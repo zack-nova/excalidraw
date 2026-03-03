@@ -231,8 +231,11 @@ export const assertSelectedElements = (
 };
 
 export const toggleMenu = (container: HTMLElement) => {
-  // open menu
-  fireEvent.click(container.querySelector(".dropdown-menu-button")!);
+  const mainMenuTrigger =
+    container.querySelector("[data-testid='main-menu-trigger']") ||
+    container.querySelector(".dropdown-menu-button");
+
+  fireEvent.click(mainMenuTrigger as HTMLElement);
 };
 
 export const togglePopover = (label: string) => {

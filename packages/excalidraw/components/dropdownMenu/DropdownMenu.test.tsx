@@ -25,4 +25,17 @@ describe("Test <DropdownMenu/>", () => {
       expect(window.h.state.openMenu).toBe(null);
     });
   });
+
+  it("opens the main menu aligned to the trigger end when docked on the right", async () => {
+    const { container } = await render(<Excalidraw />);
+
+    fireEvent.click(getByTestId(container, "main-menu-trigger"));
+
+    await waitFor(() => {
+      expect(getByTestId(container, "dropdown-menu")).toHaveAttribute(
+        "data-align",
+        "end",
+      );
+    });
+  });
 });

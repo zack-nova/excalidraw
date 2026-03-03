@@ -149,6 +149,17 @@
   .default-sidebar {
     display: flex;
     flex-direction: column;
+    left: 0;
+    right: auto;
+    border-right: 1px solid var(--sidebar-border-color);
+    border-left: 0;
+
+    :root[dir="rtl"] & {
+      left: auto;
+      right: 0;
+      border-left: 1px solid var(--sidebar-border-color);
+      border-right: 0;
+    }
 
     .sidebar-triggers {
       $padding: 2px;

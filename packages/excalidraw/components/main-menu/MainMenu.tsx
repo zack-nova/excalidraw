@@ -54,7 +54,7 @@ const MainMenu = Object.assign(
                 setAppState({ openMenu: null });
               })}
               className="main-menu"
-              align="start"
+              align="end"
             >
               {children}
               {editorInterface.formFactor === "phone" &&

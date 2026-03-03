@@ -93,7 +93,7 @@
 
     &--menu {
       position: absolute;
-      width: 320px;
+      width: min(320px, calc(100vw - (var(--editor-container-padding) * 2)));
       font-size: 1rem;
 
       top: 100%;
@@ -116,6 +116,23 @@
       @media (max-width: 860px) {
         .welcome-screen-decor-hint__label {
           max-width: 160px;
+        }
+      }
+    }
+
+    &--menu-right {
+      inset-inline-end: 0;
+      margin-inline-start: 0;
+      margin-inline-end: 0.6rem;
+      flex-direction: row-reverse;
+      justify-content: flex-end;
+      text-align: end;
+
+      svg {
+        transform: scaleX(-1);
+
+        :root[dir="rtl"] & {
+          transform: none;
         }
       }
     }

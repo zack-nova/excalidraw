@@ -10,7 +10,7 @@ const MenuHint = ({ children }: { children?: React.ReactNode }) => {
   const { WelcomeScreenMenuHintTunnel } = useTunnels();
   return (
     <WelcomeScreenMenuHintTunnel.In>
-      <div className="excalifont welcome-screen-decor welcome-screen-decor-hint welcome-screen-decor-hint--menu">
+      <div className="excalifont welcome-screen-decor welcome-screen-decor-hint welcome-screen-decor-hint--menu welcome-screen-decor-hint--menu-right">
         {WelcomeScreenMenuArrow}
         <div className="welcome-screen-decor-hint__label">
           {children || t("welcomeScreen.defaults.menuHint")}

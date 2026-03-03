@@ -2,7 +2,10 @@
 
 .excalidraw {
   .layer-ui__wrapper.animate {
-    transition: width 0.1s ease-in-out;
+    transition:
+      width 0.1s ease-in-out,
+      margin-left 0.1s ease-in-out,
+      margin-right 0.1s ease-in-out;
   }
   .layer-ui__wrapper {
     // when the rightside sidebar is docked, we need to resize the UI by its
@@ -15,6 +18,20 @@
     height: 100%;
     pointer-events: none;
     z-index: var(--zIndex-layerUI);
+
+    &--sidebar-docked {
+      width: calc(100% - var(--right-sidebar-width));
+    }
+
+    &--default-sidebar-docked {
+      width: calc(100% - var(--right-sidebar-width));
+      margin-left: var(--right-sidebar-width);
+    }
+
+    &--default-sidebar-docked-rtl {
+      margin-left: 0;
+      margin-right: var(--right-sidebar-width);
+    }
 
     &__top-right {
       display: flex;

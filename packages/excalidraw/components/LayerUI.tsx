@@ -2,6 +2,7 @@ import clsx from "clsx";
 import React from "react";
 
 import {
+  CANVAS_SEARCH_TAB,
   CLASSES,
   DEFAULT_SIDEBAR,
   TOOL_TYPE,
@@ -46,7 +47,7 @@ import MainMenu from "./main-menu/MainMenu";
 import { ActiveConfirmDialog } from "./ActiveConfirmDialog";
 import { useEditorInterface, useStylesPanelMode } from "./App";
 import { OverwriteConfirmDialog } from "./OverwriteConfirm/OverwriteConfirm";
-import { sidebarRightIcon } from "./icons";
+import { sidebarLeftIcon } from "./icons";
 import { DefaultSidebar } from "./DefaultSidebar";
 import { TTDDialog } from "./TTDDialog/TTDDialog";
 import { Stats } from "./Stats";
@@ -161,6 +162,7 @@ const LayerUI = ({
   const editorInterface = useEditorInterface();
   const stylesPanelMode = useStylesPanelMode();
   const isCompactStylesPanel = stylesPanelMode === "compact";
+  const isRTL = document.documentElement.getAttribute("dir") === "rtl";
   const tunnels = useInitializeTunnels();
 
   const spacing = isCompactStylesPanel
@@ -263,7 +265,10 @@ const LayerUI = ({
           </Island>
         ) : (
           <Island
-            className={CLASSES.SHAPE_ACTIONS_MENU}
+            className={clsx(
+              CLASSES.SHAPE_ACTIONS_MENU,
+              "App-menu__left--docked-right",
+            )}
             padding={2}
             style={{
               // we want to make sure this doesn't overflow so subtracting the
@@ -298,20 +303,13 @@ const LayerUI = ({
     return (
       <FixedSideContainer side="top">
         <div className="App-menu App-menu_top">
-          <Stack.Col
-            gap={spacing.menuTopGap}
-            className={clsx("App-menu_top__left")}
-          >
-            {renderCanvasActions()}
-            <div
-              className={clsx("selected-shape-actions-container", {
-                "selected-shape-actions-container--compact":
-                  isCompactStylesPanel,
-              })}
-            >
-              {shouldRenderSelectedShapeActions && renderSelectedShapeActions()}
-            </div>
-          </Stack.Col>
+          <div className="App-menu_top__left">
+            {!appState.viewModeEnabled &&
+              appState.openDialog?.name !== "elementLinkSelector" &&
+              !isDefaultSidebarDocked && (
+                <tunnels.DefaultSidebarTriggerTunnel.Out />
+              )}
+          </div>
           {!appState.viewModeEnabled &&
             appState.openDialog?.name !== "elementLinkSelector" && (
               <Section heading="shapes" className="shapes-section">
@@ -392,40 +390,54 @@ const LayerUI = ({
               </Section>
             )}
           <div
-            className={clsx(
-              "layer-ui__wrapper__top-right zen-mode-transition",
-              {
-                "transition-right": appState.zenModeEnabled,
-                "layer-ui__wrapper__top-right--compact": isCompactStylesPanel,
-              },
-            )}
+            className="App-menu_top__right"
+            style={{
+              alignItems: "flex-end",
+              gap: `calc(var(--space-factor) * ${spacing.menuTopGap})`,
+              justifySelf: "end",
+              width: "fit-content",
+              maxWidth: "calc(100vw - (var(--editor-container-padding) * 2))",
+            }}
           >
-            {appState.collaborators.size > 0 && (
-              <UserList
-                collaborators={appState.collaborators}
-                userToFollow={appState.userToFollow?.socketId || null}
-              />
-            )}
-            {renderTopRightUI?.(
-              editorInterface.formFactor === "phone",
-              appState,
-            )}
-            {!appState.viewModeEnabled &&
-              appState.openDialog?.name !== "elementLinkSelector" &&
-              // hide button when sidebar docked
-              (!isSidebarDocked ||
-                appState.openSidebar?.name !== DEFAULT_SIDEBAR.name) && (
-                <tunnels.DefaultSidebarTriggerTunnel.Out />
+            <div
+              className={clsx(
+                "layer-ui__wrapper__top-right zen-mode-transition",
+                {
+                  "transition-right": appState.zenModeEnabled,
+                  "layer-ui__wrapper__top-right--compact":
+                    isCompactStylesPanel,
+                },
               )}
-            {shouldShowStats && (
-              <Stats
-                app={app}
-                onClose={() => {
-                  actionManager.executeAction(actionToggleStats);
-                }}
-                renderCustomStats={renderCustomStats}
-              />
-            )}
+            >
+              {appState.collaborators.size > 0 && (
+                <UserList
+                  collaborators={appState.collaborators}
+                  userToFollow={appState.userToFollow?.socketId || null}
+                />
+              )}
+              {renderTopRightUI?.(
+                editorInterface.formFactor === "phone",
+                appState,
+              )}
+              {renderCanvasActions()}
+              {shouldShowStats && (
+                <Stats
+                  app={app}
+                  onClose={() => {
+                    actionManager.executeAction(actionToggleStats);
+                  }}
+                  renderCustomStats={renderCustomStats}
+                />
+              )}
+            </div>
+            <div
+              className={clsx("selected-shape-actions-container", {
+                "selected-shape-actions-container--compact":
+                  isCompactStylesPanel,
+              })}
+            >
+              {shouldRenderSelectedShapeActions && renderSelectedShapeActions()}
+            </div>
           </div>
         </div>
       </FixedSideContainer>
@@ -450,6 +462,16 @@ const LayerUI = ({
   };
 
   const isSidebarDocked = useAtomValue(isSidebarDockedAtom);
+  const isDefaultSidebarDocked =
+    appState.openSidebar?.name === DEFAULT_SIDEBAR.name &&
+    (appState.openSidebar.tab === CANVAS_SEARCH_TAB ||
+      appState.defaultSidebarDockedPreference);
+  const shouldReserveSidebarSpace =
+    !!appState.openSidebar &&
+    editorInterface.canFitSidebar &&
+    (appState.openSidebar.name === DEFAULT_SIDEBAR.name
+      ? isDefaultSidebarDocked
+      : isSidebarDocked);
 
   const layerUIJSX = (
     <>
@@ -463,7 +485,7 @@ const LayerUI = ({
       <DefaultMainMenu UIOptions={UIOptions} />
       <DefaultSidebar.Trigger
         __fallback
-        icon={sidebarRightIcon}
+        icon={sidebarLeftIcon}
         title={capitalizeString(t("toolBar.library"))}
         onToggle={(open) => {
           if (open) {
@@ -588,14 +610,18 @@ const LayerUI = ({
       {editorInterface.formFactor !== "phone" && (
         <>
           <div
-            className="layer-ui__wrapper"
-            style={
-              appState.openSidebar &&
-              isSidebarDocked &&
-              editorInterface.canFitSidebar
-                ? { width: `calc(100% - var(--right-sidebar-width))` }
-                : {}
-            }
+            className={clsx("layer-ui__wrapper", {
+              "layer-ui__wrapper--sidebar-docked":
+                shouldReserveSidebarSpace &&
+                appState.openSidebar?.name !== DEFAULT_SIDEBAR.name,
+              "layer-ui__wrapper--default-sidebar-docked":
+                shouldReserveSidebarSpace &&
+                appState.openSidebar?.name === DEFAULT_SIDEBAR.name,
+              "layer-ui__wrapper--default-sidebar-docked-rtl":
+                shouldReserveSidebarSpace &&
+                appState.openSidebar?.name === DEFAULT_SIDEBAR.name &&
+                isRTL,
+            })}
           >
             {renderWelcomeScreen && <tunnels.WelcomeScreenCenterTunnel.Out />}
             {renderFixedSideContainer()}
