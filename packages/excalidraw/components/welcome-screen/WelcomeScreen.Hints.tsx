@@ -1,3 +1,5 @@
+import type { CSSProperties } from "react";
+
 import { useTunnels } from "../../context/tunnels";
 import { t } from "../../i18n";
 import {
@@ -6,11 +8,18 @@ import {
   WelcomeScreenTopToolbarArrow,
 } from "../icons";
 
+const menuHintOffsetStyle = {
+  "--welcome-screen-menu-hint-right-offset": "6rem",
+} as CSSProperties;
+
 const MenuHint = ({ children }: { children?: React.ReactNode }) => {
   const { WelcomeScreenMenuHintTunnel } = useTunnels();
   return (
     <WelcomeScreenMenuHintTunnel.In>
-      <div className="excalifont welcome-screen-decor welcome-screen-decor-hint welcome-screen-decor-hint--menu welcome-screen-decor-hint--menu-right">
+      <div
+        className="excalifont welcome-screen-decor welcome-screen-decor-hint welcome-screen-decor-hint--menu welcome-screen-decor-hint--menu-right welcome-screen-decor-hint--menu-right-offset"
+        style={menuHintOffsetStyle}
+      >
         {WelcomeScreenMenuArrow}
         <div className="welcome-screen-decor-hint__label">
           {children || t("welcomeScreen.defaults.menuHint")}

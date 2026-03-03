@@ -112,6 +112,9 @@ describe("LayerUI desktop layout", () => {
       expect(menuHint).not.toBeNull();
       expect(menuHint?.closest(".App-menu_top__right")).not.toBeNull();
       expect(menuHint).toHaveClass("welcome-screen-decor-hint--menu-right");
+      expect(menuHint).toHaveStyle({
+        "--welcome-screen-menu-hint-right-offset": "6rem",
+      });
     });
   });
 });

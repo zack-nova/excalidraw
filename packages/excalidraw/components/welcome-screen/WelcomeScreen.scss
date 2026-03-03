@@ -136,6 +136,16 @@
         }
       }
     }
+
+    &--menu-right-offset {
+      transform: translateX(var(--welcome-screen-menu-hint-right-offset, 1rem));
+
+      :root[dir="rtl"] & {
+        transform: translateX(
+          calc(var(--welcome-screen-menu-hint-right-offset, 1rem) * -1)
+        );
+      }
+    }
   }
 
   // WelcomeSreen.Center
