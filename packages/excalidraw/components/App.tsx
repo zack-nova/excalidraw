@@ -4683,10 +4683,13 @@ class App extends React.Component<AppProps, AppState> {
             );
           }
 
+          const firstPendingNode =
+            this.flowChartCreator.pendingNodes?.find(isFlowchartNodeElement);
+
           if (
-            this.flowChartCreator.pendingNodes?.length &&
+            firstPendingNode &&
             !isElementCompletelyInViewport(
-              this.flowChartCreator.pendingNodes,
+              [firstPendingNode],
               this.canvas.width / window.devicePixelRatio,
               this.canvas.height / window.devicePixelRatio,
               {
@@ -4700,10 +4703,9 @@ class App extends React.Component<AppProps, AppState> {
               this.getEditorUIOffsets(),
             )
           ) {
-            this.scrollToContent(this.flowChartCreator.pendingNodes, {
+            this.scrollToContent(firstPendingNode, {
               animate: true,
               duration: 300,
-              fitToContent: true,
               canvasOffsets: this.getEditorUIOffsets(),
             });
           }

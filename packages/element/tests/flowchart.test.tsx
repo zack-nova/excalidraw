@@ -5,14 +5,27 @@ import { Excalidraw } from "@excalidraw/excalidraw";
 import { API } from "@excalidraw/excalidraw/tests/helpers/api";
 import { UI, Keyboard, Pointer } from "@excalidraw/excalidraw/tests/helpers/ui";
 import {
+  act,
   render,
   unmountComponent,
+  withExcalidrawDimensions,
 } from "@excalidraw/excalidraw/tests/test-utils";
 
 unmountComponent();
 
 const { h } = window;
 const mouse = new Pointer("mouse");
+
+const waitForNextAnimationFrame = () => {
+  return act(
+    () =>
+      new Promise((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(resolve);
+        });
+      }),
+  );
+};
 
 beforeEach(async () => {
   localStorage.clear();
@@ -153,6 +166,30 @@ describe("flow chart creation", () => {
 
     expect(firstChildNode.x).toBe(secondChildNode.x);
     expect(secondChildNode.x).toBe(thirdChildNode.x);
+  });
+
+  it("does not zoom out while previewing flowchart nodes outside the viewport", async () => {
+    await withExcalidrawDimensions({ width: 300, height: 200 }, async () => {
+      expect(h.state.zoom.value).toBe(1);
+
+      Keyboard.withModifierKeys({ ctrl: true }, () => {
+        for (let index = 0; index < 8; index++) {
+          Keyboard.keyPress(KEYS.ARROW_RIGHT);
+        }
+      });
+
+      await waitForNextAnimationFrame();
+      await waitForNextAnimationFrame();
+
+      expect(h.state.zoom.value).toBe(1);
+
+      Keyboard.keyUp(KEYS.CTRL_OR_CMD);
+
+      await waitForNextAnimationFrame();
+      await waitForNextAnimationFrame();
+
+      expect(h.state.zoom.value).toBe(1);
+    });
   });
 });
 
