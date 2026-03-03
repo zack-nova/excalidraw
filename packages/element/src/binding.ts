@@ -28,6 +28,7 @@ import type { MapEntry, Mutable } from "@excalidraw/common/utility-types";
 import type { Bounds } from "@excalidraw/common";
 
 import { getCenterForBounds } from "./bounds";
+import { findClosestBindableElementAnchorPoint } from "./anchorPoints";
 import {
   getAllHoveredElementAtPoint,
   getHoveredElementForBinding,
@@ -780,6 +781,14 @@ const getBindingStrategyForDraggingBindingElementEndpoints_simple = (
   }
 
   // Handle normal cases
+  const closestAnchorPoint =
+    hit &&
+    findClosestBindableElementAnchorPoint(
+      hit,
+      globalPoint,
+      elementsMap,
+      maxBindingDistance_simple(appState.zoom),
+    );
   const current: BindingStrategy = hit
     ? pointInElement
       ? {
@@ -791,6 +800,7 @@ const getBindingStrategyForDraggingBindingElementEndpoints_simple = (
           mode: "orbit",
           element: hit,
           focusPoint:
+            closestAnchorPoint?.point ||
             projectFixedPointOntoDiagonal(
               arrow,
               globalPoint,
@@ -1941,6 +1951,18 @@ export const calculateFixedPointForNonElbowArrowBinding = (
       );
 
   const elementCenter = elementCenterPoint(hoveredElement, elementsMap);
+  const closestAnchorPoint = findClosestBindableElementAnchorPoint(
+    hoveredElement,
+    edgePoint,
+    elementsMap,
+    maxBindingDistance_simple(),
+  );
+
+  if (closestAnchorPoint) {
+    return {
+      fixedPoint: closestAnchorPoint.fixedPoint,
+    };
+  }
 
   // Rotate the point to account for element rotation
   const nonRotatedPoint = pointRotateRads(

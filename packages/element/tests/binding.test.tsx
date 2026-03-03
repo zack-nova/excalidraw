@@ -694,4 +694,44 @@ describe("binding for simple arrows", () => {
       expect(arrow.endBinding).toBe(null);
     });
   });
+
+  describe("when the rectangle defines custom anchors", () => {
+    beforeEach(async () => {
+      mouse.reset();
+
+      await act(() => {
+        return setLanguage(defaultLang);
+      });
+      await render(<Excalidraw handleKeyboardGlobally={true} />);
+    });
+
+    it("should bind a new arrow endpoint to the nearest custom anchor", () => {
+      const rectangle = API.createElement({
+        type: "rectangle",
+        x: 100,
+        y: 100,
+        width: 100,
+        height: 100,
+      });
+
+      API.updateElement(rectangle, {
+        customData: {
+          anchorPoints: [[0.25, 0]],
+        },
+      });
+
+      API.setElements([rectangle]);
+
+      UI.clickTool("arrow");
+      mouse.downAt(0, 50);
+      mouse.moveTo(126, 96);
+      mouse.up();
+
+      const arrow = API.getSelectedElement() as ExcalidrawLinearElement;
+
+      expect(arrow.endBinding?.elementId).toBe(rectangle.id);
+      expect(arrow.endBinding?.fixedPoint[0]).toBeCloseTo(0.25, 2);
+      expect(arrow.endBinding?.fixedPoint[1]).toBeCloseTo(0, 2);
+    });
+  });
 });
