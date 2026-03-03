@@ -112,6 +112,13 @@ import {
   importFromBackend,
   isCollaborationLink,
 } from "./data";
+import {
+  applyEngineeringDataToTextElements,
+  type EngineeringDataContext,
+  maybeStartEngineeringDataMockFromUrl,
+  registerEngineeringDataDevTools,
+  subscribeEngineeringData,
+} from "./data/engineeringData";
 
 import { updateStaleImageStatuses } from "./data/FileManager";
 import {
@@ -401,6 +408,12 @@ const ExcalidrawWrapper = () => {
 
   const [excalidrawAPI, excalidrawRefCallback] =
     useCallbackRefState<ExcalidrawImperativeAPI>();
+  const engineeringDataContextRef = useRef<EngineeringDataContext>({
+    data: {},
+    items: {},
+    values: {},
+  });
+  const isApplyingEngineeringDataRef = useRef(false);
 
   const [, setShareDialogState] = useAtom(shareDialogStateAtom);
   const [collabAPI] = useAtom(collabAPIAtom);
@@ -631,6 +644,57 @@ const ExcalidrawWrapper = () => {
   }, [isCollabDisabled, collabAPI, excalidrawAPI, setLangCode]);
 
   useEffect(() => {
+    if (!excalidrawAPI) {
+      return;
+    }
+
+    const getEngineeringDataSkippedElementIds = () => {
+      const editingTextElementId =
+        excalidrawAPI.getAppState().editingTextElement?.id;
+      return editingTextElementId
+        ? new Set<string>([editingTextElementId])
+        : undefined;
+    };
+
+    const syncEngineeringDataElements = (
+      elements: readonly OrderedExcalidrawElement[],
+    ) => {
+      if (isApplyingEngineeringDataRef.current) {
+        return;
+      }
+
+      const nextElements = applyEngineeringDataToTextElements(
+        elements,
+        engineeringDataContextRef.current,
+        {
+          skipElementIds: getEngineeringDataSkippedElementIds(),
+        },
+      );
+
+      if (nextElements !== elements) {
+        isApplyingEngineeringDataRef.current = true;
+        excalidrawAPI.updateScene({
+          elements: nextElements,
+          captureUpdate: CaptureUpdateAction.NEVER,
+        });
+      }
+    };
+
+    registerEngineeringDataDevTools();
+
+    const stopMockFeed = maybeStartEngineeringDataMockFromUrl();
+    const unsubscribe = subscribeEngineeringData((context) => {
+      engineeringDataContextRef.current = context;
+      syncEngineeringDataElements(excalidrawAPI.getSceneElementsIncludingDeleted());
+    });
+
+    return () => {
+      unsubscribe();
+      stopMockFeed();
+    };
+  }, [excalidrawAPI]);
+
+  useEffect(() => {
     const unloadHandler = (event: BeforeUnloadEvent) => {
       LocalData.flushSave();
 
@@ -660,6 +724,33 @@ const ExcalidrawWrapper = () => {
     appState: AppState,
     files: BinaryFiles,
   ) => {
+    if (isApplyingEngineeringDataRef.current) {
+      isApplyingEngineeringDataRef.current = false;
+    } else if (excalidrawAPI) {
+      const nextElements = applyEngineeringDataToTextElements(
+        elements,
+        engineeringDataContextRef.current,
+        {
+          skipElementIds: (() => {
+            const editingTextElementId =
+              excalidrawAPI.getAppState().editingTextElement?.id;
+            return editingTextElementId
+              ? new Set<string>([editingTextElementId])
+              : undefined;
+          })(),
+        },
+      );
+
+      if (nextElements !== elements) {
+        isApplyingEngineeringDataRef.current = true;
+        excalidrawAPI.updateScene({
+          elements: nextElements,
+          captureUpdate: CaptureUpdateAction.NEVER,
+        });
+        return;
+      }
+    }
+
     if (collabAPI?.isCollaborating()) {
       collabAPI.syncElements(elements);
     }
