@@ -206,3 +206,118 @@
   --button-hover-bg: #363541;
   --button-bg: var(--color-surface-high);
 }
+
+.selected-shape-actions-tabs {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.375rem;
+  padding: 0.25rem;
+  border-radius: var(--border-radius-lg);
+  background: var(--color-surface-low);
+  box-shadow: inset 0 0 0 1px var(--color-surface-lowest);
+}
+
+.selected-shape-actions-tab {
+  border: none;
+  border-radius: calc(var(--border-radius-lg) - 0.125rem);
+  background: transparent;
+  color: var(--text-primary-color);
+  font: inherit;
+  font-size: 0.75rem;
+  line-height: 1.2;
+  min-height: 2rem;
+  padding: 0.375rem 0.25rem;
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease,
+    box-shadow 0.2s ease;
+
+  &[data-state="active"] {
+    background: var(--island-bg-color);
+    color: var(--color-primary);
+    box-shadow: 0 0 0 1px var(--default-border-color);
+  }
+}
+
+.selected-shape-actions-panel {
+  outline: none;
+
+  &[data-state="inactive"] {
+    display: none;
+  }
+}
+
+.selected-shape-actions__stack,
+.selected-shape-actions-inspector,
+.selected-shape-actions-data {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.selected-shape-actions-card,
+.selected-shape-actions-placeholder {
+  border-radius: var(--border-radius-lg);
+  background: var(--color-surface-low);
+  box-shadow: inset 0 0 0 1px var(--default-border-color);
+  padding: 0.75rem;
+}
+
+.selected-shape-actions-card__title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary-color);
+}
+
+.selected-shape-actions-card__meta {
+  margin-top: 0.25rem;
+  color: var(--text-primary-color);
+  opacity: 0.7;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.selected-shape-actions-placeholder {
+  color: var(--text-primary-color);
+  opacity: 0.7;
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+.selected-shape-actions-data-list {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.selected-shape-actions-data-row {
+  display: grid;
+  gap: 0.375rem;
+  grid-template-columns: minmax(0, 7rem) minmax(0, 1fr);
+  align-items: start;
+  padding: 0.625rem 0.75rem;
+  border-radius: var(--border-radius-lg);
+  background: var(--color-surface-low);
+  box-shadow: inset 0 0 0 1px var(--default-border-color);
+
+  dt,
+  dd {
+    margin: 0;
+    font-size: 0.75rem;
+    line-height: 1.4;
+    word-break: break-word;
+  }
+
+  dt {
+    color: var(--text-primary-color);
+    opacity: 0.7;
+  }
+
+  dd {
+    color: var(--text-primary-color);
+    text-align: right;
+  }
+}

@@ -1,5 +1,5 @@
 import clsx from "clsx";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Popover } from "radix-ui";
 
 import {
@@ -136,7 +136,290 @@ export const canChangeBackgroundColor = (
   );
 };
 
-export const SelectedShapeActions = ({
+type PropertiesSectionTab =
+  | "input"
+  | "output"
+  | "anchors"
+  | "data"
+  | "properties";
+
+type ComponentAnchorMetadata = {
+  id?: string | null;
+  uuid?: string | null;
+  node_id?: string | null;
+  position?: {
+    x: number;
+    y: number;
+  } | null;
+  data?: {
+    name?: string | null;
+    name_cn?: string | null;
+    interface_type?: string | null;
+    connection_type?: string | null;
+    material_type?: string | null;
+    is_connected?: boolean;
+    is_visible?: boolean;
+    allow_not_display?: boolean;
+    [key: string]: unknown;
+  } | null;
+};
+
+type ComponentMetadata = {
+  id?: string | null;
+  uuid?: string | null;
+  data?: {
+    name?: string | null;
+    name_cn?: string | null;
+    component_type?: string | null;
+    anchors?: ComponentAnchorMetadata[] | null;
+    [key: string]: unknown;
+  } | null;
+  [key: string]: unknown;
+};
+
+type FlattenedDataEntry = {
+  key: string;
+  label: string;
+  value: string;
+};
+
+type ShapeActionsInspectorItem = {
+  id: string;
+  title: string;
+  description: string[];
+};
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+const isNonEmptyString = (value: unknown): value is string =>
+  typeof value === "string" && value.trim().length > 0;
+
+const getFirstNonEmptyString = (...values: unknown[]) => {
+  for (const value of values) {
+    if (isNonEmptyString(value)) {
+      return value.trim();
+    }
+  }
+
+  return null;
+};
+
+const getSelectedElementWithComponent = (
+  targetElements: ExcalidrawElement[],
+): {
+  element: ExcalidrawElement;
+  component: ComponentMetadata;
+} | null => {
+  if (targetElements.length !== 1) {
+    return null;
+  }
+
+  const element = targetElements[0];
+  const component = element.customData?.component;
+
+  if (!isRecord(component)) {
+    return null;
+  }
+
+  return {
+    element,
+    component: component as ComponentMetadata,
+  };
+};
+
+const getComponentAnchors = (
+  targetElements: ExcalidrawElement[],
+): ComponentAnchorMetadata[] => {
+  const selectedElementWithComponent =
+    getSelectedElementWithComponent(targetElements);
+
+  if (!selectedElementWithComponent) {
+    return [];
+  }
+
+  const anchors = selectedElementWithComponent.component.data?.anchors;
+
+  if (!Array.isArray(anchors)) {
+    return [];
+  }
+
+  return anchors.filter(isRecord) as ComponentAnchorMetadata[];
+};
+
+const getAnchorConnectionType = (anchor: ComponentAnchorMetadata) =>
+  getFirstNonEmptyString(anchor.data?.connection_type)?.toLowerCase() || null;
+
+const getAnchorTitle = (anchor: ComponentAnchorMetadata) =>
+  getFirstNonEmptyString(
+    anchor.data?.name,
+    anchor.data?.name_cn,
+    anchor.id,
+    anchor.uuid,
+  ) || t("labels.propertiesTabs.unnamedAnchor");
+
+const getAnchorDescription = (anchor: ComponentAnchorMetadata) =>
+  [
+    getFirstNonEmptyString(anchor.data?.interface_type),
+    getFirstNonEmptyString(anchor.data?.material_type),
+    getFirstNonEmptyString(anchor.data?.connection_type),
+  ].filter((value): value is string => !!value);
+
+const toInspectorItems = (anchors: ComponentAnchorMetadata[]) =>
+  anchors.map((anchor, index) => ({
+    id: anchor.id || anchor.uuid || `${index}`,
+    title: getAnchorTitle(anchor),
+    description: getAnchorDescription(anchor),
+  }));
+
+const formatDataValue = (value: unknown): string | null => {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  if (typeof value === "string") {
+    const trimmedValue = value.trim();
+    return trimmedValue.length > 0 ? trimmedValue : null;
+  }
+
+  if (
+    typeof value === "number" ||
+    typeof value === "boolean" ||
+    typeof value === "bigint"
+  ) {
+    return String(value);
+  }
+
+  return null;
+};
+
+const toFlattenedDataEntries = (
+  value: unknown,
+  prefix?: string,
+): FlattenedDataEntry[] => {
+  if (Array.isArray(value)) {
+    const serialized = value
+      .map((item) => formatDataValue(item) || JSON.stringify(item))
+      .filter((item): item is string => !!item)
+      .join(", ");
+
+    return prefix && serialized
+      ? [{ key: prefix, label: prefix, value: serialized }]
+      : [];
+  }
+
+  if (isRecord(value)) {
+    return Object.entries(value).flatMap(([key, nestedValue]) =>
+      toFlattenedDataEntries(
+        nestedValue,
+        prefix ? `${prefix}.${key}` : key,
+      ),
+    );
+  }
+
+  const formattedValue = formatDataValue(value);
+
+  return prefix && formattedValue
+    ? [{ key: prefix, label: prefix, value: formattedValue }]
+    : [];
+};
+
+const getSelectedElementDataEntries = (
+  targetElements: ExcalidrawElement[],
+): FlattenedDataEntry[] => {
+  if (targetElements.length !== 1) {
+    return [];
+  }
+
+  const customData = targetElements[0].customData;
+
+  if (!isRecord(customData)) {
+    return [];
+  }
+
+  return Object.entries(customData).flatMap(([key, value]) => {
+    if (key === "component" || key === "anchorPoints") {
+      return [];
+    }
+
+    return toFlattenedDataEntries(value, isRecord(value) ? undefined : key);
+  });
+};
+
+const ShapeActionsInspectorPanel = ({
+  items,
+  emptyMessage,
+}: {
+  items: ShapeActionsInspectorItem[];
+  emptyMessage: string;
+}) => {
+  if (items.length === 0) {
+    return (
+      <div className="selected-shape-actions-placeholder">{emptyMessage}</div>
+    );
+  }
+
+  return (
+    <div className="selected-shape-actions-inspector">
+      {items.map((item) => (
+        <div
+          className="selected-shape-actions-card"
+          key={item.id}
+        >
+          <div className="selected-shape-actions-card__title">{item.title}</div>
+          {item.description.length > 0 && (
+            <div className="selected-shape-actions-card__meta">
+              {item.description.join(" · ")}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+};
+
+const ShapeActionsDataPanel = ({
+  componentName,
+  dataEntries,
+}: {
+  componentName: string | null;
+  dataEntries: FlattenedDataEntry[];
+}) => {
+  if (!componentName && dataEntries.length === 0) {
+    return (
+      <div className="selected-shape-actions-placeholder">
+        {t("labels.propertiesTabs.emptyData")}
+      </div>
+    );
+  }
+
+  return (
+    <div className="selected-shape-actions-data">
+      {componentName && (
+        <div className="selected-shape-actions-card">
+          <div className="selected-shape-actions-card__title">
+            {componentName}
+          </div>
+        </div>
+      )}
+      {dataEntries.length > 0 && (
+        <dl className="selected-shape-actions-data-list">
+          {dataEntries.map((entry) => (
+            <div
+              className="selected-shape-actions-data-row"
+              key={entry.key}
+            >
+              <dt>{entry.label}</dt>
+              <dd>{entry.value}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
+    </div>
+  );
+};
+
+const SelectedShapeActionsPropertiesPanel = ({
   appState,
   elementsMap,
   renderAction,
@@ -195,7 +478,7 @@ export const SelectedShapeActions = ({
     !isSingleElementBoundContainer && alignActionsPredicate(appState, app);
 
   return (
-    <div className="selected-shape-actions">
+    <div className="selected-shape-actions__stack">
       <div>
         {canChangeStrokeColor(appState, targetElements) &&
           renderAction("changeStrokeColor")}
@@ -320,6 +603,160 @@ export const SelectedShapeActions = ({
         </fieldset>
       )}
       {showAnchorEditorAction && renderAction("toggleAnchorEditor")}
+    </div>
+  );
+};
+
+export const SelectedShapeActions = ({
+  appState,
+  elementsMap,
+  renderAction,
+  app,
+}: {
+  appState: UIAppState;
+  elementsMap: NonDeletedElementsMap | NonDeletedSceneElementsMap;
+  renderAction: ActionManager["renderAction"];
+  app: AppClassProperties;
+}) => {
+  const targetElements = getTargetElements(elementsMap, appState);
+  const selectedElementWithComponent =
+    getSelectedElementWithComponent(targetElements);
+  const componentAnchors = getComponentAnchors(targetElements);
+  const componentName =
+    getFirstNonEmptyString(
+      selectedElementWithComponent?.component.data?.name,
+      selectedElementWithComponent?.component.data?.name_cn,
+      selectedElementWithComponent?.component.data?.component_type,
+      selectedElementWithComponent?.component.id,
+      selectedElementWithComponent?.component.uuid,
+    ) || null;
+  const inputItems = toInspectorItems(
+    componentAnchors.filter(
+      (anchor) => getAnchorConnectionType(anchor) === "inlet",
+    ),
+  );
+  const outputItems = toInspectorItems(
+    componentAnchors.filter(
+      (anchor) => getAnchorConnectionType(anchor) === "outlet",
+    ),
+  );
+  const anchorItems = toInspectorItems(componentAnchors);
+  const dataEntries = getSelectedElementDataEntries(targetElements);
+  const tabsResetKey = `${appState.activeTool.type}:${targetElements
+    .map((element) => element.id)
+    .join(",")}`;
+  const [activeTab, setActiveTab] =
+    useState<PropertiesSectionTab>("properties");
+  const tabs: Array<{
+    value: PropertiesSectionTab;
+    label: string;
+  }> = [
+    { value: "input", label: t("labels.propertiesTabs.input") },
+    { value: "output", label: t("labels.propertiesTabs.output") },
+    { value: "anchors", label: t("labels.propertiesTabs.anchors") },
+    { value: "data", label: t("labels.propertiesTabs.data") },
+    { value: "properties", label: t("labels.propertiesTabs.properties") },
+  ];
+
+  useEffect(() => {
+    setActiveTab("properties");
+  }, [tabsResetKey]);
+
+  return (
+    <div className="selected-shape-actions">
+      <div
+        aria-label={t("labels.propertiesTabs.label")}
+        className="selected-shape-actions-tabs"
+        role="tablist"
+      >
+        {tabs.map((tab) => (
+          <button
+            aria-controls={`selected-shape-actions-panel-${tab.value}`}
+            aria-selected={activeTab === tab.value}
+            className="selected-shape-actions-tab"
+            data-state={activeTab === tab.value ? "active" : "inactive"}
+            id={`selected-shape-actions-tab-${tab.value}`}
+            key={tab.value}
+            onClick={() => setActiveTab(tab.value)}
+            role="tab"
+            type="button"
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+      <div
+        aria-labelledby="selected-shape-actions-tab-input"
+        className="selected-shape-actions-panel"
+        data-state={activeTab === "input" ? "active" : "inactive"}
+        hidden={activeTab !== "input"}
+        id="selected-shape-actions-panel-input"
+        role="tabpanel"
+        tabIndex={0}
+      >
+        <ShapeActionsInspectorPanel
+          emptyMessage={t("labels.propertiesTabs.emptyInput")}
+          items={inputItems}
+        />
+      </div>
+      <div
+        aria-labelledby="selected-shape-actions-tab-output"
+        className="selected-shape-actions-panel"
+        data-state={activeTab === "output" ? "active" : "inactive"}
+        hidden={activeTab !== "output"}
+        id="selected-shape-actions-panel-output"
+        role="tabpanel"
+        tabIndex={0}
+      >
+        <ShapeActionsInspectorPanel
+          emptyMessage={t("labels.propertiesTabs.emptyOutput")}
+          items={outputItems}
+        />
+      </div>
+      <div
+        aria-labelledby="selected-shape-actions-tab-anchors"
+        className="selected-shape-actions-panel"
+        data-state={activeTab === "anchors" ? "active" : "inactive"}
+        hidden={activeTab !== "anchors"}
+        id="selected-shape-actions-panel-anchors"
+        role="tabpanel"
+        tabIndex={0}
+      >
+        <ShapeActionsInspectorPanel
+          emptyMessage={t("labels.propertiesTabs.emptyAnchors")}
+          items={anchorItems}
+        />
+      </div>
+      <div
+        aria-labelledby="selected-shape-actions-tab-data"
+        className="selected-shape-actions-panel"
+        data-state={activeTab === "data" ? "active" : "inactive"}
+        hidden={activeTab !== "data"}
+        id="selected-shape-actions-panel-data"
+        role="tabpanel"
+        tabIndex={0}
+      >
+        <ShapeActionsDataPanel
+          componentName={componentName}
+          dataEntries={dataEntries}
+        />
+      </div>
+      <div
+        aria-labelledby="selected-shape-actions-tab-properties"
+        className="selected-shape-actions-panel"
+        data-state={activeTab === "properties" ? "active" : "inactive"}
+        hidden={activeTab !== "properties"}
+        id="selected-shape-actions-panel-properties"
+        role="tabpanel"
+        tabIndex={0}
+      >
+        <SelectedShapeActionsPropertiesPanel
+          app={app}
+          appState={appState}
+          elementsMap={elementsMap}
+          renderAction={renderAction}
+        />
+      </div>
     </div>
   );
 };

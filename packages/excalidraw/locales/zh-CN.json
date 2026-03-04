@@ -146,6 +146,19 @@
       "edit": "编辑锚点",
       "showWhenUnselected": "未选中时显示锚点"
     },
+    "propertiesTabs": {
+      "label": "属性分区",
+      "input": "输入",
+      "output": "输出",
+      "anchors": "锚点",
+      "data": "数据",
+      "properties": "属性",
+      "emptyInput": "暂无输入数据。",
+      "emptyOutput": "暂无输出数据。",
+      "emptyAnchors": "暂无锚点数据。",
+      "emptyData": "暂无数据。",
+      "unnamedAnchor": "未命名锚点"
+    },
     "polygon": {
       "breakPolygon": "解除多边形",
       "convertToPolygon": "转换为多边形"

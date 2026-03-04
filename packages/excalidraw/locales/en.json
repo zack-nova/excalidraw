@@ -150,6 +150,19 @@
       "edit": "Edit anchor points",
       "showWhenUnselected": "Show anchors when unselected"
     },
+    "propertiesTabs": {
+      "label": "Properties sections",
+      "input": "Input",
+      "output": "Output",
+      "anchors": "Anchors",
+      "data": "Data",
+      "properties": "Properties",
+      "emptyInput": "No input data available.",
+      "emptyOutput": "No output data available.",
+      "emptyAnchors": "No anchor data available.",
+      "emptyData": "No data available.",
+      "unnamedAnchor": "Unnamed anchor"
+    },
     "polygon": {
       "breakPolygon": "Break polygon",
       "convertToPolygon": "Convert to polygon"
