@@ -185,10 +185,11 @@ export const SelectedShapeActions = ({
     targetElements.length === 1 &&
     isImageElement(targetElements[0]);
 
-  const showAnchorEditorAction =
-    targetElements.length === 1 &&
-    isBindableElement(targetElements[0]) &&
-    supportsBindableElementAnchorPoints(targetElements[0]);
+  const showAnchorEditorAction = targetElements.some(
+    (element) =>
+      isBindableElement(element) &&
+      supportsBindableElementAnchorPoints(element),
+  );
 
   const showAlignActions =
     !isSingleElementBoundContainer && alignActionsPredicate(appState, app);

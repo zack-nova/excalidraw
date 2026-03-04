@@ -9,6 +9,7 @@ import {
 } from "@excalidraw/excalidraw/tests/test-utils";
 import { defaultLang, setLanguage } from "@excalidraw/excalidraw/i18n";
 import { KEYS } from "@excalidraw/common";
+import { actionGroup } from "@excalidraw/excalidraw/actions";
 
 import type { ExcalidrawLinearElement } from "../src/types";
 
@@ -110,6 +111,54 @@ describe("rectangle anchor editor", () => {
     expect(
       API.getElement(rectangle).customData?.showAnchorsWhenUnselected,
     ).toBe(false);
+
+    fireEvent.click(getShowWhenUnselectedToggle());
+
+    expect(
+      API.getElement(rectangle).customData?.showAnchorsWhenUnselected,
+    ).toBe(undefined);
+  });
+
+  it("should toggle unselected anchor visibility for all eligible elements in a selected group", () => {
+    const rectangle = API.createElement({
+      type: "rectangle",
+      x: 100,
+      y: 100,
+      width: 100,
+      height: 100,
+    });
+    const ellipse = API.createElement({
+      type: "ellipse",
+      x: 260,
+      y: 100,
+      width: 100,
+      height: 100,
+    });
+
+    API.setElements([rectangle, ellipse]);
+    API.setSelectedElements([rectangle, ellipse]);
+    API.executeAction(actionGroup);
+
+    expect(screen.queryByLabelText("Edit anchor points")).toBe(null);
+
+    const toggle = getShowWhenUnselectedToggle();
+    fireEvent.click(toggle);
+
+    expect(
+      API.getElement(rectangle).customData?.showAnchorsWhenUnselected,
+    ).toBe(false);
+    expect(API.getElement(ellipse).customData?.showAnchorsWhenUnselected).toBe(
+      false,
+    );
+
+    fireEvent.click(getShowWhenUnselectedToggle());
+
+    expect(
+      API.getElement(rectangle).customData?.showAnchorsWhenUnselected,
+    ).toBe(undefined);
+    expect(API.getElement(ellipse).customData?.showAnchorsWhenUnselected).toBe(
+      undefined,
+    );
   });
 
   it("should add a new anchor when clicking on the rectangle edge in edit mode", () => {

@@ -5,6 +5,11 @@ import {
   supportsBindableElementAnchorPoints,
 } from "@excalidraw/element";
 
+import type {
+  ExcalidrawBindableElement,
+  ExcalidrawElement,
+} from "@excalidraw/element/types";
+
 import { Switch } from "../components/Switch";
 import { t } from "../i18n";
 
@@ -21,13 +26,25 @@ type AnchorEditorFormData =
     }
   | undefined;
 
-const getSelectedRectangle = (appState: AppState, app: AppClassProperties) => {
+const isAnchorEditableElement = (
+  element: ExcalidrawElement | null | undefined,
+): element is ExcalidrawBindableElement =>
+  isBindableElement(element) && supportsBindableElementAnchorPoints(element);
+
+const getSelectedAnchorElements = (
+  appState: AppState,
+  app: AppClassProperties,
+) => app.scene.getSelectedElements(appState).filter(isAnchorEditableElement);
+
+const getSelectedAnchorEditingElement = (
+  appState: AppState,
+  app: AppClassProperties,
+) => {
   const selectedElements = app.scene.getSelectedElements(appState);
 
   if (
     selectedElements.length !== 1 ||
-    !isBindableElement(selectedElements[0]) ||
-    !supportsBindableElementAnchorPoints(selectedElements[0])
+    !isAnchorEditableElement(selectedElements[0])
   ) {
     return null;
   }
@@ -42,33 +59,55 @@ export const actionToggleAnchorEditor = register<AnchorEditorFormData>({
     category: "element",
   },
   perform(elements, appState, formData, app) {
-    const selectedRectangle = getSelectedRectangle(appState, app);
-
-    if (!selectedRectangle) {
-      return false;
-    }
-
     if (formData?.name === "showWhenUnselected") {
+      const selectedAnchorElements = getSelectedAnchorElements(appState, app);
+
+      if (selectedAnchorElements.length === 0) {
+        return false;
+      }
+
+      const selectedAnchorElementsById = new Map(
+        selectedAnchorElements.map((element) => [element.id, element]),
+      );
+
       return {
         elements: elements.map((element) =>
-          element.id === selectedRectangle.id
-            ? newElementWith(element, {
-                customData: setBindableElementAnchorsWhenUnselected(
-                  selectedRectangle,
+          selectedAnchorElementsById.has(element.id)
+            ? (() => {
+                const customData = setBindableElementAnchorsWhenUnselected(
+                  selectedAnchorElementsById.get(element.id)!,
                   formData.checked,
-                ),
-              })
+                );
+
+                return newElementWith(
+                  element,
+                  { customData },
+                  customData === undefined && element.customData !== undefined,
+                );
+              })()
             : element,
         ),
         captureUpdate: CaptureUpdateAction.IMMEDIATELY,
       };
     }
 
-    const isEditing = appState.editingAnchorElementId === selectedRectangle.id;
+    const selectedAnchorEditingElement = getSelectedAnchorEditingElement(
+      appState,
+      app,
+    );
+
+    if (!selectedAnchorEditingElement) {
+      return false;
+    }
+
+    const isEditing =
+      appState.editingAnchorElementId === selectedAnchorEditingElement.id;
 
     return {
       appState: {
-        editingAnchorElementId: isEditing ? null : selectedRectangle.id,
+        editingAnchorElementId: isEditing
+          ? null
+          : selectedAnchorEditingElement.id,
         selectedAnchorPointIndex: null,
         draggedAnchorPointIndex: null,
       },
@@ -76,9 +115,13 @@ export const actionToggleAnchorEditor = register<AnchorEditorFormData>({
     };
   },
   PanelComponent: ({ appState, updateData, app }) => {
-    const selectedRectangle = getSelectedRectangle(appState, app);
+    const selectedAnchorElements = getSelectedAnchorElements(appState, app);
+    const selectedAnchorEditingElement = getSelectedAnchorEditingElement(
+      appState,
+      app,
+    );
 
-    if (!selectedRectangle) {
+    if (selectedAnchorElements.length === 0) {
       return null;
     }
 
@@ -90,29 +133,34 @@ export const actionToggleAnchorEditor = register<AnchorEditorFormData>({
     return (
       <fieldset>
         <legend>{t("labels.anchorEditor.label")}</legend>
+        {selectedAnchorEditingElement ? (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: "1rem",
+            }}
+          >
+            <label htmlFor={name}>{label}</label>
+            <Switch
+              name={name}
+              title={label}
+              checked={
+                appState.editingAnchorElementId ===
+                selectedAnchorEditingElement.id
+              }
+              onChange={() => updateData(null)}
+            />
+          </div>
+        ) : null}
         <div
           style={{
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
             gap: "1rem",
-          }}
-        >
-          <label htmlFor={name}>{label}</label>
-          <Switch
-            name={name}
-            title={label}
-            checked={appState.editingAnchorElementId === selectedRectangle.id}
-            onChange={() => updateData(null)}
-          />
-        </div>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: "1rem",
-            marginTop: "0.75rem",
+            marginTop: selectedAnchorEditingElement ? "0.75rem" : 0,
           }}
         >
           <label htmlFor={showWhenUnselectedName}>
@@ -121,9 +169,10 @@ export const actionToggleAnchorEditor = register<AnchorEditorFormData>({
           <Switch
             name={showWhenUnselectedName}
             title={showWhenUnselectedLabel}
-            checked={
-              selectedRectangle.customData?.showAnchorsWhenUnselected !== false
-            }
+            checked={selectedAnchorElements.every(
+              (element) =>
+                element.customData?.showAnchorsWhenUnselected !== false,
+            )}
             onChange={(checked) =>
               updateData({
                 name: "showWhenUnselected",
