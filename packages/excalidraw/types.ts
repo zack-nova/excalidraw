@@ -244,6 +244,11 @@ export type InteractiveCanvasAppState = Readonly<
     shouldCacheIgnoreZoom: AppState["shouldCacheIgnoreZoom"];
     exportScale: AppState["exportScale"];
     currentItemArrowType: AppState["currentItemArrowType"];
+    editingAnchorElementId: AppState["editingAnchorElementId"];
+    selectedAnchorPointIndex: AppState["selectedAnchorPointIndex"];
+    draggedAnchorPointIndex: AppState["draggedAnchorPointIndex"];
+    hoveredAnchorElementId: AppState["hoveredAnchorElementId"];
+    hoveredAnchorPointIndex: AppState["hoveredAnchorPointIndex"];
   }
 >;
 
@@ -427,6 +432,11 @@ export interface AppState {
   };
   showHyperlinkPopup: false | "info" | "editor";
   selectedLinearElement: LinearElementEditor | null;
+  editingAnchorElementId: ExcalidrawElement["id"] | null;
+  selectedAnchorPointIndex: number | null;
+  draggedAnchorPointIndex: number | null;
+  hoveredAnchorElementId: ExcalidrawElement["id"] | null;
+  hoveredAnchorPointIndex: number | null;
   snapLines: readonly SnapLine[];
   originSnapOffset: {
     x: number;
@@ -824,6 +834,9 @@ export type PointerDownState = Readonly<{
   };
   boxSelection: {
     hasOccurred: boolean;
+  };
+  anchorEditor: {
+    draggedAnchorPointIndex: number | null;
   };
 }>;
 

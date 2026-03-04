@@ -56,6 +56,9 @@ import { getCommonBounds, getElementAbsoluteCoords } from "@excalidraw/element";
 import {
   getGlobalFixedPointForBindableElement,
   isFocusPointVisible,
+  getBindableElementAnchorPoints,
+  getGlobalAnchorPointForBindableElement,
+  findClosestBindableElementEditorAnchorPoint,
 } from "@excalidraw/element";
 
 import type {
@@ -214,6 +217,175 @@ const renderSingleLinearPoint = <Point extends GlobalPoint | LocalPoint>(
     !isPhantomPoint,
     !isOverlappingPoint || isSelected,
   );
+};
+
+const renderAnchorPointHandles = (
+  context: CanvasRenderingContext2D,
+  appState: InteractiveCanvasAppState,
+  element: ExcalidrawBindableElement,
+  elementsMap: ElementsMap,
+  {
+    isEditing,
+    pointerCoords,
+    hoveredAnchorElementId,
+    hoveredAnchorPointIndex,
+  }: {
+    isEditing: boolean;
+    pointerCoords: GlobalPoint | null;
+    hoveredAnchorElementId: ExcalidrawElement["id"] | null;
+    hoveredAnchorPointIndex: number | null;
+  },
+) => {
+  const radius = LinearElementEditor.POINT_HANDLE_SIZE / appState.zoom.value;
+  const handles = getAnchorPointHandleStatesForBindableElement(
+    element,
+    elementsMap,
+    {
+      isEditing,
+      pointerCoords,
+      selectedAnchorPointIndex: appState.selectedAnchorPointIndex,
+      zoomValue: appState.zoom.value,
+      hoveredAnchorElementId,
+      hoveredAnchorPointIndex,
+    },
+  );
+
+  if (!handles.length) {
+    return;
+  }
+
+  context.save();
+  context.translate(appState.scrollX, appState.scrollY);
+  context.setLineDash([]);
+
+  handles.forEach((handle) => {
+    const isInteractive = handle.isHovered || handle.isSelected;
+    const handleRadius = handle.isPassive
+      ? radius * (isInteractive ? 0.8 : 0.6)
+      : radius;
+
+    context.lineWidth = (handle.isPassive ? 1.25 : 2) / appState.zoom.value;
+    context.strokeStyle = isInteractive
+      ? "#5e5ad8"
+      : handle.isPassive
+      ? "rgba(94, 90, 216, 0.45)"
+      : "#5e5ad8";
+    const fillStyle = handle.isSelected
+      ? "rgba(134, 131, 226, 0.95)"
+      : handle.isHovered
+      ? handle.isPassive
+        ? "rgba(134, 131, 226, 0.35)"
+        : "rgba(210, 208, 255, 0.98)"
+      : handle.isPassive
+      ? "rgba(94, 90, 216, 0.12)"
+      : "rgba(255, 255, 255, 0.95)";
+    context.fillStyle = fillStyle;
+
+    fillCircle(
+      context,
+      handle.point[0],
+      handle.point[1],
+      handleRadius,
+      true,
+      true,
+    );
+  });
+
+  context.restore();
+};
+
+export const getAnchorPointHandleStatesForBindableElement = (
+  element: ExcalidrawBindableElement,
+  elementsMap: ElementsMap,
+  {
+    isEditing,
+    pointerCoords,
+    selectedAnchorPointIndex,
+    zoomValue,
+    hoveredAnchorElementId,
+    hoveredAnchorPointIndex,
+  }: {
+    isEditing: boolean;
+    pointerCoords: GlobalPoint | null;
+    selectedAnchorPointIndex: number | null;
+    zoomValue: number;
+    hoveredAnchorElementId: ExcalidrawElement["id"] | null;
+    hoveredAnchorPointIndex: number | null;
+  },
+) => {
+  const anchorPoints = getBindableElementAnchorPoints(element);
+  const hoverThreshold =
+    (LinearElementEditor.POINT_HANDLE_SIZE * 1.5) / zoomValue;
+  const hoveredAnchorByPointer =
+    pointerCoords &&
+    findClosestBindableElementEditorAnchorPoint(
+      element,
+      pointerCoords,
+      elementsMap,
+      hoverThreshold,
+    );
+
+  return anchorPoints.map((fixedPoint, index) => ({
+    fixedPoint,
+    index,
+    point: getGlobalAnchorPointForBindableElement(
+      element,
+      fixedPoint,
+      elementsMap,
+    ),
+    isHovered: isEditing
+      ? hoveredAnchorByPointer?.index === index
+      : hoveredAnchorElementId === element.id &&
+        hoveredAnchorPointIndex === index,
+    isSelected: selectedAnchorPointIndex === index,
+    isPassive: !isEditing,
+  }));
+};
+
+export const getBindingHighlightPointsForBindableElement = (
+  element: ExcalidrawBindableElement,
+  elementsMap: ElementsMap,
+): GlobalPoint[] => {
+  if (element.type === "diamond") {
+    const center = elementCenterPoint(element, elementsMap);
+
+    return getDiamondBaseCorners(element).map((curve) => {
+      const point = bezierEquation(curve, 0.5);
+      const rotatedPoint = pointRotateRads(point, center, element.angle);
+
+      return pointFrom<GlobalPoint>(rotatedPoint[0], rotatedPoint[1]);
+    });
+  }
+
+  if (element.type === "rectangle") {
+    return getBindableElementAnchorPoints(element).map((fixedPoint) =>
+      getGlobalAnchorPointForBindableElement(element, fixedPoint, elementsMap),
+    );
+  }
+
+  const center = elementCenterPoint(element, elementsMap);
+  const basePoints = [
+    {
+      x: element.width,
+      y: element.height / 2,
+    },
+    {
+      x: element.width / 2,
+      y: element.height,
+    },
+    { x: 0, y: element.height / 2 },
+    { x: element.width / 2, y: 0 },
+  ];
+
+  return basePoints.map((point) => {
+    const globalPoint = pointFrom<GlobalPoint>(
+      point.x + element.x,
+      point.y + element.y,
+    );
+    const rotatedPoint = pointRotateRads(globalPoint, center, element.angle);
+
+    return pointFrom<GlobalPoint>(rotatedPoint[0], rotatedPoint[1]);
+  });
 };
 
 const renderBindingHighlightForBindableElement_simple = (
@@ -433,52 +605,10 @@ const renderBindingHighlightForBindableElement_simple = (
     if (!cursorIsInsideBindable || isElbow) {
       context.save();
 
-      const center = elementCenterPoint(suggestedBinding.element, elementsMap);
-
-      let midpoints: GlobalPoint[];
-      if (suggestedBinding.element.type === "diamond") {
-        const center = elementCenterPoint(
-          suggestedBinding.element,
-          elementsMap,
-        );
-        midpoints = getDiamondBaseCorners(suggestedBinding.element).map(
-          (curve) => {
-            const point = bezierEquation(curve, 0.5);
-            const rotatedPoint = pointRotateRads(
-              point,
-              center,
-              suggestedBinding.element.angle,
-            );
-
-            return pointFrom<GlobalPoint>(rotatedPoint[0], rotatedPoint[1]);
-          },
-        );
-      } else {
-        const basePoints = [
-          {
-            x: suggestedBinding.element.width,
-            y: suggestedBinding.element.height / 2,
-          }, // RIGHT
-          {
-            x: suggestedBinding.element.width / 2,
-            y: suggestedBinding.element.height,
-          }, // BOTTOM
-          { x: 0, y: suggestedBinding.element.height / 2 }, // LEFT
-          { x: suggestedBinding.element.width / 2, y: 0 }, // TOP
-        ];
-        midpoints = basePoints.map((point) => {
-          const globalPoint = pointFrom<GlobalPoint>(
-            point.x + suggestedBinding.element.x,
-            point.y + suggestedBinding.element.y,
-          );
-          const rotatedPoint = pointRotateRads(
-            globalPoint,
-            center,
-            suggestedBinding.element.angle,
-          );
-          return pointFrom<GlobalPoint>(rotatedPoint[0], rotatedPoint[1]);
-        });
-      }
+      const midpoints = getBindingHighlightPointsForBindableElement(
+        suggestedBinding.element,
+        elementsMap,
+      );
 
       const hoveredMidpoint =
         pointerCoords &&
@@ -810,43 +940,13 @@ const renderBindingHighlightForBindableElement_complex = (
     const cutoutPadding = 5 / appState.zoom.value;
     const cutoutRadius = midpointRadius + cutoutPadding;
 
-    let midpoints;
-    if (element.type === "diamond") {
-      const [, curves] = deconstructDiamondElement(element);
-      const center = elementCenterPoint(element, allElementsMap);
-
-      midpoints = curves.map((curve) => {
-        const point = bezierEquation(curve, 0.5);
-        const rotatedPoint = pointRotateRads(point, center, element.angle);
-        return {
-          x: rotatedPoint[0] - element.x,
-          y: rotatedPoint[1] - element.y,
-        };
-      });
-    } else {
-      const center = elementCenterPoint(element, allElementsMap);
-      const basePoints = [
-        { x: element.width / 2, y: 0 }, // TOP
-        { x: element.width, y: element.height / 2 }, // RIGHT
-        { x: element.width / 2, y: element.height }, // BOTTOM
-        { x: 0, y: element.height / 2 }, // LEFT
-      ];
-      midpoints = basePoints.map((point) => {
-        const globalPoint = pointFrom<GlobalPoint>(
-          point.x + element.x,
-          point.y + element.y,
-        );
-        const rotatedPoint = pointRotateRads(
-          globalPoint,
-          center,
-          element.angle,
-        );
-        return {
-          x: rotatedPoint[0] - element.x,
-          y: rotatedPoint[1] - element.y,
-        };
-      });
-    }
+    const midpoints = getBindingHighlightPointsForBindableElement(
+      element,
+      allElementsMap,
+    ).map((point) => ({
+      x: point[0] - element.x,
+      y: point[1] - element.y,
+    }));
 
     // Clear cutouts around midpoints
     midpoints.forEach((midpoint) => {
@@ -1701,6 +1801,26 @@ const _renderInteractiveScene = ({
       });
     }
   }
+
+  const pointerCoords = app.lastPointerMoveCoords
+    ? pointFrom<GlobalPoint>(
+        app.lastPointerMoveCoords.x,
+        app.lastPointerMoveCoords.y,
+      )
+    : null;
+
+  visibleElements.forEach((element) => {
+    if (!isBindableElement(element) || element.type !== "rectangle") {
+      return;
+    }
+
+    renderAnchorPointHandles(context, appState, element, elementsMap, {
+      isEditing: appState.editingAnchorElementId === element.id,
+      pointerCoords,
+      hoveredAnchorElementId: appState.hoveredAnchorElementId,
+      hoveredAnchorPointIndex: appState.hoveredAnchorPointIndex,
+    });
+  });
 
   // Paint selected elements
   if (

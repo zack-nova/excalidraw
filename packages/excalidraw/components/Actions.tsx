@@ -183,6 +183,9 @@ export const SelectedShapeActions = ({
     targetElements.length === 1 &&
     isImageElement(targetElements[0]);
 
+  const showAnchorEditorAction =
+    targetElements.length === 1 && targetElements[0].type === "rectangle";
+
   const showAlignActions =
     !isSingleElementBoundContainer && alignActionsPredicate(appState, app);
 
@@ -311,6 +314,7 @@ export const SelectedShapeActions = ({
           </div>
         </fieldset>
       )}
+      {showAnchorEditorAction && renderAction("toggleAnchorEditor")}
     </div>
   );
 };

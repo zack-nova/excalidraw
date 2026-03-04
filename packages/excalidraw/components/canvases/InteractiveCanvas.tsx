@@ -266,6 +266,11 @@ const getRelevantAppStateProps = (
   shouldCacheIgnoreZoom: appState.shouldCacheIgnoreZoom,
   exportScale: appState.exportScale,
   currentItemArrowType: appState.currentItemArrowType,
+  editingAnchorElementId: appState.editingAnchorElementId,
+  selectedAnchorPointIndex: appState.selectedAnchorPointIndex,
+  draggedAnchorPointIndex: appState.draggedAnchorPointIndex,
+  hoveredAnchorElementId: appState.hoveredAnchorElementId,
+  hoveredAnchorPointIndex: appState.hoveredAnchorPointIndex,
 });
 
 const areEqual = (

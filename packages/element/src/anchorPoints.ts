@@ -23,15 +23,29 @@ const DEFAULT_RECTANGLE_ANCHOR_POINTS: readonly FixedPoint[] = [
   [0, 0.5],
 ];
 
-const isRectangleAnchorPoint = (fixedPoint: unknown): fixedPoint is FixedPoint =>
+const isRectangleAnchorPoint = (
+  fixedPoint: unknown,
+): fixedPoint is FixedPoint =>
   Array.isArray(fixedPoint) &&
   fixedPoint.length === 2 &&
-  fixedPoint.every((coord) => typeof coord === "number" && Number.isFinite(coord));
+  fixedPoint.every(
+    (coord) => typeof coord === "number" && Number.isFinite(coord),
+  );
 
 const normalizeAnchorPoint = (fixedPoint: FixedPoint): FixedPoint => [
   clamp(fixedPoint[0], 0, 1),
   clamp(fixedPoint[1], 0, 1),
 ];
+
+const fixedPointsEqual = (left: FixedPoint, right: FixedPoint): boolean => {
+  const normalizedLeft = normalizeAnchorPoint(left);
+  const normalizedRight = normalizeAnchorPoint(right);
+
+  return (
+    normalizedLeft[0] === normalizedRight[0] &&
+    normalizedLeft[1] === normalizedRight[1]
+  );
+};
 
 const getStoredAnchorPoints = (
   element: ExcalidrawBindableElement,
@@ -59,6 +73,16 @@ export const getBindableElementAnchorPoints = (
     ? DEFAULT_RECTANGLE_ANCHOR_POINTS.map((anchorPoint) => [...anchorPoint])
     : [];
 };
+
+export const getCustomBindableElementAnchorPoints = (
+  element: ExcalidrawBindableElement,
+): FixedPoint[] =>
+  getBindableElementAnchorPoints(element).filter(
+    (fixedPoint) =>
+      !DEFAULT_RECTANGLE_ANCHOR_POINTS.some((defaultAnchorPoint) =>
+        fixedPointsEqual(defaultAnchorPoint, fixedPoint),
+      ),
+  );
 
 export const addBindableElementAnchorPoint = (
   element: ExcalidrawBindableElement,
@@ -102,7 +126,9 @@ export const removeBindableElementAnchorPoint = (
 
   return {
     ...(element.customData || {}),
-    anchorPoints: anchorPoints.filter((_, anchorIndex) => anchorIndex !== index),
+    anchorPoints: anchorPoints.filter(
+      (_, anchorIndex) => anchorIndex !== index,
+    ),
   };
 };
 
@@ -139,16 +165,14 @@ export const findClosestBindableElementAnchorPoint = (
     return null;
   }
 
-  let closestAnchor:
-    | {
-        fixedPoint: FixedPoint;
-        index: number;
-        point: GlobalPoint;
-        distance: number;
-      }
-    | null = null;
+  let closestAnchor: {
+    fixedPoint: FixedPoint;
+    index: number;
+    point: GlobalPoint;
+    distance: number;
+  } | null = null;
 
-  storedAnchorPoints.forEach((fixedPoint, index) => {
+  for (const [index, fixedPoint] of storedAnchorPoints.entries()) {
     const globalAnchorPoint = getGlobalAnchorPointForBindableElement(
       element,
       fixedPoint,
@@ -157,7 +181,7 @@ export const findClosestBindableElementAnchorPoint = (
     const distance = pointDistance(point, globalAnchorPoint);
 
     if (distance > threshold) {
-      return;
+      continue;
     }
 
     if (!closestAnchor || distance < closestAnchor.distance) {
@@ -168,7 +192,7 @@ export const findClosestBindableElementAnchorPoint = (
         distance,
       };
     }
-  });
+  }
 
   if (!closestAnchor) {
     return null;
@@ -178,5 +202,175 @@ export const findClosestBindableElementAnchorPoint = (
     fixedPoint: closestAnchor.fixedPoint,
     index: closestAnchor.index,
     point: closestAnchor.point,
+  };
+};
+
+export const findClosestCustomBindableElementAnchorPoint = (
+  element: ExcalidrawBindableElement,
+  point: GlobalPoint,
+  elementsMap: ElementsMap,
+  threshold: number,
+): {
+  fixedPoint: FixedPoint;
+  index: number;
+  point: GlobalPoint;
+} | null => {
+  const anchorPoints = getBindableElementAnchorPoints(element);
+
+  let closestAnchor: {
+    fixedPoint: FixedPoint;
+    index: number;
+    point: GlobalPoint;
+    distance: number;
+  } | null = null;
+
+  for (const [index, fixedPoint] of anchorPoints.entries()) {
+    if (
+      DEFAULT_RECTANGLE_ANCHOR_POINTS.some((defaultAnchorPoint) =>
+        fixedPointsEqual(defaultAnchorPoint, fixedPoint),
+      )
+    ) {
+      continue;
+    }
+
+    const globalAnchorPoint = getGlobalAnchorPointForBindableElement(
+      element,
+      fixedPoint,
+      elementsMap,
+    );
+    const distance = pointDistance(point, globalAnchorPoint);
+
+    if (distance > threshold) {
+      continue;
+    }
+
+    if (!closestAnchor || distance < closestAnchor.distance) {
+      closestAnchor = {
+        fixedPoint,
+        index,
+        point: globalAnchorPoint,
+        distance,
+      };
+    }
+  }
+
+  if (!closestAnchor) {
+    return null;
+  }
+
+  return {
+    fixedPoint: closestAnchor.fixedPoint,
+    index: closestAnchor.index,
+    point: closestAnchor.point,
+  };
+};
+
+export const findClosestBindableElementEditorAnchorPoint = (
+  element: ExcalidrawBindableElement,
+  point: GlobalPoint,
+  elementsMap: ElementsMap,
+  threshold: number,
+): {
+  fixedPoint: FixedPoint;
+  index: number;
+  point: GlobalPoint;
+} | null => {
+  const anchorPoints = getBindableElementAnchorPoints(element);
+
+  let closestAnchor: {
+    fixedPoint: FixedPoint;
+    index: number;
+    point: GlobalPoint;
+    distance: number;
+  } | null = null;
+
+  for (const [index, fixedPoint] of anchorPoints.entries()) {
+    const globalAnchorPoint = getGlobalAnchorPointForBindableElement(
+      element,
+      fixedPoint,
+      elementsMap,
+    );
+    const distance = pointDistance(point, globalAnchorPoint);
+
+    if (distance > threshold) {
+      continue;
+    }
+
+    if (!closestAnchor || distance < closestAnchor.distance) {
+      closestAnchor = {
+        fixedPoint,
+        index,
+        point: globalAnchorPoint,
+        distance,
+      };
+    }
+  }
+
+  if (!closestAnchor) {
+    return null;
+  }
+
+  return {
+    fixedPoint: closestAnchor.fixedPoint,
+    index: closestAnchor.index,
+    point: closestAnchor.point,
+  };
+};
+
+export const projectPointToBindableElementAnchor = (
+  element: ExcalidrawBindableElement,
+  point: GlobalPoint,
+  elementsMap: ElementsMap,
+): {
+  fixedPoint: FixedPoint;
+  point: GlobalPoint;
+} | null => {
+  if (element.type !== "rectangle" || !element.width || !element.height) {
+    return null;
+  }
+
+  const elementCenter = elementCenterPoint(element, elementsMap);
+  const nonRotatedPoint = pointRotateRads(
+    point,
+    elementCenter,
+    -element.angle as Radians,
+  );
+
+  const ratioX = clamp((nonRotatedPoint[0] - element.x) / element.width, 0, 1);
+  const ratioY = clamp((nonRotatedPoint[1] - element.y) / element.height, 0, 1);
+
+  const distances = [
+    { side: "top", distance: Math.abs(nonRotatedPoint[1] - element.y) },
+    {
+      side: "right",
+      distance: Math.abs(nonRotatedPoint[0] - (element.x + element.width)),
+    },
+    {
+      side: "bottom",
+      distance: Math.abs(nonRotatedPoint[1] - (element.y + element.height)),
+    },
+    { side: "left", distance: Math.abs(nonRotatedPoint[0] - element.x) },
+  ] as const;
+
+  const nearestSide = distances.reduce((closest, current) =>
+    current.distance < closest.distance ? current : closest,
+  );
+
+  const fixedPoint =
+    nearestSide.side === "top"
+      ? ([ratioX, 0] as FixedPoint)
+      : nearestSide.side === "right"
+      ? ([1, ratioY] as FixedPoint)
+      : nearestSide.side === "bottom"
+      ? ([ratioX, 1] as FixedPoint)
+      : ([0, ratioY] as FixedPoint);
+
+  return {
+    fixedPoint,
+    point: getGlobalAnchorPointForBindableElement(
+      element,
+      fixedPoint,
+      elementsMap,
+    ),
   };
 };

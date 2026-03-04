@@ -116,11 +116,17 @@ import {
   getCommonBounds,
   getElementAbsoluteCoords,
   bindOrUnbindBindingElements,
+  addBindableElementAnchorPoint,
   fixBindingsAfterDeletion,
+  findClosestBindableElementEditorAnchorPoint,
+  getBindableElementAnchorPoints,
   getHoveredElementForBinding,
   isBindingEnabled,
+  normalizeFixedPoint,
+  projectPointToBindableElementAnchor,
   shouldEnableBindingForPointerEvent,
   updateBoundElements,
+  updateBindableElementAnchorPoint,
   LinearElementEditor,
   newElementWith,
   newFrameElement,
@@ -285,6 +291,7 @@ import type {
   ExcalidrawElbowArrowElement,
   SceneElementsMap,
   ExcalidrawBindableElement,
+  FixedPoint,
 } from "@excalidraw/element/types";
 
 import type { Mutable, ValueOf } from "@excalidraw/common/utility-types";
@@ -584,6 +591,17 @@ let IS_PLAIN_PASTE_TIMER = 0;
 let PLAIN_PASTE_TOAST_SHOWN = false;
 
 let lastPointerUp: (() => void) | null = null;
+type AnchorEditorHit =
+  | {
+      type: "anchor";
+      index: number;
+      fixedPoint: FixedPoint;
+    }
+  | {
+      type: "edge";
+      fixedPoint: FixedPoint;
+    };
+
 const gesture: Gesture = {
   pointers: new Map(),
   lastCenter: null,
@@ -6767,12 +6785,19 @@ class App extends React.Component<AppProps, AppState> {
         this.state.activeTool.type !== "text" &&
         this.state.activeTool.type !== "eraser")
     ) {
+      this.setHoveredAnchorPoint(null, null);
       return;
     }
 
     const elements = this.scene.getNonDeletedElements();
 
     const selectedElements = this.scene.getSelectedElements(this.state);
+    if (!isOverScrollBar && this.state.activeTool.type === "selection") {
+      this.syncHoveredAnchorPoint(pointFrom(scenePointerX, scenePointerY));
+    } else {
+      this.setHoveredAnchorPoint(null, null);
+    }
+
     if (
       selectedElements.length === 1 &&
       !isOverScrollBar &&
@@ -7796,6 +7821,274 @@ class App extends React.Component<AppProps, AppState> {
     }
   }
 
+  private getEditingAnchorElement = () => {
+    const selectedElements = this.scene.getSelectedElements(this.state);
+
+    if (
+      selectedElements.length !== 1 ||
+      selectedElements[0].type !== "rectangle"
+    ) {
+      return null;
+    }
+
+    if (this.state.editingAnchorElementId !== selectedElements[0].id) {
+      return null;
+    }
+
+    return selectedElements[0] as NonDeleted<ExcalidrawBindableElement>;
+  };
+
+  private setHoveredAnchorPoint = (
+    elementId: ExcalidrawElement["id"] | null,
+    index: number | null,
+  ) => {
+    if (
+      this.state.hoveredAnchorElementId === elementId &&
+      this.state.hoveredAnchorPointIndex === index
+    ) {
+      return;
+    }
+
+    this.setState({
+      hoveredAnchorElementId: elementId,
+      hoveredAnchorPointIndex: index,
+    });
+  };
+
+  private syncHoveredAnchorPoint = (scenePoint: GlobalPoint) => {
+    const threshold =
+      (LinearElementEditor.POINT_HANDLE_SIZE * 1.5) / this.state.zoom.value;
+    const elementsMap = this.scene.getNonDeletedElementsMap();
+    let hoveredAnchorElementId: ExcalidrawElement["id"] | null = null;
+    let hoveredAnchorPointIndex: number | null = null;
+    let hoveredAnchorDistance = Infinity;
+
+    this.scene.getNonDeletedElements().forEach((element) => {
+      if (
+        !isBindableElement(element) ||
+        element.type !== "rectangle" ||
+        this.state.editingAnchorElementId === element.id
+      ) {
+        return;
+      }
+
+      const anchor = findClosestBindableElementEditorAnchorPoint(
+        element,
+        scenePoint,
+        elementsMap,
+        threshold,
+      );
+
+      if (!anchor) {
+        return;
+      }
+
+      const distance = pointDistance(scenePoint, anchor.point);
+      if (distance < hoveredAnchorDistance) {
+        hoveredAnchorElementId = element.id;
+        hoveredAnchorPointIndex = anchor.index;
+        hoveredAnchorDistance = distance;
+      }
+    });
+
+    if (hoveredAnchorElementId === null || hoveredAnchorPointIndex === null) {
+      this.setHoveredAnchorPoint(null, null);
+      return;
+    }
+
+    this.setHoveredAnchorPoint(hoveredAnchorElementId, hoveredAnchorPointIndex);
+  };
+
+  private getAnchorEditorHit = (
+    element: NonDeleted<ExcalidrawBindableElement>,
+    scenePoint: GlobalPoint,
+  ): AnchorEditorHit | null => {
+    const elementsMap = this.scene.getNonDeletedElementsMap();
+    const threshold =
+      (LinearElementEditor.POINT_HANDLE_SIZE * 1.5) / this.state.zoom.value;
+
+    const hitAnchor = findClosestBindableElementEditorAnchorPoint(
+      element,
+      scenePoint,
+      elementsMap,
+      threshold,
+    );
+
+    if (hitAnchor) {
+      return {
+        type: "anchor",
+        index: hitAnchor.index,
+        fixedPoint: hitAnchor.fixedPoint,
+      };
+    }
+
+    const projectedAnchor = projectPointToBindableElementAnchor(
+      element,
+      scenePoint,
+      elementsMap,
+    );
+
+    if (
+      !projectedAnchor ||
+      pointDistance(scenePoint, projectedAnchor.point) > threshold
+    ) {
+      return null;
+    }
+
+    return {
+      type: "edge",
+      fixedPoint: projectedAnchor.fixedPoint,
+    };
+  };
+
+  private syncBoundArrowsForAnchorPoint = (
+    bindableElement: NonDeleted<ExcalidrawBindableElement>,
+    previousFixedPoint: FixedPoint,
+    nextFixedPoint: FixedPoint,
+  ) => {
+    const elementsMap = this.scene.getNonDeletedElementsMap();
+    const normalizedPreviousFixedPoint =
+      normalizeFixedPoint(previousFixedPoint);
+    const normalizedNextFixedPoint = normalizeFixedPoint(nextFixedPoint);
+    let didUpdateBindings = false;
+
+    bindableElement.boundElements?.forEach((boundElement) => {
+      const arrow = elementsMap.get(boundElement.id);
+
+      if (!arrow || !isArrowElement(arrow) || arrow.isDeleted) {
+        return;
+      }
+
+      let startBinding = arrow.startBinding;
+      let endBinding = arrow.endBinding;
+      let didUpdateArrow = false;
+
+      if (
+        startBinding?.elementId === bindableElement.id &&
+        normalizeFixedPoint(startBinding.fixedPoint)[0] ===
+          normalizedPreviousFixedPoint[0] &&
+        normalizeFixedPoint(startBinding.fixedPoint)[1] ===
+          normalizedPreviousFixedPoint[1]
+      ) {
+        startBinding = {
+          ...startBinding,
+          fixedPoint: normalizedNextFixedPoint,
+        };
+        didUpdateArrow = true;
+      }
+
+      if (
+        endBinding?.elementId === bindableElement.id &&
+        normalizeFixedPoint(endBinding.fixedPoint)[0] ===
+          normalizedPreviousFixedPoint[0] &&
+        normalizeFixedPoint(endBinding.fixedPoint)[1] ===
+          normalizedPreviousFixedPoint[1]
+      ) {
+        endBinding = {
+          ...endBinding,
+          fixedPoint: normalizedNextFixedPoint,
+        };
+        didUpdateArrow = true;
+      }
+
+      if (!didUpdateArrow) {
+        return;
+      }
+
+      didUpdateBindings = true;
+      this.scene.mutateElement(arrow, {
+        startBinding,
+        endBinding,
+      });
+    });
+
+    if (didUpdateBindings) {
+      updateBoundElements(bindableElement, this.scene);
+    }
+  };
+
+  private updateEditingAnchorPoint = (
+    bindableElement: NonDeleted<ExcalidrawBindableElement>,
+    index: number,
+    fixedPoint: FixedPoint,
+  ) => {
+    const anchorPoints = getBindableElementAnchorPoints(bindableElement);
+    const previousFixedPoint = anchorPoints[index];
+
+    if (!previousFixedPoint) {
+      return;
+    }
+
+    this.scene.mutateElement(bindableElement, {
+      customData: updateBindableElementAnchorPoint(
+        bindableElement,
+        index,
+        fixedPoint,
+      ),
+    });
+
+    this.syncBoundArrowsForAnchorPoint(
+      bindableElement,
+      previousFixedPoint,
+      fixedPoint,
+    );
+  };
+
+  private handleAnchorEditorPointerDown = (
+    pointerDownState: PointerDownState,
+  ) => {
+    const bindableElement = this.getEditingAnchorElement();
+
+    if (!bindableElement) {
+      return false;
+    }
+
+    const anchorEditorHit = this.getAnchorEditorHit(
+      bindableElement,
+      pointFrom(pointerDownState.origin.x, pointerDownState.origin.y),
+    );
+
+    if (!anchorEditorHit) {
+      if (
+        this.state.selectedAnchorPointIndex !== null ||
+        this.state.draggedAnchorPointIndex !== null
+      ) {
+        this.setState({
+          selectedAnchorPointIndex: null,
+          draggedAnchorPointIndex: null,
+        });
+      }
+      return false;
+    }
+
+    let draggedAnchorPointIndex: number;
+
+    if (anchorEditorHit.type === "anchor") {
+      draggedAnchorPointIndex = anchorEditorHit.index;
+    } else {
+      draggedAnchorPointIndex =
+        getBindableElementAnchorPoints(bindableElement).length;
+      this.scene.mutateElement(bindableElement, {
+        customData: addBindableElementAnchorPoint(
+          bindableElement,
+          anchorEditorHit.fixedPoint,
+        ),
+      });
+    }
+
+    pointerDownState.hit.element = bindableElement;
+    pointerDownState.hit.allHitElements = [bindableElement];
+    pointerDownState.anchorEditor.draggedAnchorPointIndex =
+      draggedAnchorPointIndex;
+
+    this.setState({
+      selectedAnchorPointIndex: draggedAnchorPointIndex,
+      draggedAnchorPointIndex,
+    });
+
+    return true;
+  };
+
   private initialPointerDownState(
     event: React.PointerEvent<HTMLElement>,
   ): PointerDownState {
@@ -7861,6 +8154,9 @@ class App extends React.Component<AppProps, AppState> {
       },
       boxSelection: {
         hasOccurred: false,
+      },
+      anchorEditor: {
+        draggedAnchorPointIndex: null,
       },
     };
   }
@@ -7928,6 +8224,10 @@ class App extends React.Component<AppProps, AppState> {
       const elements = this.scene.getNonDeletedElements();
       const elementsMap = this.scene.getNonDeletedElementsMap();
       const selectedElements = this.scene.getSelectedElements(this.state);
+
+      if (this.handleAnchorEditorPointerDown(pointerDownState)) {
+        return false;
+      }
 
       if (
         selectedElements.length === 1 &&
@@ -9200,6 +9500,32 @@ class App extends React.Component<AppProps, AppState> {
         event[KEYS.CTRL_OR_CMD] ? null : this.getEffectiveGridSize(),
       );
 
+      if (pointerDownState.anchorEditor.draggedAnchorPointIndex !== null) {
+        const bindableElement = this.getEditingAnchorElement();
+
+        if (!bindableElement) {
+          return;
+        }
+
+        const projectedAnchor = projectPointToBindableElementAnchor(
+          bindableElement,
+          pointFrom(pointerCoords.x, pointerCoords.y),
+          this.scene.getNonDeletedElementsMap(),
+        );
+
+        if (!projectedAnchor) {
+          return;
+        }
+
+        pointerDownState.drag.hasOccurred = true;
+        this.updateEditingAnchorPoint(
+          bindableElement,
+          pointerDownState.anchorEditor.draggedAnchorPointIndex,
+          projectedAnchor.fixedPoint,
+        );
+        return;
+      }
+
       if (pointerDownState.resize.isResizing) {
         pointerDownState.lastCoords.x = pointerCoords.x;
         pointerDownState.lastCoords.y = pointerCoords.y;
@@ -10094,6 +10420,13 @@ class App extends React.Component<AppProps, AppState> {
         selectedElementsAreBeingDragged: false,
         bindMode: "orbit",
       });
+
+      if (pointerDownState.anchorEditor.draggedAnchorPointIndex !== null) {
+        pointerDownState.anchorEditor.draggedAnchorPointIndex = null;
+        this.setState({
+          draggedAnchorPointIndex: null,
+        });
+      }
 
       if (
         pointerDownState.drag.hasOccurred &&
@@ -12387,18 +12720,20 @@ class App extends React.Component<AppProps, AppState> {
 // -----------------------------------------------------------------------------
 // TEST HOOKS
 // -----------------------------------------------------------------------------
+type TestWindowHandle = {
+  app: App;
+  elements: readonly ExcalidrawElement[];
+  fonts: App["fonts"];
+  history: App["history"];
+  scene: Scene;
+  setState: React.Component<any, AppState>["setState"];
+  state: AppState;
+  store: Store;
+};
+
 declare global {
   interface Window {
-    h: {
-      scene: Scene;
-      elements: readonly ExcalidrawElement[];
-      state: AppState;
-      setState: React.Component<any, AppState>["setState"];
-      watchState: (prev: any, next: any) => void | undefined;
-      app: InstanceType<typeof App>;
-      history: History;
-      store: Store;
-    };
+    h: TestWindowHandle;
   }
 }
 

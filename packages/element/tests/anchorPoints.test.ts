@@ -5,11 +5,14 @@ import { pointFrom } from "@excalidraw/math";
 import { newElement } from "../src/newElement";
 import {
   addBindableElementAnchorPoint,
+  getCustomBindableElementAnchorPoints,
   findClosestBindableElementAnchorPoint,
   getBindableElementAnchorPoints,
   removeBindableElementAnchorPoint,
   updateBindableElementAnchorPoint,
 } from "../src/anchorPoints";
+
+import type { ExcalidrawBindableElement } from "../src/types";
 
 describe("rectangle anchor points", () => {
   it("returns the default four anchors when the rectangle was not customized", () => {
@@ -19,7 +22,7 @@ describe("rectangle anchor points", () => {
       y: 100,
       width: 200,
       height: 100,
-    });
+    }) as ExcalidrawBindableElement;
 
     expect(getBindableElementAnchorPoints(rectangle)).toEqual([
       [0.5, 0],
@@ -36,7 +39,7 @@ describe("rectangle anchor points", () => {
       y: 100,
       width: 200,
       height: 100,
-    });
+    }) as ExcalidrawBindableElement;
 
     expect(addBindableElementAnchorPoint(rectangle, [0.25, 0])).toEqual({
       anchorPoints: [
@@ -65,7 +68,7 @@ describe("rectangle anchor points", () => {
           [0.25, 0],
         ],
       },
-    });
+    }) as ExcalidrawBindableElement;
 
     const updatedCustomData = updateBindableElementAnchorPoint(
       rectangle,
@@ -86,7 +89,7 @@ describe("rectangle anchor points", () => {
     const updatedRectangle = {
       ...rectangle,
       customData: updatedCustomData,
-    };
+    } as ExcalidrawBindableElement;
 
     expect(removeBindableElementAnchorPoint(updatedRectangle, 1)).toEqual({
       anchorPoints: [
@@ -108,7 +111,7 @@ describe("rectangle anchor points", () => {
       customData: {
         anchorPoints: [[0.25, 0]],
       },
-    });
+    }) as ExcalidrawBindableElement;
 
     const anchor = findClosestBindableElementAnchorPoint(
       rectangle,
@@ -122,5 +125,50 @@ describe("rectangle anchor points", () => {
       index: 0,
       point: pointFrom(150, 100),
     });
+  });
+
+  it("returns only non-default rectangle anchors for passive display", () => {
+    const rectangle = newElement({
+      type: "rectangle",
+      x: 100,
+      y: 100,
+      width: 200,
+      height: 100,
+      customData: {
+        anchorPoints: [
+          [0.5, 0],
+          [1, 0.5],
+          [0.5, 1],
+          [0, 0.5],
+          [0.25, 0],
+        ],
+      },
+    }) as ExcalidrawBindableElement;
+
+    expect(getCustomBindableElementAnchorPoints(rectangle)).toEqual([
+      [0.25, 0],
+    ]);
+  });
+
+  it("treats moved default anchors as custom anchors", () => {
+    const rectangle = newElement({
+      type: "rectangle",
+      x: 100,
+      y: 100,
+      width: 200,
+      height: 100,
+      customData: {
+        anchorPoints: [
+          [0.25, 0],
+          [1, 0.5],
+          [0.5, 1],
+          [0, 0.5],
+        ],
+      },
+    }) as ExcalidrawBindableElement;
+
+    expect(getCustomBindableElementAnchorPoints(rectangle)).toEqual([
+      [0.25, 0],
+    ]);
   });
 });
