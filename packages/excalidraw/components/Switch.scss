@@ -114,5 +114,33 @@
         cursor: unset;
       }
     }
+
+    &.Switch--compact {
+      width: 34px;
+      height: 18px;
+
+      &:before {
+        width: 8px;
+        height: 8px;
+        top: 4px;
+        left: 4px;
+      }
+
+      &:active:before {
+        width: 10px;
+      }
+
+      &.toggled:before {
+        width: 12px;
+        height: 12px;
+        left: 18px;
+        top: 2px;
+      }
+
+      &.toggled:active:before {
+        width: 14px;
+        left: 16px;
+      }
+    }
   }
 }

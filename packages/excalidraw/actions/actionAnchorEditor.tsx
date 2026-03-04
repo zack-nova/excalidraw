@@ -16,6 +16,7 @@ import { t } from "../i18n";
 import { newElementWith } from "../../element/src/mutateElement";
 
 import { register } from "./register";
+import "./actionAnchorEditor.scss";
 
 import type { AppClassProperties, AppState } from "../types";
 
@@ -131,19 +132,15 @@ export const actionToggleAnchorEditor = register<AnchorEditorFormData>({
     const showWhenUnselectedName = "showAnchorPointsWhenUnselected";
 
     return (
-      <fieldset>
+      <fieldset className="anchor-editor-fieldset">
         <legend>{t("labels.anchorEditor.label")}</legend>
         {selectedAnchorEditingElement ? (
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: "1rem",
-            }}
-          >
-            <label htmlFor={name}>{label}</label>
+          <div className="anchor-editor-row">
+            <label className="anchor-editor-label" htmlFor={name}>
+              {label}
+            </label>
             <Switch
+              className="anchor-editor-switch Switch--compact"
               name={name}
               title={label}
               checked={
@@ -154,19 +151,15 @@ export const actionToggleAnchorEditor = register<AnchorEditorFormData>({
             />
           </div>
         ) : null}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: "1rem",
-            marginTop: selectedAnchorEditingElement ? "0.75rem" : 0,
-          }}
-        >
-          <label htmlFor={showWhenUnselectedName}>
+        <div className="anchor-editor-row">
+          <label
+            className="anchor-editor-label"
+            htmlFor={showWhenUnselectedName}
+          >
             {showWhenUnselectedLabel}
           </label>
           <Switch
+            className="anchor-editor-switch Switch--compact"
             name={showWhenUnselectedName}
             title={showWhenUnselectedLabel}
             checked={selectedAnchorElements.every(

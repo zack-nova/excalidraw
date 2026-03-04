@@ -1,0 +1,129 @@
+{
+    "uuid": null,
+    "id": null,
+    "type": "component",
+    "position": null,
+    "measured": {
+        "width": 80.0,
+        "height": 80.0
+    },
+    "style": {
+        "width": "80px",
+        "height": "80px"
+    },
+    "data": {
+        "image": "/PNG/ECON.png",
+        "component_type": "ECONDehumidifier",
+        "operation_mode": "design_mode",
+        "supported_operation_modes": [
+            "design_mode"
+        ],
+        "name": "ECONDehumidifier",
+        "name_cn": "除湿省煤器",
+        "anchors": [
+            {
+                "uuid": null,
+                "id": null,
+                "node_id": null,
+                "position": {
+                    "x": 0.0,
+                    "y": 0.0
+                },
+                "data": {
+                    "interface_type": "In_Gas",
+                    "is_connected": false,
+                    "connection_type": "inlet",
+                    "material_type": "gas",
+                    "is_visible": true,
+                    "allow_not_display": false,
+                    "name": "In_Gas",
+                    "name_cn": "进口烟气",
+                    "tpis_extra_info": null
+                }
+            },
+            {
+                "uuid": null,
+                "id": null,
+                "node_id": null,
+                "position": {
+                    "x": 1.0,
+                    "y": 0.0
+                },
+                "data": {
+                    "interface_type": "Out_Gas",
+                    "is_connected": false,
+                    "connection_type": "outlet",
+                    "material_type": "gas",
+                    "is_visible": true,
+                    "allow_not_display": false,
+                    "name": "Out_Gas",
+                    "name_cn": "出口烟气",
+                    "tpis_extra_info": null
+                }
+            },
+            {
+                "uuid": null,
+                "id": null,
+                "node_id": null,
+                "position": {
+                    "x": 1.0,
+                    "y": 1.0
+                },
+                "data": {
+                    "interface_type": "In_Water",
+                    "is_connected": false,
+                    "connection_type": "inlet",
+                    "material_type": "water",
+                    "is_visible": true,
+                    "allow_not_display": false,
+                    "name": "In_Water",
+                    "name_cn": "进口给水",
+                    "tpis_extra_info": null
+                }
+            },
+            {
+                "uuid": null,
+                "id": null,
+                "node_id": null,
+                "position": {
+                    "x": 0.0,
+                    "y": 1.0
+                },
+                "data": {
+                    "interface_type": "Out_Water",
+                    "is_connected": false,
+                    "connection_type": "outlet",
+                    "material_type": "water",
+                    "is_visible": true,
+                    "allow_not_display": false,
+                    "name": "Out_Water",
+                    "name_cn": "出口给水",
+                    "tpis_extra_info": null
+                }
+            },
+            {
+                "uuid": null,
+                "id": null,
+                "node_id": null,
+                "position": {
+                    "x": 0.625,
+                    "y": 0.625
+                },
+                "data": {
+                    "interface_type": "Inner_Gas",
+                    "is_connected": false,
+                    "connection_type": "outlet",
+                    "material_type": "gas",
+                    "is_visible": false,
+                    "allow_not_display": false,
+                    "name": "Inner_Gas",
+                    "name_cn": "内部节点",
+                    "tpis_extra_info": null
+                }
+            }
+        ],
+        "tpis_extra_info": null
+    },
+    "icon": "/PNG/ECON.png",
+    "group": "烟气/空气设备"
+}

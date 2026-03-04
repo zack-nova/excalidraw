@@ -1,0 +1,226 @@
+{
+    "uuid": null,
+    "id": null,
+    "type": "component",
+    "position": null,
+    "measured": {
+        "width": 200.0,
+        "height": 200.0
+    },
+    "style": {
+        "width": "200px",
+        "height": "200px"
+    },
+    "data": {
+        "image": "/PNG/CFB.png",
+        "component_type": "CFB",
+        "operation_mode": "design_mode",
+        "supported_operation_modes": [
+            "design_mode"
+        ],
+        "name": "CFB",
+        "name_cn": "循环流化床",
+        "anchors": [
+            {
+                "uuid": null,
+                "id": null,
+                "node_id": null,
+                "position": {
+                    "x": 0.0,
+                    "y": 0.6
+                },
+                "data": {
+                    "interface_type": "coal",
+                    "is_connected": false,
+                    "connection_type": "inlet",
+                    "material_type": "coal",
+                    "is_visible": true,
+                    "allow_not_display": false,
+                    "name": "coal",
+                    "name_cn": "燃料",
+                    "tpis_extra_info": null
+                }
+            },
+            {
+                "uuid": null,
+                "id": null,
+                "node_id": null,
+                "position": null,
+                "data": {
+                    "interface_type": "BurnAir",
+                    "is_connected": false,
+                    "connection_type": "inlet",
+                    "material_type": "gas",
+                    "is_visible": false,
+                    "allow_not_display": false,
+                    "name": "BurnAir",
+                    "name_cn": "燃烧空气",
+                    "tpis_extra_info": null
+                }
+            },
+            {
+                "uuid": null,
+                "id": null,
+                "node_id": null,
+                "position": {
+                    "x": 1.0,
+                    "y": 0.7
+                },
+                "data": {
+                    "interface_type": "PAir",
+                    "is_connected": false,
+                    "connection_type": "inlet",
+                    "material_type": "gas",
+                    "is_visible": true,
+                    "allow_not_display": false,
+                    "name": "PAir",
+                    "name_cn": "一次风",
+                    "tpis_extra_info": null
+                }
+            },
+            {
+                "uuid": null,
+                "id": null,
+                "node_id": null,
+                "position": {
+                    "x": 1.0,
+                    "y": 0.6
+                },
+                "data": {
+                    "interface_type": "FAir",
+                    "is_connected": false,
+                    "connection_type": "inlet",
+                    "material_type": "gas",
+                    "is_visible": true,
+                    "allow_not_display": false,
+                    "name": "FAir",
+                    "name_cn": "二次风",
+                    "tpis_extra_info": null
+                }
+            },
+            {
+                "uuid": null,
+                "id": null,
+                "node_id": null,
+                "position": {
+                    "x": 0.5,
+                    "y": 1.0
+                },
+                "data": {
+                    "interface_type": "BAir",
+                    "is_connected": false,
+                    "connection_type": "inlet",
+                    "material_type": "gas",
+                    "is_visible": true,
+                    "allow_not_display": false,
+                    "name": "BAir",
+                    "name_cn": "回料风",
+                    "tpis_extra_info": null
+                }
+            },
+            {
+                "uuid": null,
+                "id": null,
+                "node_id": null,
+                "position": {
+                    "x": 0.2,
+                    "y": 1.0
+                },
+                "data": {
+                    "interface_type": "BottomAsh",
+                    "is_connected": false,
+                    "connection_type": "outlet",
+                    "material_type": "ash",
+                    "is_visible": true,
+                    "allow_not_display": false,
+                    "name": "BottomAsh",
+                    "name_cn": "渣",
+                    "tpis_extra_info": null
+                }
+            },
+            {
+                "uuid": null,
+                "id": null,
+                "node_id": null,
+                "position": {
+                    "x": 1.0,
+                    "y": 0.9
+                },
+                "data": {
+                    "interface_type": "FlueGas",
+                    "is_connected": false,
+                    "connection_type": "outlet",
+                    "material_type": "gas",
+                    "is_visible": true,
+                    "allow_not_display": false,
+                    "name": "FlueGas",
+                    "name_cn": "烟气",
+                    "tpis_extra_info": null
+                }
+            },
+            {
+                "uuid": null,
+                "id": null,
+                "node_id": null,
+                "position": {
+                    "x": 1.0,
+                    "y": 0.4
+                },
+                "data": {
+                    "interface_type": "FeedWater",
+                    "is_connected": false,
+                    "connection_type": "inlet",
+                    "material_type": "water",
+                    "is_visible": true,
+                    "allow_not_display": false,
+                    "name": "FeedWater",
+                    "name_cn": "给水",
+                    "tpis_extra_info": null
+                }
+            },
+            {
+                "uuid": null,
+                "id": null,
+                "node_id": null,
+                "position": {
+                    "x": 1.0,
+                    "y": 0.0
+                },
+                "data": {
+                    "interface_type": "MainSteam",
+                    "is_connected": false,
+                    "connection_type": "outlet",
+                    "material_type": "water",
+                    "is_visible": true,
+                    "allow_not_display": false,
+                    "name": "MainSteam",
+                    "name_cn": "主蒸汽",
+                    "tpis_extra_info": null
+                }
+            },
+            {
+                "uuid": null,
+                "id": null,
+                "node_id": null,
+                "position": {
+                    "x": 0.4,
+                    "y": 1.0
+                },
+                "data": {
+                    "interface_type": "DrainWater",
+                    "is_connected": false,
+                    "connection_type": "outlet",
+                    "material_type": "water",
+                    "is_visible": true,
+                    "allow_not_display": false,
+                    "name": "DrainWater",
+                    "name_cn": "排污",
+                    "tpis_extra_info": null
+                }
+            }
+        ],
+        "tpis_extra_info": null
+    },
+    "icon": "/PNG/CFB.png",
+    "group": "燃料设备"
+}

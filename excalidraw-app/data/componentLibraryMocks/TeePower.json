@@ -1,0 +1,89 @@
+{
+    "uuid": null,
+    "id": null,
+    "type": "component",
+    "position": null,
+    "measured": {
+        "width": 40.0,
+        "height": 20.0
+    },
+    "style": {
+        "width": "40px",
+        "height": "20px"
+    },
+    "data": {
+        "image": "/PNG/TeePower.png",
+        "component_type": "TeePower",
+        "operation_mode": "design_mode",
+        "supported_operation_modes": [
+            "design_mode"
+        ],
+        "name": "TeePower",
+        "name_cn": "机械三通",
+        "anchors": [
+            {
+                "uuid": null,
+                "id": null,
+                "node_id": null,
+                "position": {
+                    "x": 0.0,
+                    "y": 0.5
+                },
+                "data": {
+                    "interface_type": "N1",
+                    "is_connected": false,
+                    "connection_type": "inlet",
+                    "material_type": "power",
+                    "is_visible": true,
+                    "allow_not_display": false,
+                    "name": "N1",
+                    "name_cn": "进口端",
+                    "tpis_extra_info": null
+                }
+            },
+            {
+                "uuid": null,
+                "id": null,
+                "node_id": null,
+                "position": {
+                    "x": 0.5,
+                    "y": 0.5
+                },
+                "data": {
+                    "interface_type": "N2",
+                    "is_connected": false,
+                    "connection_type": "both",
+                    "material_type": "power",
+                    "is_visible": true,
+                    "allow_not_display": true,
+                    "name": "N2",
+                    "name_cn": "中间端",
+                    "tpis_extra_info": null
+                }
+            },
+            {
+                "uuid": null,
+                "id": null,
+                "node_id": null,
+                "position": {
+                    "x": 1.0,
+                    "y": 0.5
+                },
+                "data": {
+                    "interface_type": "N3",
+                    "is_connected": false,
+                    "connection_type": "outlet",
+                    "material_type": "power",
+                    "is_visible": true,
+                    "allow_not_display": true,
+                    "name": "N3",
+                    "name_cn": "出口端",
+                    "tpis_extra_info": null
+                }
+            }
+        ],
+        "tpis_extra_info": null
+    },
+    "icon": "/PNG/TeePower.png",
+    "group": "其它设备"
+}

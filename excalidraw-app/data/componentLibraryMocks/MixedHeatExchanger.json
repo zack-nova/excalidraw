@@ -1,0 +1,89 @@
+{
+    "uuid": null,
+    "id": null,
+    "type": "component",
+    "position": null,
+    "measured": {
+        "width": 60.0,
+        "height": 60.0
+    },
+    "style": {
+        "width": "60px",
+        "height": "60px"
+    },
+    "data": {
+        "image": "/PNG/MixedHeatExchanger.png",
+        "component_type": "MixedHeatExchanger",
+        "operation_mode": "design_mode",
+        "supported_operation_modes": [
+            "design_mode"
+        ],
+        "name": "MixedHeatExchanger",
+        "name_cn": "混合式换热器",
+        "anchors": [
+            {
+                "uuid": null,
+                "id": null,
+                "node_id": null,
+                "position": {
+                    "x": 0.5,
+                    "y": 0.0
+                },
+                "data": {
+                    "interface_type": "TSteam",
+                    "is_connected": false,
+                    "connection_type": "inlet",
+                    "material_type": "water",
+                    "is_visible": true,
+                    "allow_not_display": false,
+                    "name": "TSteam",
+                    "name_cn": "蒸汽入口",
+                    "tpis_extra_info": null
+                }
+            },
+            {
+                "uuid": null,
+                "id": null,
+                "node_id": null,
+                "position": {
+                    "x": 1.0,
+                    "y": 0.5
+                },
+                "data": {
+                    "interface_type": "InWater",
+                    "is_connected": false,
+                    "connection_type": "inlet",
+                    "material_type": "water",
+                    "is_visible": true,
+                    "allow_not_display": false,
+                    "name": "InWater",
+                    "name_cn": "水入口",
+                    "tpis_extra_info": null
+                }
+            },
+            {
+                "uuid": null,
+                "id": null,
+                "node_id": null,
+                "position": {
+                    "x": 0.0,
+                    "y": 0.6666666666666666
+                },
+                "data": {
+                    "interface_type": "OutWater",
+                    "is_connected": false,
+                    "connection_type": "outlet",
+                    "material_type": "water",
+                    "is_visible": true,
+                    "allow_not_display": false,
+                    "name": "OutWater",
+                    "name_cn": "水出口",
+                    "tpis_extra_info": null
+                }
+            }
+        ],
+        "tpis_extra_info": null
+    },
+    "icon": "/PNG/MixedHeatExchanger.png",
+    "group": "汽水设备"
+}

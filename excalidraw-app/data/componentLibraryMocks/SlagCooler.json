@@ -1,0 +1,109 @@
+{
+    "uuid": null,
+    "id": null,
+    "type": "component",
+    "position": null,
+    "measured": {
+        "width": 80.0,
+        "height": 40.0
+    },
+    "style": {
+        "width": "80px",
+        "height": "40px"
+    },
+    "data": {
+        "image": "/PNG/SlagCooler.png",
+        "component_type": "SlagCooler",
+        "operation_mode": "design_mode",
+        "supported_operation_modes": [
+            "design_mode"
+        ],
+        "name": "SlagCooler",
+        "name_cn": "冷渣器",
+        "anchors": [
+            {
+                "uuid": null,
+                "id": null,
+                "node_id": null,
+                "position": {
+                    "x": 0.0,
+                    "y": 0.0
+                },
+                "data": {
+                    "interface_type": "AshInlet",
+                    "is_connected": false,
+                    "connection_type": "inlet",
+                    "material_type": "ash",
+                    "is_visible": true,
+                    "allow_not_display": false,
+                    "name": "AshInlet",
+                    "name_cn": "热渣进口",
+                    "tpis_extra_info": null
+                }
+            },
+            {
+                "uuid": null,
+                "id": null,
+                "node_id": null,
+                "position": {
+                    "x": 1.0,
+                    "y": 1.0
+                },
+                "data": {
+                    "interface_type": "AshOutlet",
+                    "is_connected": false,
+                    "connection_type": "outlet",
+                    "material_type": "ash",
+                    "is_visible": true,
+                    "allow_not_display": false,
+                    "name": "AshOutlet",
+                    "name_cn": "冷渣出口",
+                    "tpis_extra_info": null
+                }
+            },
+            {
+                "uuid": null,
+                "id": null,
+                "node_id": null,
+                "position": {
+                    "x": 1.0,
+                    "y": 0.0
+                },
+                "data": {
+                    "interface_type": "WaterInlet",
+                    "is_connected": false,
+                    "connection_type": "inlet",
+                    "material_type": "water",
+                    "is_visible": true,
+                    "allow_not_display": false,
+                    "name": "WaterInlet",
+                    "name_cn": "冷却水进口",
+                    "tpis_extra_info": null
+                }
+            },
+            {
+                "uuid": null,
+                "id": null,
+                "node_id": null,
+                "position": {
+                    "x": 0.0,
+                    "y": 1.0
+                },
+                "data": {
+                    "interface_type": "WaterOutlet",
+                    "is_connected": false,
+                    "connection_type": "outlet",
+                    "material_type": "water",
+                    "is_visible": true,
+                    "allow_not_display": false,
+                    "name": "WaterOutlet",
+                    "name_cn": "冷却水进口",
+                    "tpis_extra_info": null
+                }
+            }
+        ],
+        "tpis_extra_info": null
+    },
+    "icon": "/PNG/SlagCooler.png",
+    "group": "燃料设备"
+}

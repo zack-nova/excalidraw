@@ -1,0 +1,28 @@
+{
+    "uuid": null,
+    "id": null,
+    "type": "component",
+    "position": null,
+    "measured": {
+        "width": 20.0,
+        "height": 40.0
+    },
+    "style": {
+        "width": "20px",
+        "height": "40px"
+    },
+    "data": {
+        "image": "/PNG/TurbinEffCal.png",
+        "component_type": "TurbinEffCal",
+        "operation_mode": "design_mode",
+        "supported_operation_modes": [
+            "design_mode"
+        ],
+        "name": "TurbinEffCal",
+        "name_cn": "透平效率",
+        "anchors": [],
+        "tpis_extra_info": null
+    },
+    "icon": "/PNG/TurbinEffCal.png",
+    "group": "其它设备"
+}

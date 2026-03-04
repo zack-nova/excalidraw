@@ -1,0 +1,70 @@
+{
+    "uuid": null,
+    "id": null,
+    "type": "component",
+    "position": null,
+    "measured": {
+        "width": 40.0,
+        "height": 20.0
+    },
+    "style": {
+        "width": "40px",
+        "height": "20px"
+    },
+    "data": {
+        "image": "/PNG/PipeEle.png",
+        "component_type": "PipeEle",
+        "operation_mode": "design_mode",
+        "supported_operation_modes": [
+            "design_mode",
+            "interpolation_mode"
+        ],
+        "name": "PipeEle",
+        "name_cn": "管道元件",
+        "anchors": [
+            {
+                "uuid": null,
+                "id": null,
+                "node_id": null,
+                "position": {
+                    "x": 0.0,
+                    "y": 0.5
+                },
+                "data": {
+                    "interface_type": "Inlet",
+                    "is_connected": false,
+                    "connection_type": "inlet",
+                    "material_type": "water",
+                    "is_visible": true,
+                    "allow_not_display": false,
+                    "name": "Inlet",
+                    "name_cn": "进口",
+                    "tpis_extra_info": null
+                }
+            },
+            {
+                "uuid": null,
+                "id": null,
+                "node_id": null,
+                "position": {
+                    "x": 1.0,
+                    "y": 0.5
+                },
+                "data": {
+                    "interface_type": "Outlet",
+                    "is_connected": false,
+                    "connection_type": "outlet",
+                    "material_type": "water",
+                    "is_visible": true,
+                    "allow_not_display": false,
+                    "name": "Outlet",
+                    "name_cn": "出口",
+                    "tpis_extra_info": null
+                }
+            }
+        ],
+        "tpis_extra_info": null
+    },
+    "icon": "/PNG/PipeEle.png",
+    "group": "汽水连接件"
+}

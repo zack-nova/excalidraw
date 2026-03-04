@@ -1,0 +1,49 @@
+{
+    "uuid": null,
+    "id": null,
+    "type": "component",
+    "position": null,
+    "measured": {
+        "width": 40.0,
+        "height": 40.0
+    },
+    "style": {
+        "width": "40px",
+        "height": "40px"
+    },
+    "data": {
+        "image": "/PNG/CoalSource.png",
+        "component_type": "CoalSource",
+        "operation_mode": "design_mode",
+        "supported_operation_modes": [
+            "design_mode"
+        ],
+        "name": "CoalSource",
+        "name_cn": "煤/燃料",
+        "anchors": [
+            {
+                "uuid": null,
+                "id": null,
+                "node_id": null,
+                "position": {
+                    "x": 0.5,
+                    "y": 1.0
+                },
+                "data": {
+                    "interface_type": "Outlet",
+                    "is_connected": false,
+                    "connection_type": "outlet",
+                    "material_type": "coal",
+                    "is_visible": true,
+                    "allow_not_display": false,
+                    "name": "Outlet",
+                    "name_cn": "煤/燃料",
+                    "tpis_extra_info": null
+                }
+            }
+        ],
+        "tpis_extra_info": null
+    },
+    "icon": "/PNG/CoalSource.png",
+    "group": "燃料设备"
+}

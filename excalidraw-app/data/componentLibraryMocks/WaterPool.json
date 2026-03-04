@@ -1,0 +1,49 @@
+{
+    "uuid": null,
+    "id": null,
+    "type": "component",
+    "position": null,
+    "measured": {
+        "width": 40.0,
+        "height": 40.0
+    },
+    "style": {
+        "width": "40px",
+        "height": "40px"
+    },
+    "data": {
+        "image": "/PNG/WaterPool.png",
+        "component_type": "WaterPool",
+        "operation_mode": "design_mode",
+        "supported_operation_modes": [
+            "design_mode"
+        ],
+        "name": "WaterPool",
+        "name_cn": "水/蒸汽池",
+        "anchors": [
+            {
+                "uuid": null,
+                "id": null,
+                "node_id": null,
+                "position": {
+                    "x": 0.0,
+                    "y": 0.5
+                },
+                "data": {
+                    "interface_type": "Outlet",
+                    "is_connected": false,
+                    "connection_type": "inlet",
+                    "material_type": "water",
+                    "is_visible": true,
+                    "allow_not_display": false,
+                    "name": "Outlet",
+                    "name_cn": "入口工质",
+                    "tpis_extra_info": null
+                }
+            }
+        ],
+        "tpis_extra_info": null
+    },
+    "icon": "/PNG/WaterPool.png",
+    "group": "汽水连接件"
+}

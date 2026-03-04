@@ -1,0 +1,89 @@
+{
+    "uuid": null,
+    "id": null,
+    "type": "component",
+    "position": null,
+    "measured": {
+        "width": 20.0,
+        "height": 20.0
+    },
+    "style": {
+        "width": "20px",
+        "height": "20px"
+    },
+    "data": {
+        "image": "/PNG/SealedLeakage.png",
+        "component_type": "SealedLeakage",
+        "operation_mode": "design_mode",
+        "supported_operation_modes": [
+            "design_mode"
+        ],
+        "name": "SealedLeakage",
+        "name_cn": "密封漏汽",
+        "anchors": [
+            {
+                "uuid": null,
+                "id": null,
+                "node_id": null,
+                "position": {
+                    "x": 0.5,
+                    "y": 1.0
+                },
+                "data": {
+                    "interface_type": "N1",
+                    "is_connected": false,
+                    "connection_type": "inlet",
+                    "material_type": "water",
+                    "is_visible": true,
+                    "allow_not_display": false,
+                    "name": "N1",
+                    "name_cn": "进口",
+                    "tpis_extra_info": null
+                }
+            },
+            {
+                "uuid": null,
+                "id": null,
+                "node_id": null,
+                "position": {
+                    "x": 0.0,
+                    "y": 0.5
+                },
+                "data": {
+                    "interface_type": "N2",
+                    "is_connected": false,
+                    "connection_type": "both",
+                    "material_type": "water",
+                    "is_visible": true,
+                    "allow_not_display": true,
+                    "name": "N2",
+                    "name_cn": "漏(补)点",
+                    "tpis_extra_info": null
+                }
+            },
+            {
+                "uuid": null,
+                "id": null,
+                "node_id": null,
+                "position": {
+                    "x": 0.5,
+                    "y": 0.0
+                },
+                "data": {
+                    "interface_type": "N3",
+                    "is_connected": false,
+                    "connection_type": "outlet",
+                    "material_type": "water",
+                    "is_visible": true,
+                    "allow_not_display": false,
+                    "name": "N3",
+                    "name_cn": "出口",
+                    "tpis_extra_info": null
+                }
+            }
+        ],
+        "tpis_extra_info": null
+    },
+    "icon": "/PNG/SealedLeakage.png",
+    "group": "汽水连接件"
+}

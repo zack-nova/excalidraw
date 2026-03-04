@@ -1,0 +1,89 @@
+{
+    "uuid": null,
+    "id": null,
+    "type": "component",
+    "position": null,
+    "measured": {
+        "width": 40.0,
+        "height": 60.0
+    },
+    "style": {
+        "width": "40px",
+        "height": "60px"
+    },
+    "data": {
+        "image": "/PNG/ConTank.png",
+        "component_type": "ConTank",
+        "operation_mode": "design_mode",
+        "supported_operation_modes": [
+            "design_mode"
+        ],
+        "name": "ConTank",
+        "name_cn": "排污扩容器",
+        "anchors": [
+            {
+                "uuid": null,
+                "id": null,
+                "node_id": null,
+                "position": {
+                    "x": 0.5,
+                    "y": 0.0
+                },
+                "data": {
+                    "interface_type": "Steam",
+                    "is_connected": false,
+                    "connection_type": "outlet",
+                    "material_type": "water",
+                    "is_visible": true,
+                    "allow_not_display": true,
+                    "name": "Steam",
+                    "name_cn": "连排蒸汽",
+                    "tpis_extra_info": null
+                }
+            },
+            {
+                "uuid": null,
+                "id": null,
+                "node_id": null,
+                "position": {
+                    "x": 1.0,
+                    "y": 0.6666666666666666
+                },
+                "data": {
+                    "interface_type": "InWater",
+                    "is_connected": false,
+                    "connection_type": "inlet",
+                    "material_type": "water",
+                    "is_visible": true,
+                    "allow_not_display": false,
+                    "name": "InWater",
+                    "name_cn": "排污水入口",
+                    "tpis_extra_info": null
+                }
+            },
+            {
+                "uuid": null,
+                "id": null,
+                "node_id": null,
+                "position": {
+                    "x": 0.5,
+                    "y": 1.0
+                },
+                "data": {
+                    "interface_type": "OutWater",
+                    "is_connected": false,
+                    "connection_type": "outlet",
+                    "material_type": "water",
+                    "is_visible": true,
+                    "allow_not_display": false,
+                    "name": "OutWater",
+                    "name_cn": "排污水出口",
+                    "tpis_extra_info": null
+                }
+            }
+        ],
+        "tpis_extra_info": null
+    },
+    "icon": "/PNG/ConTank.png",
+    "group": "汽水设备"
+}

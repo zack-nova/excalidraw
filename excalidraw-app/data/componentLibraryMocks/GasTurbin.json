@@ -1,0 +1,146 @@
+{
+    "uuid": null,
+    "id": null,
+    "type": "component",
+    "position": null,
+    "measured": {
+        "width": 40.0,
+        "height": 80.0
+    },
+    "style": {
+        "width": "40px",
+        "height": "80px"
+    },
+    "data": {
+        "image": "/PNG/GasTurbin.png",
+        "component_type": "GasTurbin",
+        "operation_mode": "design_mode",
+        "supported_operation_modes": [
+            "design_mode"
+        ],
+        "name": "GasTurbin",
+        "name_cn": "燃气轮机",
+        "anchors": [
+            {
+                "uuid": null,
+                "id": null,
+                "node_id": null,
+                "position": {
+                    "x": 0.0,
+                    "y": 0.125
+                },
+                "data": {
+                    "interface_type": "InGas",
+                    "is_connected": false,
+                    "connection_type": "inlet",
+                    "material_type": "gas",
+                    "is_visible": true,
+                    "allow_not_display": false,
+                    "name": "InGas",
+                    "name_cn": "进口烟气",
+                    "tpis_extra_info": null
+                }
+            },
+            {
+                "uuid": null,
+                "id": null,
+                "node_id": null,
+                "position": null,
+                "data": {
+                    "interface_type": "InnerGas",
+                    "is_connected": false,
+                    "connection_type": "outlet",
+                    "material_type": "gas",
+                    "is_visible": false,
+                    "allow_not_display": false,
+                    "name": "InnerGas",
+                    "name_cn": null,
+                    "tpis_extra_info": null
+                }
+            },
+            {
+                "uuid": null,
+                "id": null,
+                "node_id": null,
+                "position": {
+                    "x": 1.0,
+                    "y": 0.0
+                },
+                "data": {
+                    "interface_type": "OutGas",
+                    "is_connected": false,
+                    "connection_type": "outlet",
+                    "material_type": "gas",
+                    "is_visible": true,
+                    "allow_not_display": false,
+                    "name": "OutGas",
+                    "name_cn": "出口烟气",
+                    "tpis_extra_info": null
+                }
+            },
+            {
+                "uuid": null,
+                "id": null,
+                "node_id": null,
+                "position": {
+                    "x": 0.0,
+                    "y": 0.5
+                },
+                "data": {
+                    "interface_type": "Outpower1",
+                    "is_connected": false,
+                    "connection_type": "outlet",
+                    "material_type": "power",
+                    "is_visible": true,
+                    "allow_not_display": true,
+                    "name": "Outpower1",
+                    "name_cn": "输出功率1",
+                    "tpis_extra_info": null
+                }
+            },
+            {
+                "uuid": null,
+                "id": null,
+                "node_id": null,
+                "position": {
+                    "x": 1.0,
+                    "y": 0.5
+                },
+                "data": {
+                    "interface_type": "Outpower2",
+                    "is_connected": false,
+                    "connection_type": "outlet",
+                    "material_type": "power",
+                    "is_visible": true,
+                    "allow_not_display": false,
+                    "name": "Outpower2",
+                    "name_cn": "输出功率2",
+                    "tpis_extra_info": null
+                }
+            },
+            {
+                "uuid": null,
+                "id": null,
+                "node_id": null,
+                "position": {
+                    "x": 0.0,
+                    "y": 0.875
+                },
+                "data": {
+                    "interface_type": "AdmissionGas",
+                    "is_connected": false,
+                    "connection_type": "inlet",
+                    "material_type": "gas",
+                    "is_visible": true,
+                    "allow_not_display": true,
+                    "name": "AdmissionGas",
+                    "name_cn": "补气点",
+                    "tpis_extra_info": null
+                }
+            }
+        ],
+        "tpis_extra_info": null
+    },
+    "icon": "/PNG/GasTurbin.png",
+    "group": "烟气/空气设备"
+}

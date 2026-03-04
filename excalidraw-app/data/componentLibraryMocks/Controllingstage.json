@@ -1,0 +1,111 @@
+{
+    "uuid": null,
+    "id": null,
+    "type": "component",
+    "position": null,
+    "measured": {
+        "width": 40.0,
+        "height": 80.0
+    },
+    "style": {
+        "width": "40px",
+        "height": "80px"
+    },
+    "data": {
+        "image": "/PNG/Controllingstage.png",
+        "component_type": "Controllingstage",
+        "operation_mode": "design_mode",
+        "supported_operation_modes": [
+            "design_mode",
+            "interpolation_mode",
+            "calculation_mode"
+        ],
+        "name": "Controllingstage",
+        "name_cn": "调节级",
+        "anchors": [
+            {
+                "uuid": null,
+                "id": null,
+                "node_id": null,
+                "position": {
+                    "x": 0.0,
+                    "y": 0.125
+                },
+                "data": {
+                    "interface_type": "InSteam",
+                    "is_connected": false,
+                    "connection_type": "inlet",
+                    "material_type": "water",
+                    "is_visible": true,
+                    "allow_not_display": false,
+                    "name": "InSteam",
+                    "name_cn": "进口蒸汽",
+                    "tpis_extra_info": null
+                }
+            },
+            {
+                "uuid": null,
+                "id": null,
+                "node_id": null,
+                "position": {
+                    "x": 1.0,
+                    "y": 0.125
+                },
+                "data": {
+                    "interface_type": "OutSteam",
+                    "is_connected": false,
+                    "connection_type": "outlet",
+                    "material_type": "water",
+                    "is_visible": true,
+                    "allow_not_display": false,
+                    "name": "OutSteam",
+                    "name_cn": "出口蒸汽",
+                    "tpis_extra_info": null
+                }
+            },
+            {
+                "uuid": null,
+                "id": null,
+                "node_id": null,
+                "position": {
+                    "x": 0.0,
+                    "y": 0.5
+                },
+                "data": {
+                    "interface_type": "InPower",
+                    "is_connected": false,
+                    "connection_type": "inlet",
+                    "material_type": "power",
+                    "is_visible": true,
+                    "allow_not_display": true,
+                    "name": "InPower",
+                    "name_cn": "输入功率",
+                    "tpis_extra_info": null
+                }
+            },
+            {
+                "uuid": null,
+                "id": null,
+                "node_id": null,
+                "position": {
+                    "x": 1.0,
+                    "y": 0.5
+                },
+                "data": {
+                    "interface_type": "Outpower",
+                    "is_connected": false,
+                    "connection_type": "outlet",
+                    "material_type": "power",
+                    "is_visible": true,
+                    "allow_not_display": true,
+                    "name": "Outpower",
+                    "name_cn": "输出功率",
+                    "tpis_extra_info": null
+                }
+            }
+        ],
+        "tpis_extra_info": null
+    },
+    "icon": "/PNG/Controllingstage.png",
+    "group": "汽水设备"
+}

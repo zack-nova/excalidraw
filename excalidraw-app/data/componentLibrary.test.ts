@@ -2,8 +2,13 @@ import { MIME_TYPES } from "@excalidraw/common";
 
 import { describe, expect, it } from "vitest";
 
-import { buildLibraryItemsFromComponentSources } from "./componentLibrary";
+import { getBindableElementAnchorPoints } from "@excalidraw/element";
+import type { ExcalidrawBindableElement } from "@excalidraw/element/types";
 
+import {
+  buildLibraryItemsFromComponentSources,
+  mockComponentLibrarySources,
+} from "./componentLibrary";
 import type { ComponentLibrarySource } from "./componentLibrary";
 
 const PNG_BYTES = Uint8Array.from([
@@ -14,6 +19,28 @@ const PNG_BYTES = Uint8Array.from([
 ]);
 
 describe("buildLibraryItemsFromComponentSources()", () => {
+  it("includes all backend component mocks", () => {
+    const source = mockComponentLibrarySources[0];
+
+    expect(source?.sourceName).toBe("西交大素材库");
+    expect(source?.items).toHaveLength(63);
+    expect(
+      source?.items.some(
+        (component) => component.data.component_type === "CoalSource",
+      ),
+    ).toBe(true);
+    expect(
+      source?.items.some(
+        (component) => component.data.component_type === "WaterValve",
+      ),
+    ).toBe(true);
+    expect(
+      source?.items.some(
+        (component) => component.data.component_type === "GasTurbin",
+      ),
+    ).toBe(true);
+  });
+
   it("maps component source data into grouped image library items", async () => {
     const sources: ComponentLibrarySource[] = [
       {
@@ -113,6 +140,7 @@ describe("buildLibraryItemsFromComponentSources()", () => {
         }),
       }),
     );
+    expect(firstElement.customData?.anchorPoints).toBeUndefined();
 
     expect(libraryItems[0].files).toEqual(
       expect.objectContaining({
@@ -122,6 +150,100 @@ describe("buildLibraryItemsFromComponentSources()", () => {
         }),
       }),
     );
+  });
+
+  it("maps component anchor positions to image anchor points", async () => {
+    const sources: ComponentLibrarySource[] = [
+      {
+        sourceId: "xjtu-library",
+        sourceName: "西交大素材库",
+        items: [
+          {
+            uuid: null,
+            id: null,
+            type: "component",
+            position: null,
+            measured: { width: 40, height: 40 },
+            style: { width: "40px", height: "40px" },
+            data: {
+              image: "/PNG/WaterValve.png",
+              component_type: "WaterValve",
+              operation_mode: "design_mode",
+              supported_operation_modes: ["design_mode", "interpolation_mode"],
+              name: "WaterValve",
+              name_cn: "节流阀",
+              anchors: [
+                {
+                  uuid: null,
+                  id: null,
+                  node_id: null,
+                  position: {
+                    x: 0,
+                    y: 0.75,
+                  },
+                  data: {
+                    interface_type: "InSteam",
+                    is_connected: false,
+                    connection_type: "inlet",
+                    material_type: "water",
+                    is_visible: true,
+                    allow_not_display: false,
+                    name: "InSteam",
+                    name_cn: "阀门入口",
+                    tpis_extra_info: null,
+                  },
+                },
+                {
+                  uuid: null,
+                  id: null,
+                  node_id: null,
+                  position: {
+                    x: 1,
+                    y: 0.75,
+                  },
+                  data: {
+                    interface_type: "OutSteam",
+                    is_connected: false,
+                    connection_type: "outlet",
+                    material_type: "water",
+                    is_visible: true,
+                    allow_not_display: false,
+                    name: "OutSteam",
+                    name_cn: "阀门出口",
+                    tpis_extra_info: null,
+                  },
+                },
+              ],
+              tpis_extra_info: null,
+            },
+            icon: "/PNG/WaterValve.png",
+            group: "汽水连接件",
+          },
+        ],
+      },
+    ];
+
+    const libraryItems = await buildLibraryItemsFromComponentSources(sources, {
+      loadAsset: async (assetPath) =>
+        new File([PNG_BYTES], assetPath.split("/").at(-1) || "component.png", {
+          type: MIME_TYPES.png,
+        }),
+    });
+
+    const firstElement = libraryItems[0].elements[0];
+    expect(firstElement.type).toBe("image");
+    if (firstElement.type !== "image") {
+      throw new Error("Expected an image element");
+    }
+
+    expect(
+      getBindableElementAnchorPoints(
+        firstElement as ExcalidrawBindableElement,
+      ),
+    ).toEqual([
+      [0, 0.75],
+      [1, 0.75],
+    ]);
   });
 
   it("creates stable library item identities for the same component source", async () => {

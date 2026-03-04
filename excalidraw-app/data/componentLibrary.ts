@@ -6,6 +6,8 @@ import {
   getMimeType,
 } from "@excalidraw/excalidraw/data/blob";
 
+import { mockComponentLibraryItems } from "./componentLibraryMockItems";
+
 import type {
   BinaryFileData,
   LibraryItem,
@@ -117,6 +119,21 @@ const getComponentDimensions = (component: ComponentListItem) => ({
   height: component.measured?.height || DEFAULT_COMPONENT_HEIGHT,
 });
 
+const getComponentAnchorPoints = (component: ComponentListItem) =>
+  (component.data.anchors || []).flatMap((anchor) => {
+    const x = anchor.position?.x;
+    const y = anchor.position?.y;
+
+    return (
+      typeof x === "number" &&
+      Number.isFinite(x) &&
+      typeof y === "number" &&
+      Number.isFinite(y)
+    )
+      ? ([[x, y]] as [number, number][])
+      : [];
+  });
+
 const buildSearchKeywords = (
   component: ComponentListItem,
   source: ComponentLibrarySource,
@@ -169,6 +186,7 @@ export const buildLibraryItemsFromComponentSources = async (
         const fileId = await generateIdFromFile(assetFile);
         const dataURL = await getDataURL(assetFile);
         const { width, height } = getComponentDimensions(component);
+        const anchorPoints = getComponentAnchorPoints(component);
         const name = getComponentDisplayName(component);
         const groupName = component.group?.trim() || DEFAULT_GROUP;
         const identityKey = getComponentIdentityKey(source, component, index);
@@ -183,6 +201,7 @@ export const buildLibraryItemsFromComponentSources = async (
             fileId,
             customData: {
               component,
+              ...(anchorPoints.length > 0 ? { anchorPoints } : {}),
             },
           }),
           id: `component-element:${encodeURIComponent(identityKey)}`,
@@ -223,121 +242,6 @@ export const mockComponentLibrarySources: readonly ComponentLibrarySource[] = [
   {
     sourceId: "xjtu-library",
     sourceName: "西交大素材库",
-    items: [
-      {
-        uuid: null,
-        id: null,
-        type: "component",
-        position: null,
-        measured: {
-          width: 40,
-          height: 40,
-        },
-        style: {
-          width: "40px",
-          height: "40px",
-        },
-        data: {
-          image: "/PNG/CoalSource.png",
-          component_type: "CoalSource",
-          operation_mode: "design_mode",
-          supported_operation_modes: ["design_mode"],
-          name: "CoalSource",
-          name_cn: "煤/燃料",
-          anchors: [
-            {
-              uuid: null,
-              id: null,
-              node_id: null,
-              position: {
-                x: 0.5,
-                y: 1,
-              },
-              data: {
-                interface_type: "Outlet",
-                is_connected: false,
-                connection_type: "outlet",
-                material_type: "coal",
-                is_visible: true,
-                allow_not_display: false,
-                name: "Outlet",
-                name_cn: "煤/燃料",
-                tpis_extra_info: null,
-              },
-            },
-          ],
-          tpis_extra_info: null,
-        },
-        icon: "/PNG/CoalSource.png",
-        group: "燃料设备",
-      },
-      {
-        uuid: null,
-        id: null,
-        type: "component",
-        position: null,
-        measured: {
-          width: 40,
-          height: 40,
-        },
-        style: {
-          width: "40px",
-          height: "40px",
-        },
-        data: {
-          image: "/PNG/WaterValve.png",
-          component_type: "WaterValve",
-          operation_mode: "design_mode",
-          supported_operation_modes: ["design_mode", "interpolation_mode"],
-          name: "WaterValve",
-          name_cn: "节流阀",
-          anchors: [
-            {
-              uuid: null,
-              id: null,
-              node_id: null,
-              position: {
-                x: 0,
-                y: 0.75,
-              },
-              data: {
-                interface_type: "InSteam",
-                is_connected: false,
-                connection_type: "inlet",
-                material_type: "water",
-                is_visible: true,
-                allow_not_display: false,
-                name: "InSteam",
-                name_cn: "阀门入口",
-                tpis_extra_info: null,
-              },
-            },
-            {
-              uuid: null,
-              id: null,
-              node_id: null,
-              position: {
-                x: 1,
-                y: 0.75,
-              },
-              data: {
-                interface_type: "OutSteam",
-                is_connected: false,
-                connection_type: "outlet",
-                material_type: "water",
-                is_visible: true,
-                allow_not_display: false,
-                name: "OutSteam",
-                name_cn: "阀门出口",
-                tpis_extra_info: null,
-              },
-            },
-          ],
-          tpis_extra_info: null,
-        },
-        icon: "/PNG/WaterValve.png",
-        group: "汽水连接件",
-      },
-    ],
+    items: [...mockComponentLibraryItems],
   },
 ];

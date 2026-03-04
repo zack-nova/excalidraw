@@ -1,0 +1,361 @@
+{
+    "uuid": null,
+    "id": null,
+    "type": "component",
+    "position": null,
+    "measured": {
+        "width": 200.0,
+        "height": 200.0
+    },
+    "style": {
+        "width": "200px",
+        "height": "200px"
+    },
+    "data": {
+        "image": "/PNG/Boiler.png",
+        "component_type": "Boiler",
+        "operation_mode": "design_mode",
+        "supported_operation_modes": ["design_mode", "interpolation_mode"],
+        "name": "Boiler",
+        "name_cn": "锅炉",
+        "anchors": [
+            {
+                "uuid": null,
+                "id": null,
+                "node_id": null,
+                "position": {
+                    "x": 0.0,
+                    "y": 0.2
+                },
+                "data": {
+                    "interface_type": "Fuel",
+                    "is_connected": false,
+                    "connection_type": "inlet",
+                    "material_type": "coal",
+                    "is_visible": true,
+                    "allow_not_display": false,
+                    "name": "Fuel",
+                    "name_cn": "燃料",
+                    "tpis_extra_info": null
+                }
+            },
+            {
+                "uuid": null,
+                "id": null,
+                "node_id": null,
+                "position": {
+                    "x": 0.0,
+                    "y": 0.4
+                },
+                "data": {
+                    "interface_type": "BurnAir",
+                    "is_connected": false,
+                    "connection_type": "inlet",
+                    "material_type": "gas",
+                    "is_visible": true,
+                    "allow_not_display": false,
+                    "name": "BurnAir",
+                    "name_cn": "空气",
+                    "tpis_extra_info": null
+                }
+            },
+            {
+                "uuid": null,
+                "id": null,
+                "node_id": null,
+                "position": null,
+                "data": {
+                    "interface_type": "Air24",
+                    "is_connected": false,
+                    "connection_type": "outlet",
+                    "material_type": "gas",
+                    "is_visible": false,
+                    "allow_not_display": false,
+                    "name": "Air24",
+                    "name_cn": null,
+                    "tpis_extra_info": null
+                }
+            },
+            {
+                "uuid": null,
+                "id": null,
+                "node_id": null,
+                "position": {
+                    "x": 1.0,
+                    "y": 0.0
+                },
+                "data": {
+                    "interface_type": "FlueGas",
+                    "is_connected": false,
+                    "connection_type": "outlet",
+                    "material_type": "gas",
+                    "is_visible": true,
+                    "allow_not_display": false,
+                    "name": "FlueGas",
+                    "name_cn": "烟气",
+                    "tpis_extra_info": null
+                }
+            },
+            {
+                "uuid": null,
+                "id": null,
+                "node_id": null,
+                "position": null,
+                "data": {
+                    "interface_type": "NGas24",
+                    "is_connected": false,
+                    "connection_type": "inlet",
+                    "material_type": "gas",
+                    "is_visible": false,
+                    "allow_not_display": false,
+                    "name": "NGas24",
+                    "name_cn": null,
+                    "tpis_extra_info": null
+                }
+            },
+            {
+                "uuid": null,
+                "id": null,
+                "node_id": null,
+                "position": {
+                    "x": 0.0,
+                    "y": 0.8
+                },
+                "data": {
+                    "interface_type": "FeedWater",
+                    "is_connected": false,
+                    "connection_type": "inlet",
+                    "material_type": "water",
+                    "is_visible": true,
+                    "allow_not_display": false,
+                    "name": "FeedWater",
+                    "name_cn": "给水",
+                    "tpis_extra_info": null
+                }
+            },
+            {
+                "uuid": null,
+                "id": null,
+                "node_id": null,
+                "position": {
+                    "x": 1.0,
+                    "y": 0.8
+                },
+                "data": {
+                    "interface_type": "MainSteam",
+                    "is_connected": false,
+                    "connection_type": "outlet",
+                    "material_type": "water",
+                    "is_visible": true,
+                    "allow_not_display": false,
+                    "name": "MainSteam",
+                    "name_cn": "主蒸汽",
+                    "tpis_extra_info": null
+                }
+            },
+            {
+                "uuid": null,
+                "id": null,
+                "node_id": null,
+                "position": {
+                    "x": 0.6,
+                    "y": 1.0
+                },
+                "data": {
+                    "interface_type": "DrainWater",
+                    "is_connected": false,
+                    "connection_type": "outlet",
+                    "material_type": "water",
+                    "is_visible": true,
+                    "allow_not_display": true,
+                    "name": "DrainWater",
+                    "name_cn": "排污",
+                    "tpis_extra_info": null
+                }
+            },
+            {
+                "uuid": null,
+                "id": null,
+                "node_id": null,
+                "position": {
+                    "x": 1.0,
+                    "y": 0.6
+                },
+                "data": {
+                    "interface_type": "ReSteamIn",
+                    "is_connected": false,
+                    "connection_type": "inlet",
+                    "material_type": "water",
+                    "is_visible": true,
+                    "allow_not_display": true,
+                    "name": "ReSteamIn",
+                    "name_cn": "一次再热蒸汽入口",
+                    "tpis_extra_info": null
+                }
+            },
+            {
+                "uuid": null,
+                "id": null,
+                "node_id": null,
+                "position": {
+                    "x": 1.0,
+                    "y": 0.45
+                },
+                "data": {
+                    "interface_type": "ReSteamOut",
+                    "is_connected": false,
+                    "connection_type": "outlet",
+                    "material_type": "water",
+                    "is_visible": true,
+                    "allow_not_display": true,
+                    "name": "ReSteamOut",
+                    "name_cn": "一次再热蒸汽出口",
+                    "tpis_extra_info": null
+                }
+            },
+            {
+                "uuid": null,
+                "id": null,
+                "node_id": null,
+                "position": {
+                    "x": 0.85,
+                    "y": 0.45
+                },
+                "data": {
+                    "interface_type": "ReSteamExtra",
+                    "is_connected": false,
+                    "connection_type": "outlet",
+                    "material_type": "water",
+                    "is_visible": true,
+                    "allow_not_display": true,
+                    "name": "ReSteamExtra",
+                    "name_cn": "一次再热抽汽出口",
+                    "tpis_extra_info": null
+                }
+            },
+            {
+                "uuid": null,
+                "id": null,
+                "node_id": null,
+                "position": {
+                    "x": 1.0,
+                    "y": 0.25
+                },
+                "data": {
+                    "interface_type": "ReSteamIn2",
+                    "is_connected": false,
+                    "connection_type": "inlet",
+                    "material_type": "water",
+                    "is_visible": true,
+                    "allow_not_display": true,
+                    "name": "ReSteamIn2",
+                    "name_cn": "二次再热蒸汽入口",
+                    "tpis_extra_info": null
+                }
+            },
+            {
+                "uuid": null,
+                "id": null,
+                "node_id": null,
+                "position": {
+                    "x": 1.0,
+                    "y": 0.1
+                },
+                "data": {
+                    "interface_type": "ReSteamOut2",
+                    "is_connected": false,
+                    "connection_type": "outlet",
+                    "material_type": "water",
+                    "is_visible": true,
+                    "allow_not_display": true,
+                    "name": "ReSteamOut2",
+                    "name_cn": "二次再热蒸汽出口",
+                    "tpis_extra_info": null
+                }
+            },
+            {
+                "uuid": null,
+                "id": null,
+                "node_id": null,
+                "position": {
+                    "x": 0.8,
+                    "y": 0.0
+                },
+                "data": {
+                    "interface_type": "GRJWS",
+                    "is_connected": false,
+                    "connection_type": "inlet",
+                    "material_type": "water",
+                    "is_visible": true,
+                    "allow_not_display": true,
+                    "name": "GRJWS",
+                    "name_cn": "过热器减温水",
+                    "tpis_extra_info": null
+                }
+            },
+            {
+                "uuid": null,
+                "id": null,
+                "node_id": null,
+                "position": {
+                    "x": 0.7,
+                    "y": 0.0
+                },
+                "data": {
+                    "interface_type": "ZRJWS1",
+                    "is_connected": false,
+                    "connection_type": "inlet",
+                    "material_type": "water",
+                    "is_visible": true,
+                    "allow_not_display": true,
+                    "name": "ZRJWS1",
+                    "name_cn": "一次再热减温水",
+                    "tpis_extra_info": null
+                }
+            },
+            {
+                "uuid": null,
+                "id": null,
+                "node_id": null,
+                "position": {
+                    "x": 0.6,
+                    "y": 0.0
+                },
+                "data": {
+                    "interface_type": "ZRJWS2",
+                    "is_connected": false,
+                    "connection_type": "inlet",
+                    "material_type": "water",
+                    "is_visible": true,
+                    "allow_not_display": true,
+                    "name": "ZRJWS2",
+                    "name_cn": "二次再热减温水",
+                    "tpis_extra_info": null
+                }
+            },
+            {
+                "uuid": null,
+                "id": null,
+                "node_id": null,
+                "position": {
+                    "x": 0.4,
+                    "y": 1.0
+                },
+                "data": {
+                    "interface_type": "BottomAsh",
+                    "is_connected": false,
+                    "connection_type": "outlet",
+                    "material_type": "ash",
+                    "is_visible": true,
+                    "allow_not_display": true,
+                    "name": "BottomAsh",
+                    "name_cn": "渣",
+                    "tpis_extra_info": null
+                }
+            }
+        ],
+        "tpis_extra_info": null
+    },
+    "icon": "/PNG/Boiler.png",
+    "group": "燃料设备"
+}
