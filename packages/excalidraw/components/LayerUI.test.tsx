@@ -76,6 +76,79 @@ describe("LayerUI desktop layout", () => {
     });
   });
 
+  it("renders host top-left UI before the lock button, toolbar-end UI after extra tools, and host top-right UI before the main menu on desktop", async () => {
+    const { container } = await render(
+      <Excalidraw
+        renderTopLeftUI={(isMobile) =>
+          isMobile ? null : (
+            <button type="button" data-testid="host-top-left">
+              Host top left
+            </button>
+          )
+        }
+        renderToolbarEndUI={(isMobile) =>
+          isMobile ? null : (
+            <button type="button" data-testid="host-toolbar-end">
+              Host toolbar end
+            </button>
+          )
+        }
+        renderTopRightUI={(isMobile) =>
+          isMobile ? null : (
+            <button type="button" data-testid="host-top-right">
+              Host top right
+            </button>
+          )
+        }
+      />,
+    );
+
+    await withExcalidrawDimensions({ width: 1920, height: 1080 }, async () => {
+      const topMenu = container.querySelector(".App-menu_top") as HTMLElement;
+      const leftPanel = topMenu.firstElementChild as HTMLElement;
+      const rightPanel = topMenu.lastElementChild as HTMLElement;
+      const toolbar = topMenu.querySelector(".App-toolbar") as HTMLElement;
+      const hostTopLeft = toolbar.querySelector(
+        "[data-testid='host-top-left']",
+      ) as HTMLElement | null;
+      const extraToolsTrigger = toolbar.querySelector(
+        ".App-toolbar__extra-tools-trigger",
+      ) as HTMLElement | null;
+      const hostToolbarEnd = toolbar.querySelector(
+        "[data-testid='host-toolbar-end']",
+      ) as HTMLElement | null;
+      const lockButton = toolbar.querySelector(
+        "[data-testid='toolbar-lock']",
+      ) as HTMLElement | null;
+      const mainMenuTrigger = rightPanel.querySelector(
+        "[data-testid='main-menu-trigger']",
+      ) as HTMLElement | null;
+      const hostTopRight = rightPanel.querySelector(
+        "[data-testid='host-top-right']",
+      ) as HTMLElement | null;
+
+      expect(hostTopLeft).not.toBeNull();
+      expect(extraToolsTrigger).not.toBeNull();
+      expect(hostToolbarEnd).not.toBeNull();
+      expect(lockButton).not.toBeNull();
+      expect(mainMenuTrigger).not.toBeNull();
+      expect(hostTopRight).not.toBeNull();
+
+      expect(
+        hostTopLeft!.compareDocumentPosition(lockButton!) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).not.toBe(0);
+      expect(
+        extraToolsTrigger!.compareDocumentPosition(hostToolbarEnd!) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).not.toBe(0);
+      expect(
+        hostTopRight!.compareDocumentPosition(mainMenuTrigger!) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).not.toBe(0);
+    });
+  });
+
   it("renders a five-tab card above the properties panel and defaults to the properties tab", async () => {
     const { container } = await render(<Excalidraw />);
 

@@ -90,6 +90,7 @@ interface LayerUIProps {
   showExitZenModeBtn: boolean;
   langCode: Language["code"];
   renderTopLeftUI?: ExcalidrawProps["renderTopLeftUI"];
+  renderToolbarEndUI?: ExcalidrawProps["renderToolbarEndUI"];
   renderTopRightUI?: ExcalidrawProps["renderTopRightUI"];
   renderCustomStats?: ExcalidrawProps["renderCustomStats"];
   UIOptions: AppProps["UIOptions"];
@@ -149,6 +150,7 @@ const LayerUI = ({
   onPenModeToggle,
   showExitZenModeBtn,
   renderTopLeftUI,
+  renderToolbarEndUI,
   renderTopRightUI,
   renderCustomStats,
   UIOptions,
@@ -347,6 +349,7 @@ const LayerUI = ({
                               title={t("toolBar.penMode")}
                               penDetected={appState.penDetected}
                             />
+                            {renderTopLeftUI?.(false, appState)}
                             <LockButton
                               checked={appState.activeTool.locked}
                               onChange={onLockToggle}
@@ -361,6 +364,7 @@ const LayerUI = ({
                               UIOptions={UIOptions}
                               app={app}
                             />
+                            {renderToolbarEndUI?.(false, appState)}
                           </Stack.Row>
                         </Island>
                         {isCollaborating && (

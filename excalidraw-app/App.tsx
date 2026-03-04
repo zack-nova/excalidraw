@@ -155,6 +155,10 @@ import "./index.scss";
 
 import { ExcalidrawPlusPromoBanner } from "./components/ExcalidrawPlusPromoBanner";
 import { AppSidebar } from "./components/AppSidebar";
+import {
+  EngineeringCalculateTrigger,
+  EngineeringWorkspaceModeTrigger,
+} from "./components/EngineeringWorkspaceControls";
 
 import type { CollabAPI } from "./collab/Collab";
 
@@ -999,6 +1003,20 @@ const ExcalidrawWrapper = () => {
         handleKeyboardGlobally={true}
         autoFocus={true}
         theme={editorTheme}
+        renderTopLeftUI={(isMobile) => {
+          if (isMobile) {
+            return null;
+          }
+
+          return <EngineeringWorkspaceModeTrigger />;
+        }}
+        renderToolbarEndUI={(isMobile) => {
+          if (isMobile) {
+            return null;
+          }
+
+          return <EngineeringCalculateTrigger />;
+        }}
         renderTopRightUI={(isMobile) => {
           if (isMobile || !collabAPI || isCollabDisabled) {
             return null;

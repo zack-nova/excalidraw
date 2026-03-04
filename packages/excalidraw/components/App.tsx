@@ -2027,7 +2027,12 @@ class App extends React.Component<AppProps, AppState> {
 
   public render() {
     const selectedElements = this.scene.getSelectedElements(this.state);
-    const { renderTopRightUI, renderTopLeftUI, renderCustomStats } = this.props;
+    const {
+      renderTopRightUI,
+      renderTopLeftUI,
+      renderToolbarEndUI,
+      renderCustomStats,
+    } = this.props;
 
     const sceneNonce = this.scene.getSceneNonce();
     const { elementsMap, visibleElements } =
@@ -2115,6 +2120,7 @@ class App extends React.Component<AppProps, AppState> {
                           onHandToolToggle={this.onHandToolToggle}
                           langCode={getLanguage().code}
                           renderTopLeftUI={renderTopLeftUI}
+                          renderToolbarEndUI={renderToolbarEndUI}
                           renderTopRightUI={renderTopRightUI}
                           renderCustomStats={renderCustomStats}
                           showExitZenModeBtn={

@@ -1,4 +1,6 @@
 import fs from "fs";
+import path from "path";
+import { pathToFileURL } from "url";
 
 // vitest.setup.ts
 import "vitest-canvas-mock";
@@ -67,6 +69,42 @@ Object.defineProperty(document, "fonts", {
 Object.defineProperty(window, "EXCALIDRAW_ASSET_PATH", {
   value: `file://${__dirname}/`,
 });
+
+const originalFetch = globalThis.fetch.bind(globalThis);
+const publicDirUrl = pathToFileURL(path.resolve(__dirname, "public") + path.sep);
+
+const getContentType = (assetPath: string) => {
+  if (assetPath.endsWith(".png")) {
+    return "image/png";
+  }
+
+  if (assetPath.endsWith(".svg")) {
+    return "image/svg+xml";
+  }
+
+  return "application/octet-stream";
+};
+
+globalThis.fetch = (async (input, init) => {
+  if (typeof input === "string" && input.startsWith("/")) {
+    const assetUrl = new URL(input.slice(1), publicDirUrl);
+
+    try {
+      const content = await fs.promises.readFile(assetUrl);
+
+      return new Response(
+        new Blob([content], {
+          type: getContentType(input),
+        }),
+        { status: 200 },
+      );
+    } catch {
+      return new Response(null, { status: 404 });
+    }
+  }
+
+  return originalFetch(input, init);
+}) as typeof fetch;
 
 // mock the font fetch only, so that everything else, as font subsetting, can run inside of the (snapshot) tests
 vi.mock(

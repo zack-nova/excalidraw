@@ -594,6 +594,10 @@ export interface ExcalidrawProps {
     isMobile: boolean,
     appState: UIAppState,
   ) => JSX.Element | null;
+  renderToolbarEndUI?: (
+    isMobile: boolean,
+    appState: UIAppState,
+  ) => JSX.Element | null;
   renderTopRightUI?: (
     isMobile: boolean,
     appState: UIAppState,
