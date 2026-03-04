@@ -4,8 +4,8 @@
     "type": "component",
     "position": null,
     "measured": {
-        "width": 60.0,
-        "height": 20.0
+        "width": 60,
+        "height": 20
     },
     "style": {
         "width": "60px",
@@ -26,7 +26,7 @@
                 "id": null,
                 "node_id": null,
                 "position": {
-                    "x": 0.0,
+                    "x": 0,
                     "y": 0.5
                 },
                 "data": {
@@ -47,7 +47,7 @@
                 "node_id": null,
                 "position": {
                     "x": 0.16666666666666666,
-                    "y": 0.0
+                    "y": 0
                 },
                 "data": {
                     "interface_type": "N1",
@@ -67,7 +67,7 @@
                 "node_id": null,
                 "position": {
                     "x": 0.6666666666666666,
-                    "y": 0.0
+                    "y": 0
                 },
                 "data": {
                     "interface_type": "N2",
@@ -86,7 +86,7 @@
                 "id": null,
                 "node_id": null,
                 "position": {
-                    "x": 1.0,
+                    "x": 1,
                     "y": 0.5
                 },
                 "data": {
@@ -107,7 +107,7 @@
                 "node_id": null,
                 "position": {
                     "x": 0.6666666666666666,
-                    "y": 1.0
+                    "y": 1
                 },
                 "data": {
                     "interface_type": "N4",
@@ -127,7 +127,7 @@
                 "node_id": null,
                 "position": {
                     "x": 0.16666666666666666,
-                    "y": 1.0
+                    "y": 1
                 },
                 "data": {
                     "interface_type": "N5",
@@ -145,5 +145,6 @@
         "tpis_extra_info": null
     },
     "icon": "/PNG/SteamHeader.png",
-    "group": "汽水连接件"
+    "group": "汽水连接件",
+    "isEngineeringComponent": true
 }

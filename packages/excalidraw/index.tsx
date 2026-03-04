@@ -31,6 +31,8 @@ const ExcalidrawBase = (props: ExcalidrawProps) => {
     renderTopLeftUI,
     renderToolbarEndUI,
     renderTopRightUI,
+    selectedShapeActionsLayout,
+    renderSelectedShapeActionsFooter,
     langCode = defaultLang.code,
     viewModeEnabled,
     zenModeEnabled,
@@ -125,6 +127,8 @@ const ExcalidrawBase = (props: ExcalidrawProps) => {
           renderTopLeftUI={renderTopLeftUI}
           renderToolbarEndUI={renderToolbarEndUI}
           renderTopRightUI={renderTopRightUI}
+          selectedShapeActionsLayout={selectedShapeActionsLayout}
+          renderSelectedShapeActionsFooter={renderSelectedShapeActionsFooter}
           langCode={langCode}
           viewModeEnabled={viewModeEnabled}
           zenModeEnabled={zenModeEnabled}

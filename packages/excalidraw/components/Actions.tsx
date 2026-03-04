@@ -1,5 +1,5 @@
 import clsx from "clsx";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Popover } from "radix-ui";
 
 import {
@@ -141,6 +141,7 @@ type PropertiesSectionTab =
   | "output"
   | "anchors"
   | "data"
+  | "placeholder"
   | "properties";
 
 type ComponentAnchorMetadata = {
@@ -612,11 +613,15 @@ export const SelectedShapeActions = ({
   elementsMap,
   renderAction,
   app,
+  layout = "tabbed",
+  footer = null,
 }: {
   appState: UIAppState;
   elementsMap: NonDeletedElementsMap | NonDeletedSceneElementsMap;
   renderAction: ActionManager["renderAction"];
   app: AppClassProperties;
+  layout?: "tabbed" | "properties-only" | "data-tabs";
+  footer?: ReactNode;
 }) => {
   const targetElements = getTargetElements(elementsMap, appState);
   const selectedElementWithComponent =
@@ -646,21 +651,49 @@ export const SelectedShapeActions = ({
     .map((element) => element.id)
     .join(",")}`;
   const [activeTab, setActiveTab] =
-    useState<PropertiesSectionTab>("properties");
+    useState<PropertiesSectionTab>(
+      layout === "data-tabs" ? "data" : "properties",
+    );
   const tabs: Array<{
     value: PropertiesSectionTab;
     label: string;
-  }> = [
-    { value: "input", label: t("labels.propertiesTabs.input") },
-    { value: "output", label: t("labels.propertiesTabs.output") },
-    { value: "anchors", label: t("labels.propertiesTabs.anchors") },
-    { value: "data", label: t("labels.propertiesTabs.data") },
-    { value: "properties", label: t("labels.propertiesTabs.properties") },
-  ];
+  }> =
+    layout === "data-tabs"
+      ? [
+          { value: "input", label: t("labels.propertiesTabs.input") },
+          { value: "output", label: t("labels.propertiesTabs.output") },
+          { value: "anchors", label: t("labels.propertiesTabs.anchors") },
+          { value: "data", label: t("labels.propertiesTabs.data") },
+          {
+            value: "placeholder",
+            label: t("labels.propertiesTabs.placeholder"),
+          },
+        ]
+      : [
+          { value: "input", label: t("labels.propertiesTabs.input") },
+          { value: "output", label: t("labels.propertiesTabs.output") },
+          { value: "anchors", label: t("labels.propertiesTabs.anchors") },
+          { value: "data", label: t("labels.propertiesTabs.data") },
+          { value: "properties", label: t("labels.propertiesTabs.properties") },
+        ];
 
   useEffect(() => {
-    setActiveTab("properties");
-  }, [tabsResetKey]);
+    setActiveTab(layout === "data-tabs" ? "data" : "properties");
+  }, [layout, tabsResetKey]);
+
+  if (layout === "properties-only") {
+    return (
+      <div className="selected-shape-actions">
+        <SelectedShapeActionsPropertiesPanel
+          app={app}
+          appState={appState}
+          elementsMap={elementsMap}
+          renderAction={renderAction}
+        />
+        {footer}
+      </div>
+    );
+  }
 
   return (
     <div className="selected-shape-actions">
@@ -740,6 +773,22 @@ export const SelectedShapeActions = ({
           componentName={componentName}
           dataEntries={dataEntries}
         />
+      </div>
+      <div
+        aria-labelledby="selected-shape-actions-tab-placeholder"
+        className="selected-shape-actions-panel"
+        data-state={activeTab === "placeholder" ? "active" : "inactive"}
+        data-testid="selected-shape-actions-placeholder-panel"
+        hidden={activeTab !== "placeholder"}
+        id="selected-shape-actions-panel-placeholder"
+        role="tabpanel"
+        tabIndex={0}
+      >
+        <div className="selected-shape-actions-data-card">
+          <div className="selected-shape-actions-placeholder">
+            {t("labels.propertiesTabs.emptyPlaceholder")}
+          </div>
+        </div>
       </div>
       <div
         aria-labelledby="selected-shape-actions-tab-properties"

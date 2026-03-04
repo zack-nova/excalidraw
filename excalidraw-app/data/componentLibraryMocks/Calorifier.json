@@ -4,8 +4,8 @@
     "type": "component",
     "position": null,
     "measured": {
-        "width": 80.0,
-        "height": 80.0
+        "width": 80,
+        "height": 80
     },
     "style": {
         "width": "80px",
@@ -28,7 +28,7 @@
                 "node_id": null,
                 "position": {
                     "x": 0.75,
-                    "y": 1.0
+                    "y": 1
                 },
                 "data": {
                     "interface_type": "FeedWater",
@@ -48,7 +48,7 @@
                 "node_id": null,
                 "position": {
                     "x": 0.75,
-                    "y": 0.0
+                    "y": 0
                 },
                 "data": {
                     "interface_type": "MainSteam",
@@ -67,7 +67,7 @@
                 "id": null,
                 "node_id": null,
                 "position": {
-                    "x": 1.0,
+                    "x": 1,
                     "y": 0.75
                 },
                 "data": {
@@ -88,7 +88,7 @@
                 "node_id": null,
                 "position": {
                     "x": 0.5,
-                    "y": 1.0
+                    "y": 1
                 },
                 "data": {
                     "interface_type": "ReSteamIn",
@@ -108,7 +108,7 @@
                 "node_id": null,
                 "position": {
                     "x": 0.5,
-                    "y": 0.0
+                    "y": 0
                 },
                 "data": {
                     "interface_type": "ReSteamOut",
@@ -128,7 +128,7 @@
                 "node_id": null,
                 "position": {
                     "x": 0.25,
-                    "y": 1.0
+                    "y": 1
                 },
                 "data": {
                     "interface_type": "ReSteamIn2",
@@ -148,7 +148,7 @@
                 "node_id": null,
                 "position": {
                     "x": 0.25,
-                    "y": 0.0
+                    "y": 0
                 },
                 "data": {
                     "interface_type": "ReSteamOut2",
@@ -167,7 +167,7 @@
                 "id": null,
                 "node_id": null,
                 "position": {
-                    "x": 0.0,
+                    "x": 0,
                     "y": 0.375
                 },
                 "data": {
@@ -187,7 +187,7 @@
                 "id": null,
                 "node_id": null,
                 "position": {
-                    "x": 0.0,
+                    "x": 0,
                     "y": 0.25
                 },
                 "data": {
@@ -207,7 +207,7 @@
                 "id": null,
                 "node_id": null,
                 "position": {
-                    "x": 0.0,
+                    "x": 0,
                     "y": 0.125
                 },
                 "data": {
@@ -226,5 +226,6 @@
         "tpis_extra_info": null
     },
     "icon": "/PNG/Calorifier.png",
-    "group": "汽水设备"
+    "group": "汽水设备",
+    "isEngineeringComponent": true
 }

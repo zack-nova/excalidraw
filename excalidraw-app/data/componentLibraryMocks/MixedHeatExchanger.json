@@ -4,8 +4,8 @@
     "type": "component",
     "position": null,
     "measured": {
-        "width": 60.0,
-        "height": 60.0
+        "width": 60,
+        "height": 60
     },
     "style": {
         "width": "60px",
@@ -27,7 +27,7 @@
                 "node_id": null,
                 "position": {
                     "x": 0.5,
-                    "y": 0.0
+                    "y": 0
                 },
                 "data": {
                     "interface_type": "TSteam",
@@ -46,7 +46,7 @@
                 "id": null,
                 "node_id": null,
                 "position": {
-                    "x": 1.0,
+                    "x": 1,
                     "y": 0.5
                 },
                 "data": {
@@ -66,7 +66,7 @@
                 "id": null,
                 "node_id": null,
                 "position": {
-                    "x": 0.0,
+                    "x": 0,
                     "y": 0.6666666666666666
                 },
                 "data": {
@@ -85,5 +85,6 @@
         "tpis_extra_info": null
     },
     "icon": "/PNG/MixedHeatExchanger.png",
-    "group": "汽水设备"
+    "group": "汽水设备",
+    "isEngineeringComponent": true
 }

@@ -90,3 +90,4 @@ export { actionToggleSearchMenu } from "./actionToggleSearchMenu";
 
 export { actionToggleCropEditor } from "./actionCropEditor";
 export { actionToggleAnchorEditor } from "./actionAnchorEditor";
+export { actionToggleEngineeringComponent } from "./actionEngineeringComponent";

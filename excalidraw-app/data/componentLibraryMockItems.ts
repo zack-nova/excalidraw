@@ -129,3 +129,10 @@ export const mockComponentLibraryItems = [
   component_WaterTag,
   component_WaterValve,
 ] as ComponentListItem[];
+
+export const mockEngineeringComponentLibraryItems = mockComponentLibraryItems.map(
+  (component) => ({
+    ...component,
+    isEngineeringComponent: true,
+  }),
+) as ComponentListItem[];

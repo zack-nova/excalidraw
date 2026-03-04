@@ -4,8 +4,8 @@
     "type": "component",
     "position": null,
     "measured": {
-        "width": 40.0,
-        "height": 40.0
+        "width": 40,
+        "height": 40
     },
     "style": {
         "width": "40px",
@@ -27,7 +27,7 @@
                 "node_id": null,
                 "position": {
                     "x": 0.5,
-                    "y": 1.0
+                    "y": 1
                 },
                 "data": {
                     "interface_type": "Outlet",
@@ -45,5 +45,6 @@
         "tpis_extra_info": null
     },
     "icon": "/PNG/CoalSource.png",
-    "group": "燃料设备"
+    "group": "燃料设备",
+    "isEngineeringComponent": true
 }

@@ -156,12 +156,18 @@
       "output": "Output",
       "anchors": "Anchors",
       "data": "Data",
+      "placeholder": "Placeholder",
       "properties": "Properties",
       "emptyInput": "No input data available.",
       "emptyOutput": "No output data available.",
       "emptyAnchors": "No anchor data available.",
       "emptyData": "No data available.",
+      "emptyPlaceholder": "Reserved for a future data workspace panel.",
       "unnamedAnchor": "Unnamed anchor"
+    },
+    "engineeringComponent": {
+      "label": "Engineering",
+      "toggle": "Engineering component"
     },
     "polygon": {
       "breakPolygon": "Break polygon",

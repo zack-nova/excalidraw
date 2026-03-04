@@ -39,6 +39,11 @@ describe("buildLibraryItemsFromComponentSources()", () => {
         (component) => component.data.component_type === "GasTurbin",
       ),
     ).toBe(true);
+    expect(
+      source?.items.every(
+        (component) => component.isEngineeringComponent === true,
+      ),
+    ).toBe(true);
   });
 
   it("maps component source data into grouped image library items", async () => {
@@ -131,8 +136,10 @@ describe("buildLibraryItemsFromComponentSources()", () => {
         height: 40,
         fileId: expect.any(String),
         customData: expect.objectContaining({
+          isEngineeringComponent: true,
           component: expect.objectContaining({
             group: "燃料设备",
+            isEngineeringComponent: true,
             data: expect.objectContaining({
               component_type: "CoalSource",
             }),

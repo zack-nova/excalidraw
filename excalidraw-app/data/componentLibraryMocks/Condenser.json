@@ -4,8 +4,8 @@
     "type": "component",
     "position": null,
     "measured": {
-        "width": 120.0,
-        "height": 120.0
+        "width": 120,
+        "height": 120
     },
     "style": {
         "width": "120px",
@@ -28,7 +28,7 @@
                 "node_id": null,
                 "position": {
                     "x": 0.5,
-                    "y": 0.0
+                    "y": 0
                 },
                 "data": {
                     "interface_type": "TSteam",
@@ -48,7 +48,7 @@
                 "node_id": null,
                 "position": {
                     "x": 0.5,
-                    "y": 1.0
+                    "y": 1
                 },
                 "data": {
                     "interface_type": "OutWater",
@@ -67,7 +67,7 @@
                 "id": null,
                 "node_id": null,
                 "position": {
-                    "x": 1.0,
+                    "x": 1,
                     "y": 0.75
                 },
                 "data": {
@@ -87,7 +87,7 @@
                 "id": null,
                 "node_id": null,
                 "position": {
-                    "x": 1.0,
+                    "x": 1,
                     "y": 0.4166666666666667
                 },
                 "data": {
@@ -107,7 +107,7 @@
                 "id": null,
                 "node_id": null,
                 "position": {
-                    "x": 1.0,
+                    "x": 1,
                     "y": 0.16666666666666666
                 },
                 "data": {
@@ -127,7 +127,7 @@
                 "id": null,
                 "node_id": null,
                 "position": {
-                    "x": 0.0,
+                    "x": 0,
                     "y": 0.16666666666666666
                 },
                 "data": {
@@ -147,7 +147,7 @@
                 "id": null,
                 "node_id": null,
                 "position": {
-                    "x": 0.0,
+                    "x": 0,
                     "y": 0.5833333333333334
                 },
                 "data": {
@@ -223,5 +223,6 @@
         "tpis_extra_info": null
     },
     "icon": "/PNG/Condenser.png",
-    "group": "汽水设备"
+    "group": "汽水设备",
+    "isEngineeringComponent": true
 }

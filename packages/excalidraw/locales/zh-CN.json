@@ -152,12 +152,18 @@
       "output": "输出",
       "anchors": "锚点",
       "data": "数据",
+      "placeholder": "占位",
       "properties": "属性",
       "emptyInput": "暂无输入数据。",
       "emptyOutput": "暂无输出数据。",
       "emptyAnchors": "暂无锚点数据。",
       "emptyData": "暂无数据。",
+      "emptyPlaceholder": "数据工作区占位，后续补充。",
       "unnamedAnchor": "未命名锚点"
+    },
+    "engineeringComponent": {
+      "label": "工程",
+      "toggle": "工程组件"
     },
     "polygon": {
       "breakPolygon": "解除多边形",

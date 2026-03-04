@@ -9,6 +9,7 @@ export type SwitchProps = {
   onChange: (value: boolean) => void;
   disabled?: boolean;
   className?: string;
+  testId?: string;
 };
 
 export const Switch = ({
@@ -18,10 +19,12 @@ export const Switch = ({
   onChange,
   disabled = false,
   className,
+  testId,
 }: SwitchProps) => {
   return (
     <div className={clsx("Switch", className, { toggled: checked, disabled })}>
       <input
+        data-testid={testId}
         name={name}
         id={name}
         title={title}

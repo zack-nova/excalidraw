@@ -4,8 +4,8 @@
     "type": "component",
     "position": null,
     "measured": {
-        "width": 60.0,
-        "height": 60.0
+        "width": 60,
+        "height": 60
     },
     "style": {
         "width": "60px",
@@ -28,7 +28,7 @@
                 "id": null,
                 "node_id": null,
                 "position": {
-                    "x": 1.0,
+                    "x": 1,
                     "y": 0.5
                 },
                 "data": {
@@ -48,7 +48,7 @@
                 "id": null,
                 "node_id": null,
                 "position": {
-                    "x": 0.0,
+                    "x": 0,
                     "y": 0.5
                 },
                 "data": {
@@ -69,7 +69,7 @@
                 "node_id": null,
                 "position": {
                     "x": 0.3333333333333333,
-                    "y": 0.0
+                    "y": 0
                 },
                 "data": {
                     "interface_type": "InSteam",
@@ -89,7 +89,7 @@
                 "node_id": null,
                 "position": {
                     "x": 0.6666666666666666,
-                    "y": 1.0
+                    "y": 1
                 },
                 "data": {
                     "interface_type": "DrainWater",
@@ -107,5 +107,6 @@
         "tpis_extra_info": null
     },
     "icon": "/PNG/SurfaceHeatExchanger.png",
-    "group": "汽水设备"
+    "group": "汽水设备",
+    "isEngineeringComponent": true
 }

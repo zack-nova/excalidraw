@@ -4,8 +4,8 @@
     "type": "component",
     "position": null,
     "measured": {
-        "width": 20.0,
-        "height": 20.0
+        "width": 20,
+        "height": 20
     },
     "style": {
         "width": "20px",
@@ -27,7 +27,7 @@
                 "node_id": null,
                 "position": {
                     "x": 0.5,
-                    "y": 1.0
+                    "y": 1
                 },
                 "data": {
                     "interface_type": "OutPower",
@@ -45,5 +45,6 @@
         "tpis_extra_info": null
     },
     "icon": "/PNG/Motor.png",
-    "group": "其它设备"
+    "group": "其它设备",
+    "isEngineeringComponent": true
 }

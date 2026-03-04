@@ -4,8 +4,8 @@
     "type": "component",
     "position": null,
     "measured": {
-        "width": 120.0,
-        "height": 120.0
+        "width": 120,
+        "height": 120
     },
     "style": {
         "width": "120px",
@@ -27,7 +27,7 @@
                 "id": null,
                 "node_id": null,
                 "position": {
-                    "x": 0.0,
+                    "x": 0,
                     "y": 0.08333333333333333
                 },
                 "data": {
@@ -47,8 +47,8 @@
                 "id": null,
                 "node_id": null,
                 "position": {
-                    "x": 0.0,
-                    "y": 1.0
+                    "x": 0,
+                    "y": 1
                 },
                 "data": {
                     "interface_type": "OutWater",
@@ -67,7 +67,7 @@
                 "id": null,
                 "node_id": null,
                 "position": {
-                    "x": 0.0,
+                    "x": 0,
                     "y": 0.75
                 },
                 "data": {
@@ -87,7 +87,7 @@
                 "id": null,
                 "node_id": null,
                 "position": {
-                    "x": 1.0,
+                    "x": 1,
                     "y": 0.75
                 },
                 "data": {
@@ -108,7 +108,7 @@
                 "node_id": null,
                 "position": {
                     "x": 0.5,
-                    "y": 0.0
+                    "y": 0
                 },
                 "data": {
                     "interface_type": "N3",
@@ -146,5 +146,6 @@
         "tpis_extra_info": null
     },
     "icon": "/PNG/Airisland.png",
-    "group": "汽水设备"
+    "group": "汽水设备",
+    "isEngineeringComponent": true
 }

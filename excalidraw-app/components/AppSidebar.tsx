@@ -1,10 +1,13 @@
 import { DefaultSidebar, Sidebar, THEME } from "@excalidraw/excalidraw";
 import {
+  elementLinkIcon,
   messageCircleIcon,
   presentationIcon,
 } from "@excalidraw/excalidraw/components/icons";
 import { LinkButton } from "@excalidraw/excalidraw/components/LinkButton";
 import { useUIAppState } from "@excalidraw/excalidraw/context/ui-appState";
+
+import { EngineeringStructureTreePanel } from "./EngineeringStructureTreePanel";
 
 import "./AppSidebar.scss";
 
@@ -15,18 +18,35 @@ export const AppSidebar = () => {
     <DefaultSidebar>
       <DefaultSidebar.TabTriggers>
         <Sidebar.TabTrigger
+          tab="engineering-structure"
+          title="结构树"
+          data-testid="engineering-structure-sidebar-trigger"
+          style={{
+            opacity: openSidebar?.tab === "engineering-structure" ? 1 : 0.4,
+          }}
+        >
+          {elementLinkIcon}
+        </Sidebar.TabTrigger>
+        <Sidebar.TabTrigger
           tab="comments"
+          title="评论"
+          data-testid="comments-sidebar-trigger"
           style={{ opacity: openSidebar?.tab === "comments" ? 1 : 0.4 }}
         >
           {messageCircleIcon}
         </Sidebar.TabTrigger>
         <Sidebar.TabTrigger
           tab="presentation"
+          title="演示"
+          data-testid="presentation-sidebar-trigger"
           style={{ opacity: openSidebar?.tab === "presentation" ? 1 : 0.4 }}
         >
           {presentationIcon}
         </Sidebar.TabTrigger>
       </DefaultSidebar.TabTriggers>
+      <Sidebar.Tab tab="engineering-structure" className="app-sidebar-tree-tab">
+        <EngineeringStructureTreePanel />
+      </Sidebar.Tab>
       <Sidebar.Tab tab="comments">
         <div className="app-sidebar-promo-container">
           <div

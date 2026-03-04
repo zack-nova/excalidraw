@@ -4,8 +4,8 @@
     "type": "component",
     "position": null,
     "measured": {
-        "width": 80.0,
-        "height": 40.0
+        "width": 80,
+        "height": 40
     },
     "style": {
         "width": "80px",
@@ -27,7 +27,7 @@
                 "node_id": null,
                 "position": {
                     "x": 0.25,
-                    "y": 0.0
+                    "y": 0
                 },
                 "data": {
                     "interface_type": "InWater",
@@ -46,7 +46,7 @@
                 "id": null,
                 "node_id": null,
                 "position": {
-                    "x": 0.0,
+                    "x": 0,
                     "y": 0.5
                 },
                 "data": {
@@ -66,7 +66,7 @@
                 "id": null,
                 "node_id": null,
                 "position": {
-                    "x": 1.0,
+                    "x": 1,
                     "y": 0.5
                 },
                 "data": {
@@ -87,7 +87,7 @@
                 "node_id": null,
                 "position": {
                     "x": 0.25,
-                    "y": 1.0
+                    "y": 1
                 },
                 "data": {
                     "interface_type": "DrainWater",
@@ -105,5 +105,6 @@
         "tpis_extra_info": null
     },
     "icon": "/PNG/PTReducer.png",
-    "group": "汽水设备"
+    "group": "汽水设备",
+    "isEngineeringComponent": true
 }

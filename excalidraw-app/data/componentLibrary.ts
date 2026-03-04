@@ -6,7 +6,7 @@ import {
   getMimeType,
 } from "@excalidraw/excalidraw/data/blob";
 
-import { mockComponentLibraryItems } from "./componentLibraryMockItems";
+import { mockEngineeringComponentLibraryItems } from "./componentLibraryMockItems";
 
 import type {
   BinaryFileData,
@@ -39,6 +39,7 @@ export type ComponentListItem = {
   uuid: string | null;
   id: string | null;
   type: "component";
+  isEngineeringComponent?: boolean;
   position: {
     x: number;
     y: number;
@@ -181,6 +182,10 @@ export const buildLibraryItemsFromComponentSources = async (
   const libraryItems = await Promise.all(
     sources.flatMap((source) =>
       source.items.map(async (component, index) => {
+        const normalizedComponent = {
+          ...component,
+          isEngineeringComponent: component.isEngineeringComponent !== false,
+        };
         const assetPath = getComponentAssetPath(component);
         const assetFile = await loadAsset(assetPath);
         const fileId = await generateIdFromFile(assetFile);
@@ -200,7 +205,9 @@ export const buildLibraryItemsFromComponentSources = async (
             status: "saved",
             fileId,
             customData: {
-              component,
+              isEngineeringComponent:
+                normalizedComponent.isEngineeringComponent === true,
+              component: normalizedComponent,
               ...(anchorPoints.length > 0 ? { anchorPoints } : {}),
             },
           }),
@@ -242,6 +249,6 @@ export const mockComponentLibrarySources: readonly ComponentLibrarySource[] = [
   {
     sourceId: "xjtu-library",
     sourceName: "西交大素材库",
-    items: [...mockComponentLibraryItems],
+    items: [...mockEngineeringComponentLibraryItems],
   },
 ];

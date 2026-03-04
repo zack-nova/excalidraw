@@ -4,8 +4,8 @@
     "type": "component",
     "position": null,
     "measured": {
-        "width": 40.0,
-        "height": 80.0
+        "width": 40,
+        "height": 80
     },
     "style": {
         "width": "40px",
@@ -28,7 +28,7 @@
                 "id": null,
                 "node_id": null,
                 "position": {
-                    "x": 0.0,
+                    "x": 0,
                     "y": 0.125
                 },
                 "data": {
@@ -48,7 +48,7 @@
                 "id": null,
                 "node_id": null,
                 "position": {
-                    "x": 1.0,
+                    "x": 1,
                     "y": 0.125
                 },
                 "data": {
@@ -68,7 +68,7 @@
                 "id": null,
                 "node_id": null,
                 "position": {
-                    "x": 0.0,
+                    "x": 0,
                     "y": 0.5
                 },
                 "data": {
@@ -88,7 +88,7 @@
                 "id": null,
                 "node_id": null,
                 "position": {
-                    "x": 1.0,
+                    "x": 1,
                     "y": 0.5
                 },
                 "data": {
@@ -107,5 +107,6 @@
         "tpis_extra_info": null
     },
     "icon": "/PNG/Controllingstage.png",
-    "group": "汽水设备"
+    "group": "汽水设备",
+    "isEngineeringComponent": true
 }

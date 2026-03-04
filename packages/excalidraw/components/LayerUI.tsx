@@ -92,6 +92,8 @@ interface LayerUIProps {
   renderTopLeftUI?: ExcalidrawProps["renderTopLeftUI"];
   renderToolbarEndUI?: ExcalidrawProps["renderToolbarEndUI"];
   renderTopRightUI?: ExcalidrawProps["renderTopRightUI"];
+  selectedShapeActionsLayout?: ExcalidrawProps["selectedShapeActionsLayout"];
+  renderSelectedShapeActionsFooter?: ExcalidrawProps["renderSelectedShapeActionsFooter"];
   renderCustomStats?: ExcalidrawProps["renderCustomStats"];
   UIOptions: AppProps["UIOptions"];
   onExportImage: AppClassProperties["onExportImage"];
@@ -152,6 +154,8 @@ const LayerUI = ({
   renderTopLeftUI,
   renderToolbarEndUI,
   renderTopRightUI,
+  selectedShapeActionsLayout,
+  renderSelectedShapeActionsFooter,
   renderCustomStats,
   UIOptions,
   onExportImage,
@@ -283,6 +287,8 @@ const LayerUI = ({
               elementsMap={app.scene.getNonDeletedElementsMap()}
               renderAction={actionManager.renderAction}
               app={app}
+              layout={selectedShapeActionsLayout}
+              footer={renderSelectedShapeActionsFooter?.(false, appState)}
             />
           </Island>
         )}

@@ -4,8 +4,8 @@
     "type": "component",
     "position": null,
     "measured": {
-        "width": 20.0,
-        "height": 40.0
+        "width": 20,
+        "height": 40
     },
     "style": {
         "width": "20px",
@@ -24,5 +24,6 @@
         "tpis_extra_info": null
     },
     "icon": "/PNG/TurbinEffCal.png",
-    "group": "其它设备"
+    "group": "其它设备",
+    "isEngineeringComponent": true
 }

@@ -329,6 +329,7 @@ import {
   actionToggleLinearEditor,
   actionToggleObjectsSnapMode,
   actionToggleCropEditor,
+  actionToggleEngineeringComponent,
 } from "../actions";
 import { actionWrapTextInContainer } from "../actions/actionBoundText";
 import { actionToggleHandTool, zoomToFit } from "../actions/actionCanvas";
@@ -2031,6 +2032,8 @@ class App extends React.Component<AppProps, AppState> {
       renderTopRightUI,
       renderTopLeftUI,
       renderToolbarEndUI,
+      selectedShapeActionsLayout,
+      renderSelectedShapeActionsFooter,
       renderCustomStats,
     } = this.props;
 
@@ -2122,6 +2125,12 @@ class App extends React.Component<AppProps, AppState> {
                           renderTopLeftUI={renderTopLeftUI}
                           renderToolbarEndUI={renderToolbarEndUI}
                           renderTopRightUI={renderTopRightUI}
+                          selectedShapeActionsLayout={
+                            selectedShapeActionsLayout
+                          }
+                          renderSelectedShapeActionsFooter={
+                            renderSelectedShapeActionsFooter
+                          }
                           renderCustomStats={renderCustomStats}
                           showExitZenModeBtn={
                             typeof this.props?.zenModeEnabled === "undefined" &&

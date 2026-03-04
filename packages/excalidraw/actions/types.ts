@@ -143,6 +143,7 @@ export type ActionName =
   | "toggleLassoTool"
   | "toggleShapeSwitch"
   | "toggleAnchorEditor"
+  | "toggleEngineeringComponent"
   | "togglePolygon";
 
 export type PanelComponentProps = {

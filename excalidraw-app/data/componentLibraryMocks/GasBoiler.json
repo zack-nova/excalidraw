@@ -4,8 +4,8 @@
     "type": "component",
     "position": null,
     "measured": {
-        "width": 200.0,
-        "height": 200.0
+        "width": 200,
+        "height": 200
     },
     "style": {
         "width": "200px",
@@ -27,7 +27,7 @@
                 "id": null,
                 "node_id": null,
                 "position": {
-                    "x": 0.0,
+                    "x": 0,
                     "y": 0.2
                 },
                 "data": {
@@ -64,7 +64,7 @@
                 "id": null,
                 "node_id": null,
                 "position": {
-                    "x": 0.0,
+                    "x": 0,
                     "y": 0.4
                 },
                 "data": {
@@ -84,7 +84,7 @@
                 "id": null,
                 "node_id": null,
                 "position": {
-                    "x": 1.0,
+                    "x": 1,
                     "y": 0.6
                 },
                 "data": {
@@ -104,7 +104,7 @@
                 "id": null,
                 "node_id": null,
                 "position": {
-                    "x": 1.0,
+                    "x": 1,
                     "y": 0.45
                 },
                 "data": {
@@ -124,7 +124,7 @@
                 "id": null,
                 "node_id": null,
                 "position": {
-                    "x": 1.0,
+                    "x": 1,
                     "y": 0.25
                 },
                 "data": {
@@ -144,7 +144,7 @@
                 "id": null,
                 "node_id": null,
                 "position": {
-                    "x": 1.0,
+                    "x": 1,
                     "y": 0.1
                 },
                 "data": {
@@ -165,7 +165,7 @@
                 "node_id": null,
                 "position": {
                     "x": 0.8,
-                    "y": 0.0
+                    "y": 0
                 },
                 "data": {
                     "interface_type": "GRJWS",
@@ -185,7 +185,7 @@
                 "node_id": null,
                 "position": {
                     "x": 0.7,
-                    "y": 0.0
+                    "y": 0
                 },
                 "data": {
                     "interface_type": "ZRJWS1",
@@ -205,7 +205,7 @@
                 "node_id": null,
                 "position": {
                     "x": 0.6,
-                    "y": 0.0
+                    "y": 0
                 },
                 "data": {
                     "interface_type": "ZRJWS2",
@@ -224,8 +224,8 @@
                 "id": null,
                 "node_id": null,
                 "position": {
-                    "x": 1.0,
-                    "y": 0.0
+                    "x": 1,
+                    "y": 0
                 },
                 "data": {
                     "interface_type": "FlueGas",
@@ -244,7 +244,7 @@
                 "id": null,
                 "node_id": null,
                 "position": {
-                    "x": 0.0,
+                    "x": 0,
                     "y": 0.8
                 },
                 "data": {
@@ -264,7 +264,7 @@
                 "id": null,
                 "node_id": null,
                 "position": {
-                    "x": 1.0,
+                    "x": 1,
                     "y": 0.8
                 },
                 "data": {
@@ -285,7 +285,7 @@
                 "node_id": null,
                 "position": {
                     "x": 0.6,
-                    "y": 1.0
+                    "y": 1
                 },
                 "data": {
                     "interface_type": "DrainWater",
@@ -303,5 +303,6 @@
         "tpis_extra_info": null
     },
     "icon": "/PNG/Boiler.png",
-    "group": "烟气/空气设备"
+    "group": "烟气/空气设备",
+    "isEngineeringComponent": true
 }

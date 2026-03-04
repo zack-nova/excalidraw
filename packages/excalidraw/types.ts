@@ -602,6 +602,11 @@ export interface ExcalidrawProps {
     isMobile: boolean,
     appState: UIAppState,
   ) => JSX.Element | null;
+  selectedShapeActionsLayout?: "tabbed" | "properties-only" | "data-tabs";
+  renderSelectedShapeActionsFooter?: (
+    isMobile: boolean,
+    appState: UIAppState,
+  ) => JSX.Element | null;
   langCode?: Language["code"];
   viewModeEnabled?: boolean;
   zenModeEnabled?: boolean;

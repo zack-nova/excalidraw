@@ -84,6 +84,7 @@ import {
   useAtom,
   useAtomValue,
   useAtomWithInitialValue,
+  useSetAtom,
   appJotaiStore,
 } from "./app-jotai";
 import {
@@ -99,6 +100,7 @@ import Collab, {
 } from "./collab/Collab";
 import { AppFooter } from "./components/AppFooter";
 import { AppMainMenu } from "./components/AppMainMenu";
+import { EngineeringModelingFooter } from "./components/EngineeringModelingFooter";
 import { AppWelcomeScreen } from "./components/AppWelcomeScreen";
 import {
   ExportToExcalidrawPlus,
@@ -159,6 +161,8 @@ import {
   EngineeringCalculateTrigger,
   EngineeringWorkspaceModeTrigger,
 } from "./components/EngineeringWorkspaceControls";
+import { syncEngineeringSceneToModelAtom } from "./engineering-modeling-state";
+import { engineeringWorkspaceModeAtom } from "./engineering-ui-state";
 
 import type { CollabAPI } from "./collab/Collab";
 
@@ -451,6 +455,10 @@ const ExcalidrawWrapper = () => {
     return isCollaborationLink(window.location.href);
   });
   const collabError = useAtomValue(collabErrorIndicatorAtom);
+  const workspaceMode = useAtomValue(engineeringWorkspaceModeAtom);
+  const syncEngineeringSceneToModel = useSetAtom(
+    syncEngineeringSceneToModelAtom,
+  );
 
   useHandleLibrary({
     excalidrawAPI,
@@ -785,6 +793,8 @@ const ExcalidrawWrapper = () => {
       collabAPI.syncElements(elements);
     }
 
+    syncEngineeringSceneToModel(elements);
+
     // this check is redundant, but since this is a hot path, it's best
     // not to evaludate the nested expression every time
     if (!LocalData.isSavePaused()) {
@@ -1040,6 +1050,16 @@ const ExcalidrawWrapper = () => {
               />
             </div>
           );
+        }}
+        selectedShapeActionsLayout={
+          workspaceMode === "data" ? "data-tabs" : "properties-only"
+        }
+        renderSelectedShapeActionsFooter={(isMobile) => {
+          if (isMobile || workspaceMode !== "modeling") {
+            return null;
+          }
+
+          return <EngineeringModelingFooter />;
         }}
         onLinkOpen={(element, event) => {
           if (element.link && isElementLink(element.link)) {
