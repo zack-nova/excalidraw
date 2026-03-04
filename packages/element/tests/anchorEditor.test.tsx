@@ -53,6 +53,45 @@ describe("rectangle anchor editor", () => {
     expect(h.state.selectedAnchorPointIndex).toBe(null);
   });
 
+  it("should show anchor controls for ellipse, diamond, and image", () => {
+    const ellipse = API.createElement({
+      type: "ellipse",
+      x: 100,
+      y: 100,
+      width: 100,
+      height: 100,
+    });
+    const diamond = API.createElement({
+      type: "diamond",
+      x: 100,
+      y: 100,
+      width: 100,
+      height: 100,
+    });
+    const image = API.createElement({
+      type: "image",
+      x: 100,
+      y: 100,
+      width: 100,
+      height: 100,
+    });
+
+    API.setElements([ellipse]);
+    API.setSelectedElements([ellipse]);
+    expect(screen.getByLabelText("Edit anchor points")).not.toBeChecked();
+    expect(screen.getByLabelText("Show anchors when unselected")).toBeChecked();
+
+    API.setElements([diamond]);
+    API.setSelectedElements([diamond]);
+    expect(screen.getByLabelText("Edit anchor points")).not.toBeChecked();
+    expect(screen.getByLabelText("Show anchors when unselected")).toBeChecked();
+
+    API.setElements([image]);
+    API.setSelectedElements([image]);
+    expect(screen.getByLabelText("Edit anchor points")).not.toBeChecked();
+    expect(screen.getByLabelText("Show anchors when unselected")).toBeChecked();
+  });
+
   it("should toggle whether anchors stay visible when the rectangle is unselected", () => {
     const rectangle = API.createElement({
       type: "rectangle",
@@ -97,6 +136,28 @@ describe("rectangle anchor editor", () => {
     ]);
   });
 
+  it("should add a new anchor when clicking on a circle edge in edit mode", () => {
+    const ellipse = API.createElement({
+      type: "ellipse",
+      x: 100,
+      y: 100,
+      width: 100,
+      height: 100,
+    });
+
+    API.setElements([ellipse]);
+    API.setSelectedElements([ellipse]);
+    enableAnchorEditor();
+
+    mouse.clickAt(185.35533905932738, 114.64466094067262);
+
+    const anchorPoints = API.getElement(ellipse).customData?.anchorPoints;
+
+    expect(anchorPoints).toHaveLength(5);
+    expect(anchorPoints?.[4][0]).toBeCloseTo(0.85355, 2);
+    expect(anchorPoints?.[4][1]).toBeCloseTo(0.14645, 2);
+  });
+
   it("should drag an existing anchor to a new position", () => {
     const rectangle = API.createElement({
       type: "rectangle",
@@ -139,6 +200,29 @@ describe("rectangle anchor editor", () => {
     Keyboard.keyPress(KEYS.DELETE);
 
     expect(API.getElement(rectangle).customData?.anchorPoints).toEqual([
+      [1, 0.5],
+      [0.5, 1],
+      [0, 0.5],
+    ]);
+  });
+
+  it("should delete the selected default anchor from an ellipse", () => {
+    const ellipse = API.createElement({
+      type: "ellipse",
+      x: 100,
+      y: 100,
+      width: 100,
+      height: 100,
+    });
+
+    API.setElements([ellipse]);
+    API.setSelectedElements([ellipse]);
+    enableAnchorEditor();
+
+    mouse.clickAt(150, 100);
+    Keyboard.keyPress(KEYS.DELETE);
+
+    expect(API.getElement(ellipse).customData?.anchorPoints).toEqual([
       [1, 0.5],
       [0.5, 1],
       [0, 0.5],
@@ -232,6 +316,24 @@ describe("rectangle anchor editor", () => {
 
     expect(h.state.hoveredAnchorElementId).toBe(null);
     expect(h.state.hoveredAnchorPointIndex).toBe(null);
+  });
+
+  it("should hover a default diamond anchor even when the diamond is not selected", () => {
+    const diamond = API.createElement({
+      type: "diamond",
+      x: 100,
+      y: 100,
+      width: 100,
+      height: 100,
+    });
+
+    API.setElements([diamond]);
+    API.clearSelection();
+
+    mouse.moveTo(150, 100);
+
+    expect(h.state.hoveredAnchorElementId).toBe(diamond.id);
+    expect(h.state.hoveredAnchorPointIndex).toBe(0);
   });
 
   it("should not hover an anchor when unselected anchor display is disabled", () => {

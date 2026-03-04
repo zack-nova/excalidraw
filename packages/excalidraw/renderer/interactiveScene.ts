@@ -5,7 +5,6 @@ import {
   type GlobalPoint,
   type LocalPoint,
   type Radians,
-  bezierEquation,
   pointRotateRads,
   pointDistance,
 } from "@excalidraw/math";
@@ -24,7 +23,6 @@ import {
   deconstructDiamondElement,
   deconstructRectanguloidElement,
   elementCenterPoint,
-  getDiamondBaseCorners,
   FOCUS_POINT_SIZE,
   getOmitSidesForEditorInterface,
   getTransformHandles,
@@ -60,6 +58,7 @@ import {
   getGlobalAnchorPointForBindableElement,
   findClosestBindableElementEditorAnchorPoint,
   shouldShowBindableElementAnchorsWhenUnselected,
+  supportsBindableElementAnchorPoints,
 } from "@excalidraw/element";
 
 import type {
@@ -351,7 +350,7 @@ export const getAnchorPointHandleStatesForBindableElement = (
       ? hoveredAnchorByPointer?.index === index
       : hoveredAnchorElementId === element.id &&
         hoveredAnchorPointIndex === index,
-    isSelected: selectedAnchorPointIndex === index,
+    isSelected: isEditing && selectedAnchorPointIndex === index,
     isPassive: !isEditing,
   }));
 };
@@ -360,18 +359,7 @@ export const getBindingHighlightPointsForBindableElement = (
   element: ExcalidrawBindableElement,
   elementsMap: ElementsMap,
 ): GlobalPoint[] => {
-  if (element.type === "diamond") {
-    const center = elementCenterPoint(element, elementsMap);
-
-    return getDiamondBaseCorners(element).map((curve) => {
-      const point = bezierEquation(curve, 0.5);
-      const rotatedPoint = pointRotateRads(point, center, element.angle);
-
-      return pointFrom<GlobalPoint>(rotatedPoint[0], rotatedPoint[1]);
-    });
-  }
-
-  if (element.type === "rectangle") {
+  if (supportsBindableElementAnchorPoints(element)) {
     return getBindableElementAnchorPoints(element).map((fixedPoint) =>
       getGlobalAnchorPointForBindableElement(element, fixedPoint, elementsMap),
     );
@@ -1824,7 +1812,10 @@ const _renderInteractiveScene = ({
     : null;
 
   visibleElements.forEach((element) => {
-    if (!isBindableElement(element) || element.type !== "rectangle") {
+    if (
+      !isBindableElement(element) ||
+      !supportsBindableElementAnchorPoints(element)
+    ) {
       return;
     }
 

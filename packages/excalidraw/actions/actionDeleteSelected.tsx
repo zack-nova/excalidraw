@@ -12,8 +12,10 @@ import { getContainerElement } from "@excalidraw/element";
 import {
   getBindableElementAnchorPoints,
   removeBindableElementAnchorPoint,
+  supportsBindableElementAnchorPoints,
 } from "@excalidraw/element";
 import {
+  isBindableElement,
   isBoundToContainer,
   isElbowArrow,
   isFrameLikeElement,
@@ -223,7 +225,11 @@ export const actionDeleteSelected = register({
         .getSelectedElements(appState)
         .find((candidate) => candidate.id === appState.editingAnchorElementId);
 
-      if (!element || element.type !== "rectangle") {
+      if (
+        !element ||
+        !isBindableElement(element) ||
+        !supportsBindableElementAnchorPoints(element)
+      ) {
         return false;
       }
 

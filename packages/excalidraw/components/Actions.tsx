@@ -18,6 +18,8 @@ import {
   isLinearElement,
   isTextElement,
   isArrowElement,
+  isBindableElement,
+  supportsBindableElementAnchorPoints,
   hasStrokeColor,
   toolIsArrow,
 } from "@excalidraw/element";
@@ -184,7 +186,9 @@ export const SelectedShapeActions = ({
     isImageElement(targetElements[0]);
 
   const showAnchorEditorAction =
-    targetElements.length === 1 && targetElements[0].type === "rectangle";
+    targetElements.length === 1 &&
+    isBindableElement(targetElements[0]) &&
+    supportsBindableElementAnchorPoints(targetElements[0]);
 
   const showAlignActions =
     !isSingleElementBoundContainer && alignActionsPredicate(appState, app);

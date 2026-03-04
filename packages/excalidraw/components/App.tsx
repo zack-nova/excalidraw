@@ -125,6 +125,7 @@ import {
   normalizeFixedPoint,
   projectPointToBindableElementAnchor,
   shouldShowBindableElementAnchorsWhenUnselected,
+  supportsBindableElementAnchorPoints,
   shouldEnableBindingForPointerEvent,
   updateBoundElements,
   updateBindableElementAnchorPoint,
@@ -7830,7 +7831,8 @@ class App extends React.Component<AppProps, AppState> {
 
     if (
       selectedElements.length !== 1 ||
-      selectedElements[0].type !== "rectangle"
+      !isBindableElement(selectedElements[0]) ||
+      !supportsBindableElementAnchorPoints(selectedElements[0])
     ) {
       return null;
     }
@@ -7870,7 +7872,7 @@ class App extends React.Component<AppProps, AppState> {
     this.scene.getNonDeletedElements().forEach((element) => {
       if (
         !isBindableElement(element) ||
-        element.type !== "rectangle" ||
+        !supportsBindableElementAnchorPoints(element) ||
         this.state.editingAnchorElementId === element.id ||
         (!this.state.selectedElementIds[element.id] &&
           !shouldShowBindableElementAnchorsWhenUnselected(element))

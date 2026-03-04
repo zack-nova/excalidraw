@@ -2,14 +2,20 @@ import { arrayToMap } from "@excalidraw/common";
 
 import { pointFrom } from "@excalidraw/math";
 
-import { newElement } from "../src/newElement";
+import {
+  newElement,
+  newFrameElement,
+  newImageElement,
+} from "../src/newElement";
 import {
   addBindableElementAnchorPoint,
   getCustomBindableElementAnchorPoints,
   findClosestBindableElementAnchorPoint,
   getBindableElementAnchorPoints,
+  projectPointToBindableElementAnchor,
   removeBindableElementAnchorPoint,
   setBindableElementAnchorsWhenUnselected,
+  supportsBindableElementAnchorPoints,
   shouldShowBindableElementAnchorsWhenUnselected,
   updateBindableElementAnchorPoint,
 } from "../src/anchorPoints";
@@ -208,5 +214,129 @@ describe("rectangle anchor points", () => {
     expect(setBindableElementAnchorsWhenUnselected(rectangle, true)).toEqual({
       anchorPoints: [[0.25, 0]],
     });
+  });
+
+  it("returns the default four anchors for ellipse, diamond, and image", () => {
+    const ellipse = newElement({
+      type: "ellipse",
+      x: 100,
+      y: 100,
+      width: 200,
+      height: 100,
+    }) as ExcalidrawBindableElement;
+    const diamond = newElement({
+      type: "diamond",
+      x: 100,
+      y: 100,
+      width: 200,
+      height: 100,
+    }) as ExcalidrawBindableElement;
+    const image = newImageElement({
+      type: "image",
+      x: 100,
+      y: 100,
+      width: 200,
+      height: 100,
+      fileId: null,
+      status: "pending",
+      scale: [1, 1],
+    }) as ExcalidrawBindableElement;
+
+    expect(getBindableElementAnchorPoints(ellipse)).toEqual([
+      [0.5, 0],
+      [1, 0.5],
+      [0.5, 1],
+      [0, 0.5],
+    ]);
+    expect(getBindableElementAnchorPoints(diamond)).toEqual([
+      [0.5, 0],
+      [1, 0.5],
+      [0.5, 1],
+      [0, 0.5],
+    ]);
+    expect(getBindableElementAnchorPoints(image)).toEqual([
+      [0.5, 0],
+      [1, 0.5],
+      [0.5, 1],
+      [0, 0.5],
+    ]);
+  });
+
+  it("projects points to ellipse and diamond outlines when adding anchors", () => {
+    const ellipse = newElement({
+      type: "ellipse",
+      x: 100,
+      y: 100,
+      width: 100,
+      height: 100,
+    }) as ExcalidrawBindableElement;
+    const diamond = newElement({
+      type: "diamond",
+      x: 100,
+      y: 100,
+      width: 100,
+      height: 100,
+    }) as ExcalidrawBindableElement;
+
+    const ellipseProjection = projectPointToBindableElementAnchor(
+      ellipse,
+      pointFrom(185.35533905932738, 114.64466094067262),
+      arrayToMap([ellipse]),
+    );
+    const diamondProjection = projectPointToBindableElementAnchor(
+      diamond,
+      pointFrom(175, 125),
+      arrayToMap([diamond]),
+    );
+
+    expect(ellipseProjection?.fixedPoint[0]).toBeCloseTo(0.85355, 4);
+    expect(ellipseProjection?.fixedPoint[1]).toBeCloseTo(0.14645, 4);
+    expect(diamondProjection?.fixedPoint).toEqual([0.75, 0.25]);
+  });
+
+  it("only enables anchor editing for rectangle, ellipse, diamond, and image", () => {
+    const rectangle = newElement({
+      type: "rectangle",
+      x: 100,
+      y: 100,
+      width: 100,
+      height: 100,
+    }) as ExcalidrawBindableElement;
+    const ellipse = newElement({
+      type: "ellipse",
+      x: 100,
+      y: 100,
+      width: 100,
+      height: 100,
+    }) as ExcalidrawBindableElement;
+    const diamond = newElement({
+      type: "diamond",
+      x: 100,
+      y: 100,
+      width: 100,
+      height: 100,
+    }) as ExcalidrawBindableElement;
+    const image = newImageElement({
+      type: "image",
+      x: 100,
+      y: 100,
+      width: 100,
+      height: 100,
+      fileId: null,
+      status: "pending",
+      scale: [1, 1],
+    }) as ExcalidrawBindableElement;
+    const frame = newFrameElement({
+      x: 100,
+      y: 100,
+      width: 100,
+      height: 100,
+    }) as ExcalidrawBindableElement;
+
+    expect(supportsBindableElementAnchorPoints(rectangle)).toBe(true);
+    expect(supportsBindableElementAnchorPoints(ellipse)).toBe(true);
+    expect(supportsBindableElementAnchorPoints(diamond)).toBe(true);
+    expect(supportsBindableElementAnchorPoints(image)).toBe(true);
+    expect(supportsBindableElementAnchorPoints(frame)).toBe(false);
   });
 });

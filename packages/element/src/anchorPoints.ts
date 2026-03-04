@@ -24,6 +24,14 @@ const DEFAULT_RECTANGLE_ANCHOR_POINTS: readonly FixedPoint[] = [
 ];
 const SHOW_ANCHORS_WHEN_UNSELECTED_KEY = "showAnchorsWhenUnselected";
 
+export const supportsBindableElementAnchorPoints = (
+  element: ExcalidrawBindableElement,
+): boolean =>
+  element.type === "rectangle" ||
+  element.type === "ellipse" ||
+  element.type === "diamond" ||
+  element.type === "image";
+
 const isRectangleAnchorPoint = (
   fixedPoint: unknown,
 ): fixedPoint is FixedPoint =>
@@ -70,7 +78,7 @@ export const getBindableElementAnchorPoints = (
     return storedAnchorPoints;
   }
 
-  return element.type === "rectangle"
+  return supportsBindableElementAnchorPoints(element)
     ? DEFAULT_RECTANGLE_ANCHOR_POINTS.map((anchorPoint) => [...anchorPoint])
     : [];
 };
@@ -345,7 +353,11 @@ export const projectPointToBindableElementAnchor = (
   fixedPoint: FixedPoint;
   point: GlobalPoint;
 } | null => {
-  if (element.type !== "rectangle" || !element.width || !element.height) {
+  if (
+    !supportsBindableElementAnchorPoints(element) ||
+    !element.width ||
+    !element.height
+  ) {
     return null;
   }
 
@@ -356,34 +368,91 @@ export const projectPointToBindableElementAnchor = (
     -element.angle as Radians,
   );
 
-  const ratioX = clamp((nonRotatedPoint[0] - element.x) / element.width, 0, 1);
-  const ratioY = clamp((nonRotatedPoint[1] - element.y) / element.height, 0, 1);
+  const elementLeft = element.x;
+  const elementTop = element.y;
+  const centerX = element.x + element.width / 2;
+  const centerY = element.y + element.height / 2;
 
-  const distances = [
-    { side: "top", distance: Math.abs(nonRotatedPoint[1] - element.y) },
-    {
-      side: "right",
-      distance: Math.abs(nonRotatedPoint[0] - (element.x + element.width)),
-    },
-    {
-      side: "bottom",
-      distance: Math.abs(nonRotatedPoint[1] - (element.y + element.height)),
-    },
-    { side: "left", distance: Math.abs(nonRotatedPoint[0] - element.x) },
-  ] as const;
+  let fixedPoint: FixedPoint;
 
-  const nearestSide = distances.reduce((closest, current) =>
-    current.distance < closest.distance ? current : closest,
-  );
+  if (element.type === "rectangle" || element.type === "image") {
+    const ratioX = clamp(
+      (nonRotatedPoint[0] - element.x) / element.width,
+      0,
+      1,
+    );
+    const ratioY = clamp(
+      (nonRotatedPoint[1] - element.y) / element.height,
+      0,
+      1,
+    );
 
-  const fixedPoint =
-    nearestSide.side === "top"
-      ? ([ratioX, 0] as FixedPoint)
-      : nearestSide.side === "right"
-      ? ([1, ratioY] as FixedPoint)
-      : nearestSide.side === "bottom"
-      ? ([ratioX, 1] as FixedPoint)
-      : ([0, ratioY] as FixedPoint);
+    const distances = [
+      { side: "top", distance: Math.abs(nonRotatedPoint[1] - element.y) },
+      {
+        side: "right",
+        distance: Math.abs(nonRotatedPoint[0] - (element.x + element.width)),
+      },
+      {
+        side: "bottom",
+        distance: Math.abs(nonRotatedPoint[1] - (element.y + element.height)),
+      },
+      { side: "left", distance: Math.abs(nonRotatedPoint[0] - element.x) },
+    ] as const;
+
+    const nearestSide = distances.reduce((closest, current) =>
+      current.distance < closest.distance ? current : closest,
+    );
+
+    fixedPoint =
+      nearestSide.side === "top"
+        ? ([ratioX, 0] as FixedPoint)
+        : nearestSide.side === "right"
+        ? ([1, ratioY] as FixedPoint)
+        : nearestSide.side === "bottom"
+        ? ([ratioX, 1] as FixedPoint)
+        : ([0, ratioY] as FixedPoint);
+  } else if (element.type === "ellipse") {
+    const radiusX = element.width / 2;
+    const radiusY = element.height / 2;
+    const deltaX = nonRotatedPoint[0] - centerX;
+    const deltaY = nonRotatedPoint[1] - centerY;
+
+    if (deltaX === 0 && deltaY === 0) {
+      fixedPoint = [0.5, 0];
+    } else {
+      const scale =
+        1 /
+        Math.sqrt(
+          (deltaX * deltaX) / (radiusX * radiusX) +
+            (deltaY * deltaY) / (radiusY * radiusY),
+        );
+
+      fixedPoint = normalizeAnchorPoint([
+        (centerX + deltaX * scale - elementLeft) / element.width,
+        (centerY + deltaY * scale - elementTop) / element.height,
+      ]);
+    }
+  } else if (element.type === "diamond") {
+    const radiusX = element.width / 2;
+    const radiusY = element.height / 2;
+    const deltaX = nonRotatedPoint[0] - centerX;
+    const deltaY = nonRotatedPoint[1] - centerY;
+
+    if (deltaX === 0 && deltaY === 0) {
+      fixedPoint = [0.5, 0];
+    } else {
+      const scale =
+        1 / (Math.abs(deltaX) / radiusX + Math.abs(deltaY) / radiusY);
+
+      fixedPoint = normalizeAnchorPoint([
+        (centerX + deltaX * scale - elementLeft) / element.width,
+        (centerY + deltaY * scale - elementTop) / element.height,
+      ]);
+    }
+  } else {
+    return null;
+  }
 
   return {
     fixedPoint,

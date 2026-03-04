@@ -1,5 +1,9 @@
 import { CaptureUpdateAction } from "@excalidraw/element";
-import { setBindableElementAnchorsWhenUnselected } from "@excalidraw/element";
+import {
+  isBindableElement,
+  setBindableElementAnchorsWhenUnselected,
+  supportsBindableElementAnchorPoints,
+} from "@excalidraw/element";
 
 import { Switch } from "../components/Switch";
 import { t } from "../i18n";
@@ -22,7 +26,8 @@ const getSelectedRectangle = (appState: AppState, app: AppClassProperties) => {
 
   if (
     selectedElements.length !== 1 ||
-    selectedElements[0].type !== "rectangle"
+    !isBindableElement(selectedElements[0]) ||
+    !supportsBindableElementAnchorPoints(selectedElements[0])
   ) {
     return null;
   }
