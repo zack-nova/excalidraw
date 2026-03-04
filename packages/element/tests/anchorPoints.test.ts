@@ -9,6 +9,8 @@ import {
   findClosestBindableElementAnchorPoint,
   getBindableElementAnchorPoints,
   removeBindableElementAnchorPoint,
+  setBindableElementAnchorsWhenUnselected,
+  shouldShowBindableElementAnchorsWhenUnselected,
   updateBindableElementAnchorPoint,
 } from "../src/anchorPoints";
 
@@ -170,5 +172,41 @@ describe("rectangle anchor points", () => {
     expect(getCustomBindableElementAnchorPoints(rectangle)).toEqual([
       [0.25, 0],
     ]);
+  });
+
+  it("shows anchors when unselected by default", () => {
+    const rectangle = newElement({
+      type: "rectangle",
+      x: 100,
+      y: 100,
+      width: 200,
+      height: 100,
+    }) as ExcalidrawBindableElement;
+
+    expect(shouldShowBindableElementAnchorsWhenUnselected(rectangle)).toBe(
+      true,
+    );
+  });
+
+  it("stores the unselected anchor visibility flag alongside anchor points", () => {
+    const rectangle = newElement({
+      type: "rectangle",
+      x: 100,
+      y: 100,
+      width: 200,
+      height: 100,
+      customData: {
+        anchorPoints: [[0.25, 0]],
+      },
+    }) as ExcalidrawBindableElement;
+
+    expect(setBindableElementAnchorsWhenUnselected(rectangle, false)).toEqual({
+      anchorPoints: [[0.25, 0]],
+      showAnchorsWhenUnselected: false,
+    });
+
+    expect(setBindableElementAnchorsWhenUnselected(rectangle, true)).toEqual({
+      anchorPoints: [[0.25, 0]],
+    });
   });
 });

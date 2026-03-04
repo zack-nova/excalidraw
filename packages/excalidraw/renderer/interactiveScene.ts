@@ -59,6 +59,7 @@ import {
   getBindableElementAnchorPoints,
   getGlobalAnchorPointForBindableElement,
   findClosestBindableElementEditorAnchorPoint,
+  shouldShowBindableElementAnchorsWhenUnselected,
 } from "@excalidraw/element";
 
 import type {
@@ -226,11 +227,13 @@ const renderAnchorPointHandles = (
   elementsMap: ElementsMap,
   {
     isEditing,
+    isSelected,
     pointerCoords,
     hoveredAnchorElementId,
     hoveredAnchorPointIndex,
   }: {
     isEditing: boolean;
+    isSelected: boolean;
     pointerCoords: GlobalPoint | null;
     hoveredAnchorElementId: ExcalidrawElement["id"] | null;
     hoveredAnchorPointIndex: number | null;
@@ -242,6 +245,7 @@ const renderAnchorPointHandles = (
     elementsMap,
     {
       isEditing,
+      isSelected,
       pointerCoords,
       selectedAnchorPointIndex: appState.selectedAnchorPointIndex,
       zoomValue: appState.zoom.value,
@@ -299,6 +303,7 @@ export const getAnchorPointHandleStatesForBindableElement = (
   elementsMap: ElementsMap,
   {
     isEditing,
+    isSelected,
     pointerCoords,
     selectedAnchorPointIndex,
     zoomValue,
@@ -306,6 +311,7 @@ export const getAnchorPointHandleStatesForBindableElement = (
     hoveredAnchorPointIndex,
   }: {
     isEditing: boolean;
+    isSelected: boolean;
     pointerCoords: GlobalPoint | null;
     selectedAnchorPointIndex: number | null;
     zoomValue: number;
@@ -313,6 +319,14 @@ export const getAnchorPointHandleStatesForBindableElement = (
     hoveredAnchorPointIndex: number | null;
   },
 ) => {
+  if (
+    !isEditing &&
+    !isSelected &&
+    !shouldShowBindableElementAnchorsWhenUnselected(element)
+  ) {
+    return [];
+  }
+
   const anchorPoints = getBindableElementAnchorPoints(element);
   const hoverThreshold =
     (LinearElementEditor.POINT_HANDLE_SIZE * 1.5) / zoomValue;
@@ -1816,6 +1830,7 @@ const _renderInteractiveScene = ({
 
     renderAnchorPointHandles(context, appState, element, elementsMap, {
       isEditing: appState.editingAnchorElementId === element.id,
+      isSelected: !!appState.selectedElementIds[element.id],
       pointerCoords,
       hoveredAnchorElementId: appState.hoveredAnchorElementId,
       hoveredAnchorPointIndex: appState.hoveredAnchorPointIndex,

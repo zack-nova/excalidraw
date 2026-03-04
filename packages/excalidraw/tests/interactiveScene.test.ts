@@ -53,6 +53,7 @@ describe("interactive binding highlights", () => {
         arrayToMap([rectangle]),
         {
           isEditing: false,
+          isSelected: false,
           pointerCoords: pointFrom<GlobalPoint>(149, 100),
           selectedAnchorPointIndex: null,
           zoomValue: 1,
@@ -99,6 +100,7 @@ describe("interactive binding highlights", () => {
         arrayToMap([rectangle]),
         {
           isEditing: false,
+          isSelected: false,
           pointerCoords: pointFrom<GlobalPoint>(124, 100),
           selectedAnchorPointIndex: null,
           zoomValue: 1,
@@ -164,6 +166,7 @@ describe("interactive binding highlights", () => {
         arrayToMap([rectangle]),
         {
           isEditing: true,
+          isSelected: true,
           pointerCoords: null,
           selectedAnchorPointIndex: 4,
           zoomValue: 1,
@@ -172,5 +175,50 @@ describe("interactive binding highlights", () => {
         },
       ),
     ).toHaveLength(5);
+  });
+
+  it("hides passive anchors when the rectangle disables unselected anchor display", () => {
+    const rectangle = newElement({
+      type: "rectangle",
+      x: 100,
+      y: 100,
+      width: 100,
+      height: 100,
+      customData: {
+        showAnchorsWhenUnselected: false,
+      },
+    }) as ExcalidrawBindableElement;
+
+    expect(
+      getAnchorPointHandleStatesForBindableElement(
+        rectangle,
+        arrayToMap([rectangle]),
+        {
+          isEditing: false,
+          isSelected: false,
+          pointerCoords: null,
+          selectedAnchorPointIndex: null,
+          zoomValue: 1,
+          hoveredAnchorElementId: null,
+          hoveredAnchorPointIndex: null,
+        },
+      ),
+    ).toEqual([]);
+
+    expect(
+      getAnchorPointHandleStatesForBindableElement(
+        rectangle,
+        arrayToMap([rectangle]),
+        {
+          isEditing: false,
+          isSelected: true,
+          pointerCoords: null,
+          selectedAnchorPointIndex: null,
+          zoomValue: 1,
+          hoveredAnchorElementId: null,
+          hoveredAnchorPointIndex: null,
+        },
+      ),
+    ).toHaveLength(4);
   });
 });

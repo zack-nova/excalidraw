@@ -31,6 +31,9 @@ describe("rectangle anchor editor", () => {
     return toggle;
   };
 
+  const getShowWhenUnselectedToggle = () =>
+    screen.getByLabelText("Show anchors when unselected");
+
   it("should toggle anchor editing from the right sidebar", () => {
     const rectangle = API.createElement({
       type: "rectangle",
@@ -48,6 +51,26 @@ describe("rectangle anchor editor", () => {
     expect(toggle).toBeChecked();
     expect(h.state.editingAnchorElementId).toBe(rectangle.id);
     expect(h.state.selectedAnchorPointIndex).toBe(null);
+  });
+
+  it("should toggle whether anchors stay visible when the rectangle is unselected", () => {
+    const rectangle = API.createElement({
+      type: "rectangle",
+      x: 100,
+      y: 100,
+      width: 100,
+      height: 100,
+    });
+
+    API.setElements([rectangle]);
+    API.setSelectedElements([rectangle]);
+
+    const toggle = getShowWhenUnselectedToggle();
+    fireEvent.click(toggle);
+
+    expect(
+      API.getElement(rectangle).customData?.showAnchorsWhenUnselected,
+    ).toBe(false);
   });
 
   it("should add a new anchor when clicking on the rectangle edge in edit mode", () => {
@@ -206,6 +229,27 @@ describe("rectangle anchor editor", () => {
     expect(h.state.hoveredAnchorPointIndex).toBe(0);
 
     mouse.moveTo(300, 300);
+
+    expect(h.state.hoveredAnchorElementId).toBe(null);
+    expect(h.state.hoveredAnchorPointIndex).toBe(null);
+  });
+
+  it("should not hover an anchor when unselected anchor display is disabled", () => {
+    const rectangle = API.createElement({
+      type: "rectangle",
+      x: 100,
+      y: 100,
+      width: 100,
+      height: 100,
+    });
+
+    API.setElements([rectangle]);
+    API.setSelectedElements([rectangle]);
+
+    fireEvent.click(getShowWhenUnselectedToggle());
+    API.clearSelection();
+
+    mouse.moveTo(150, 100);
 
     expect(h.state.hoveredAnchorElementId).toBe(null);
     expect(h.state.hoveredAnchorPointIndex).toBe(null);

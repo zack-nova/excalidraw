@@ -124,6 +124,7 @@ import {
   isBindingEnabled,
   normalizeFixedPoint,
   projectPointToBindableElementAnchor,
+  shouldShowBindableElementAnchorsWhenUnselected,
   shouldEnableBindingForPointerEvent,
   updateBoundElements,
   updateBindableElementAnchorPoint,
@@ -4701,8 +4702,9 @@ class App extends React.Component<AppProps, AppState> {
             );
           }
 
-          const firstPendingNode =
-            this.flowChartCreator.pendingNodes?.find(isFlowchartNodeElement);
+          const firstPendingNode = this.flowChartCreator.pendingNodes?.find(
+            isFlowchartNodeElement,
+          );
 
           if (
             firstPendingNode &&
@@ -7869,7 +7871,9 @@ class App extends React.Component<AppProps, AppState> {
       if (
         !isBindableElement(element) ||
         element.type !== "rectangle" ||
-        this.state.editingAnchorElementId === element.id
+        this.state.editingAnchorElementId === element.id ||
+        (!this.state.selectedElementIds[element.id] &&
+          !shouldShowBindableElementAnchorsWhenUnselected(element))
       ) {
         return;
       }

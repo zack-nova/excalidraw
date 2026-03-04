@@ -22,6 +22,7 @@ const DEFAULT_RECTANGLE_ANCHOR_POINTS: readonly FixedPoint[] = [
   [0.5, 1],
   [0, 0.5],
 ];
+const SHOW_ANCHORS_WHEN_UNSELECTED_KEY = "showAnchorsWhenUnselected";
 
 const isRectangleAnchorPoint = (
   fixedPoint: unknown,
@@ -83,6 +84,25 @@ export const getCustomBindableElementAnchorPoints = (
         fixedPointsEqual(defaultAnchorPoint, fixedPoint),
       ),
   );
+
+export const shouldShowBindableElementAnchorsWhenUnselected = (
+  element: ExcalidrawBindableElement,
+): boolean => element.customData?.[SHOW_ANCHORS_WHEN_UNSELECTED_KEY] !== false;
+
+export const setBindableElementAnchorsWhenUnselected = (
+  element: ExcalidrawBindableElement,
+  shouldShowWhenUnselected: boolean,
+) => {
+  const customData = { ...(element.customData || {}) };
+
+  if (shouldShowWhenUnselected) {
+    delete customData[SHOW_ANCHORS_WHEN_UNSELECTED_KEY];
+  } else {
+    customData[SHOW_ANCHORS_WHEN_UNSELECTED_KEY] = false;
+  }
+
+  return Object.keys(customData).length > 0 ? customData : undefined;
+};
 
 export const addBindableElementAnchorPoint = (
   element: ExcalidrawBindableElement,

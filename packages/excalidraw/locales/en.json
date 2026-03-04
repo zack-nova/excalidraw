@@ -147,7 +147,8 @@
     },
     "anchorEditor": {
       "label": "Anchor points",
-      "edit": "Edit anchor points"
+      "edit": "Edit anchor points",
+      "showWhenUnselected": "Show anchors when unselected"
     },
     "polygon": {
       "breakPolygon": "Break polygon",
