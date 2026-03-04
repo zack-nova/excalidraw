@@ -6,12 +6,16 @@ import { COLOR_PALETTE } from "@excalidraw/common";
 import { atom, useAtom } from "../editor-jotai";
 
 import type { LibraryItem } from "../types";
+import type { BinaryFiles } from "../types";
 
 export type SvgCache = Map<LibraryItem["id"], SVGSVGElement>;
 
 export const libraryItemSvgsCache = atom<SvgCache>(new Map());
 
-const exportLibraryItemToSvg = async (elements: LibraryItem["elements"]) => {
+const exportLibraryItemToSvg = async (
+  elements: LibraryItem["elements"],
+  files?: BinaryFiles,
+) => {
   // TODO should pass theme (appState.exportWithDark) - we're still using
   // CSS filter here
   return await exportToSvg({
@@ -20,7 +24,7 @@ const exportLibraryItemToSvg = async (elements: LibraryItem["elements"]) => {
       exportBackground: false,
       viewBackgroundColor: COLOR_PALETTE.white,
     },
-    files: null,
+    files: files || null,
     renderEmbeddables: false,
     skipInliningFonts: true,
   });
@@ -29,6 +33,7 @@ const exportLibraryItemToSvg = async (elements: LibraryItem["elements"]) => {
 export const useLibraryItemSvg = (
   id: LibraryItem["id"] | null,
   elements: LibraryItem["elements"] | undefined,
+  files: LibraryItem["files"] | undefined,
   svgCache: SvgCache,
   ref: React.RefObject<HTMLDivElement | null>,
 ): SVGSVGElement | undefined => {
@@ -45,7 +50,7 @@ export const useLibraryItemSvg = (
         } else {
           // When there is no svg in cache export it and save to cache
           (async () => {
-            const exportedSvg = await exportLibraryItemToSvg(elements);
+            const exportedSvg = await exportLibraryItemToSvg(elements, files);
             // TODO: should likely be removed for custom fonts
             exportedSvg.querySelector(".style-fonts")?.remove();
 
@@ -58,12 +63,12 @@ export const useLibraryItemSvg = (
       } else {
         // When we have no id (usualy selected items from canvas) just export the svg
         (async () => {
-          const exportedSvg = await exportLibraryItemToSvg(elements);
+          const exportedSvg = await exportLibraryItemToSvg(elements, files);
           setSvg(exportedSvg);
         })();
       }
     }
-  }, [id, elements, svgCache, setSvg]);
+  }, [id, elements, files, svgCache, setSvg]);
 
   useEffect(() => {
     const node = ref.current;

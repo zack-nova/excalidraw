@@ -4,9 +4,12 @@ import { vi } from "vitest";
 
 import { MIME_TYPES, ORIG_ID } from "@excalidraw/common";
 
-import { getCommonBoundingBox } from "@excalidraw/element";
+import { getCommonBoundingBox, newImageElement } from "@excalidraw/element";
 
-import type { ExcalidrawGenericElement } from "@excalidraw/element/types";
+import type {
+  ExcalidrawGenericElement,
+  FileId,
+} from "@excalidraw/element/types";
 
 import { parseLibraryJSON } from "../data/blob";
 import { serializeLibraryAsJSON } from "../data/json";
@@ -14,10 +17,11 @@ import { distributeLibraryItemsOnSquareGrid } from "../data/library";
 import { Excalidraw } from "../index";
 
 import { API } from "./helpers/api";
+import { mockHTMLImageElement } from "./helpers/mocks";
 import { UI } from "./helpers/ui";
-import { fireEvent, render, waitFor } from "./test-utils";
+import { fireEvent, render, screen, waitFor } from "./test-utils";
 
-import type { LibraryItem, LibraryItems } from "../types";
+import type { BinaryFiles, DataURL, LibraryItem, LibraryItems } from "../types";
 
 const { h } = window;
 
@@ -237,9 +241,78 @@ describe("library", () => {
     // this has a high flake
     // expect(h.state.activeTool.type).toBe("selection");
   });
+
+  it("dropping library ids onto canvas deduplicates repeated library items by id", async () => {
+    const duplicateA: LibraryItem = {
+      id: "duplicate-item",
+      status: "published",
+      elements: [
+        API.createElement({ id: "duplicate-item-rect-1", type: "rectangle" }),
+      ],
+      created: 1,
+      name: "重复组件",
+    };
+    const duplicateB: LibraryItem = {
+      id: "duplicate-item",
+      status: "published",
+      elements: [
+        API.createElement({ id: "duplicate-item-rect-2", type: "rectangle" }),
+      ],
+      created: 2,
+      name: "重复组件",
+    };
+
+    await act(() =>
+      h.app.library.updateLibrary({
+        libraryItems: [duplicateA, duplicateB],
+        merge: false,
+      }),
+    );
+
+    await API.drop([
+      {
+        kind: "string",
+        value: JSON.stringify({
+          itemIds: ["duplicate-item"],
+        }),
+        type: MIME_TYPES.excalidrawlibIds,
+      },
+    ]);
+
+    await waitFor(() => {
+      expect(h.elements).toHaveLength(1);
+    });
+  });
 });
 
 describe("library menu", () => {
+  const createSourcedLibraryItem = ({
+    id,
+    name,
+    sourceId,
+    sourceName,
+    sourceKind,
+    componentGroup,
+  }: {
+    id: string;
+    name: string;
+    sourceId?: string;
+    sourceName?: string;
+    sourceKind?: "personal" | "public";
+    componentGroup?: string;
+  }) =>
+    ({
+      id,
+      status: sourceKind === "public" ? "published" : "unpublished",
+      elements: [API.createElement({ id: `${id}-rect`, type: "rectangle" })],
+      created: Date.now(),
+      name,
+      sourceId,
+      sourceName,
+      sourceKind,
+      componentGroup,
+    } as LibraryItem);
+
   it("should load library from file picker", async () => {
     const { container } = await render(<Excalidraw />);
 
@@ -267,6 +340,293 @@ describe("library menu", () => {
       expect(latestLibrary[0].elements).toEqual([
         expect.objectContaining(strippedElement),
       ]);
+    });
+  });
+
+  it("orders personal library, add button, and external source accordions", async () => {
+    const selectedElement = API.createElement({
+      id: "selected-rect",
+      type: "rectangle",
+    });
+    const libraryItems: LibraryItems = [
+      createSourcedLibraryItem({
+        id: "personal-item",
+        name: "我的组件",
+        sourceKind: "personal",
+      }),
+      createSourcedLibraryItem({
+        id: "fuel-item",
+        name: "CoalSource",
+        sourceId: "xjtu-library",
+        sourceName: "西交大素材库",
+        sourceKind: "public",
+        componentGroup: "燃料设备",
+      }),
+      createSourcedLibraryItem({
+        id: "valve-item",
+        name: "WaterValve",
+        sourceId: "xjtu-library",
+        sourceName: "西交大素材库",
+        sourceKind: "public",
+        componentGroup: "汽水连接件",
+      }),
+    ];
+
+    const { container } = await render(
+      <Excalidraw
+        initialData={{
+          elements: [selectedElement],
+          appState: {
+            selectedElementIds: {
+              [selectedElement.id]: true,
+            },
+          },
+          libraryItems,
+        }}
+      />,
+    );
+
+    await act(async () => {
+      fireEvent.click(container.querySelector(".sidebar-trigger")!);
+    });
+
+    const personalTitle = screen.getByText("Personal Library");
+    const addButtonTile = container.querySelector(".library-unit__pulse");
+    const sourceButton = screen.getByRole("button", {
+      name: "西交大素材库",
+    });
+
+    expect(addButtonTile).not.toBeNull();
+    expect(
+      personalTitle.compareDocumentPosition(addButtonTile!) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(screen.queryByText("Other Libraries")).toBe(null);
+    expect(
+      addButtonTile!.compareDocumentPosition(sourceButton) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(sourceButton).toBeInTheDocument();
+  });
+
+  it("groups items by source and group, and restores collapsed state after search", async () => {
+    const libraryItems: LibraryItems = [
+      createSourcedLibraryItem({
+        id: "personal-item",
+        name: "我的组件",
+        sourceKind: "personal",
+      }),
+      createSourcedLibraryItem({
+        id: "fuel-item",
+        name: "CoalSource",
+        sourceId: "xjtu-library",
+        sourceName: "西交大素材库",
+        sourceKind: "public",
+        componentGroup: "燃料设备",
+      }),
+      createSourcedLibraryItem({
+        id: "valve-item",
+        name: "WaterValve",
+        sourceId: "xjtu-library",
+        sourceName: "西交大素材库",
+        sourceKind: "public",
+        componentGroup: "汽水连接件",
+      }),
+    ];
+
+    const { container } = await render(
+      <Excalidraw initialData={{ libraryItems }} />,
+    );
+
+    fireEvent.click(container.querySelector(".sidebar-trigger")!);
+
+    const source = await screen.findByRole("button", {
+      name: "西交大素材库",
+    });
+
+    fireEvent.click(source);
+    expect(source).toHaveAttribute("aria-expanded", "false");
+
+    const searchInput = screen.getByPlaceholderText("Search library");
+    fireEvent.change(searchInput, { target: { value: "WaterValve" } });
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", {
+          name: "西交大素材库",
+        }),
+      ).toHaveAttribute("aria-expanded", "true");
+      expect(
+        screen.getByRole("button", {
+          name: "汽水连接件",
+        }),
+      ).toHaveAttribute("aria-expanded", "true");
+      expect(screen.queryByRole("button", { name: "燃料设备" })).toBe(null);
+      expect(container.querySelectorAll(".library-unit__active").length).toBe(
+        1,
+      );
+    });
+
+    fireEvent.change(searchInput, { target: { value: "" } });
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", {
+          name: "西交大素材库",
+        }),
+      ).toHaveAttribute("aria-expanded", "false");
+    });
+  });
+
+  it("hides the group accordion when a library only has one group", async () => {
+    const libraryItems: LibraryItems = [
+      createSourcedLibraryItem({
+        id: "single-group-item",
+        name: "单分组组件",
+        sourceId: "single-library",
+        sourceName: "单分组素材库",
+        sourceKind: "public",
+        componentGroup: "唯一分组",
+      }),
+    ];
+
+    const { container } = await render(
+      <Excalidraw initialData={{ libraryItems }} />,
+    );
+
+    fireEvent.click(container.querySelector(".sidebar-trigger")!);
+
+    expect(
+      await screen.findByRole("button", {
+        name: "单分组素材库",
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", {
+        name: "唯一分组",
+      }),
+    ).toBe(null);
+    expect(await screen.findByLabelText("单分组组件")).toBeInTheDocument();
+  });
+
+  it("inserts grouped image library items with file data and component payload", async () => {
+    mockHTMLImageElement(40, 40);
+
+    const fileId = "component-file" as FileId;
+    const files: BinaryFiles = {
+      [fileId]: {
+        id: fileId,
+        mimeType: MIME_TYPES.png,
+        dataURL:
+          "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4//8/AwAF/gL+p42lWAAAAABJRU5ErkJggg==" as DataURL,
+        created: Date.now(),
+      },
+    };
+
+    const imageElement = newImageElement({
+      type: "image",
+      x: 0,
+      y: 0,
+      width: 40,
+      height: 40,
+      status: "saved",
+      fileId,
+      customData: {
+        component: {
+          group: "燃料设备",
+          data: {
+            component_type: "CoalSource",
+            name_cn: "煤/燃料",
+          },
+        },
+      },
+    });
+
+    const libraryItems: LibraryItems = [
+      {
+        id: "coal-item",
+        status: "unpublished",
+        created: Date.now(),
+        name: "煤/燃料",
+        sourceId: "fuel-library",
+        sourceName: "燃料素材库",
+        sourceKind: "public",
+        componentGroup: "燃料设备",
+        elements: [imageElement],
+        files,
+      } as LibraryItem,
+    ];
+
+    const { container } = await render(
+      <Excalidraw initialData={{ libraryItems }} />,
+    );
+
+    fireEvent.click(container.querySelector(".sidebar-trigger")!);
+
+    fireEvent.click(await screen.findByLabelText("煤/燃料"));
+
+    await waitFor(() => {
+      expect(h.elements).toEqual([
+        expect.objectContaining({
+          type: "image",
+          fileId,
+          customData: expect.objectContaining({
+            component: expect.objectContaining({
+              group: "燃料设备",
+              data: expect.objectContaining({
+                component_type: "CoalSource",
+              }),
+            }),
+          }),
+        }),
+      ]);
+      expect(h.app.files[fileId]).toEqual(
+        expect.objectContaining({
+          id: fileId,
+          mimeType: MIME_TYPES.png,
+        }),
+      );
+    });
+  });
+
+  it("deduplicates repeated library items by id when rendering and inserting", async () => {
+    const duplicateA = createSourcedLibraryItem({
+      id: "duplicate-item",
+      name: "重复组件",
+      sourceId: "xjtu-library",
+      sourceName: "西交大素材库",
+      sourceKind: "public",
+      componentGroup: "燃料设备",
+    });
+
+    const duplicateB = {
+      ...createSourcedLibraryItem({
+        id: "duplicate-item",
+        name: "重复组件",
+        sourceId: "xjtu-library",
+        sourceName: "西交大素材库",
+        sourceKind: "public",
+        componentGroup: "燃料设备",
+      }),
+      elements: [
+        API.createElement({ id: "duplicate-item-rect-2", type: "rectangle" }),
+      ],
+    } as LibraryItem;
+
+    const { container } = await render(
+      <Excalidraw initialData={{ libraryItems: [duplicateA, duplicateB] }} />,
+    );
+
+    fireEvent.click(container.querySelector(".sidebar-trigger")!);
+
+    await waitFor(() => {
+      expect(screen.getAllByLabelText("重复组件")).toHaveLength(1);
+    });
+
+    fireEvent.click(screen.getByLabelText("重复组件"));
+
+    await waitFor(() => {
+      expect(h.elements).toHaveLength(1);
     });
   });
 });

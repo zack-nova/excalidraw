@@ -361,7 +361,10 @@ import {
 } from "../clipboard";
 
 import { exportCanvas, loadFromBlob } from "../data";
-import Library, { distributeLibraryItemsOnSquareGrid } from "../data/library";
+import Library, {
+  distributeLibraryItemsOnSquareGrid,
+  getLibraryItemsFiles,
+} from "../data/library";
 import { restoreAppState, restoreElements } from "../data/restore";
 import { getCenter, getDistance } from "../gesture";
 import { History } from "../history";
@@ -609,6 +612,33 @@ const gesture: Gesture = {
   lastCenter: null,
   initialDistance: null,
   initialScale: null,
+};
+
+const getUniqueLibraryItemsByIds = (
+  libraryItems: LibraryItems,
+  itemIds: readonly string[],
+): LibraryItems => {
+  const itemIdsSet = new Set(itemIds);
+  const firstLibraryItemById = new Map<string, LibraryItems[number]>();
+  const seenIds = new Set<string>();
+
+  libraryItems.forEach((item) => {
+    if (!itemIdsSet.has(item.id) || firstLibraryItemById.has(item.id)) {
+      return;
+    }
+
+    firstLibraryItemById.set(item.id, item);
+  });
+
+  return itemIds.flatMap((itemId) => {
+    if (seenIds.has(itemId)) {
+      return [];
+    }
+
+    seenIds.add(itemId);
+    const libraryItem = firstLibraryItemById.get(itemId);
+    return libraryItem ? [libraryItem] : [];
+  });
 };
 
 class App extends React.Component<AppProps, AppState> {
@@ -11856,9 +11886,7 @@ class App extends React.Component<AppProps, AppState> {
             excalidrawLibrary_ids,
           ) as ExcalidrawLibraryIds;
           const allLibraryItems = await this.library.getLatestLibrary();
-          libraryItems = allLibraryItems.filter((item) =>
-            itemIds.includes(item.id),
-          );
+          libraryItems = getUniqueLibraryItemsByIds(allLibraryItems, itemIds);
           // legacy library dataTransfer format
         } else if (excalidrawLibrary_data) {
           libraryItems = parseLibraryJSON(excalidrawLibrary_data);
@@ -11877,7 +11905,7 @@ class App extends React.Component<AppProps, AppState> {
           this.addElementsFromPasteOrLibrary({
             elements: distributeLibraryItemsOnSquareGrid(libraryItems),
             position: event,
-            files: null,
+            files: getLibraryItemsFiles(libraryItems),
           });
         }
       } catch (error: any) {

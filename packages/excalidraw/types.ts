@@ -520,10 +520,16 @@ export type LibraryItem = {
   id: string;
   status: "published" | "unpublished";
   elements: readonly NonDeleted<ExcalidrawElement>[];
+  files?: BinaryFiles;
   /** timestamp in epoch (ms) */
   created: number;
   name?: string;
   error?: string;
+  sourceId?: string;
+  sourceName?: string;
+  sourceKind?: "personal" | "public";
+  componentGroup?: string;
+  searchKeywords?: readonly string[];
 };
 export type LibraryItems = readonly LibraryItem[];
 export type LibraryItems_anyVersion = LibraryItems | LibraryItems_v1;

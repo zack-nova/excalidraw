@@ -16,7 +16,9 @@ export const LibraryUnit = memo(
   ({
     id,
     elements,
+    files,
     isPending,
+    name,
     onClick,
     selected,
     onToggle,
@@ -25,7 +27,9 @@ export const LibraryUnit = memo(
   }: {
     id: LibraryItem["id"] | /** for pending item */ null;
     elements?: LibraryItem["elements"];
+    files?: LibraryItem["files"];
     isPending?: boolean;
+    name?: LibraryItem["name"];
     onClick: (id: LibraryItem["id"] | null) => void;
     selected: boolean;
     onToggle: (id: string, event: React.MouseEvent) => void;
@@ -33,7 +37,7 @@ export const LibraryUnit = memo(
     svgCache: SvgCache;
   }) => {
     const ref = useRef<HTMLDivElement | null>(null);
-    const svg = useLibraryItemSvg(id, elements, svgCache, ref);
+    const svg = useLibraryItemSvg(id, elements, files, svgCache, ref);
 
     const [isHovered, setIsHovered] = useState(false);
     const isMobile = useEditorInterface().formFactor === "phone";
@@ -56,6 +60,9 @@ export const LibraryUnit = memo(
           className={clsx("library-unit__dragger", {
             "library-unit__pulse": !!isPending,
           })}
+          aria-label={name}
+          role={elements ? "button" : undefined}
+          title={name}
           ref={ref}
           draggable={!!elements}
           onClick={
