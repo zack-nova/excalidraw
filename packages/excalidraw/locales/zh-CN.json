@@ -141,6 +141,10 @@
       "edit": "编辑线条",
       "editArrow": "编辑箭头"
     },
+    "anchorEditor": {
+      "label": "锚点",
+      "edit": "编辑锚点"
+    },
     "polygon": {
       "breakPolygon": "解除多边形",
       "convertToPolygon": "转换为多边形"
@@ -171,7 +175,9 @@
     "linkToElement": "链接到对象",
     "wrapSelectionInFrame": "用选中的元素创建画框",
     "tab": "Tab",
-    "shapeSwitch": "切换形状"
+    "shapeSwitch": "切换形状",
+    "preferences": "偏好设置",
+    "preferences_toolLock": "工具锁定"
   },
   "elementLink": {
     "title": "链接到对象",

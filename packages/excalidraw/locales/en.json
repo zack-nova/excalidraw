@@ -145,6 +145,10 @@
       "edit": "Edit line",
       "editArrow": "Edit arrow"
     },
+    "anchorEditor": {
+      "label": "Anchor points",
+      "edit": "Edit anchor points"
+    },
     "polygon": {
       "breakPolygon": "Break polygon",
       "convertToPolygon": "Convert to polygon"

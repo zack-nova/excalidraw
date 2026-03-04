@@ -10,6 +10,10 @@ import { LinearElementEditor } from "@excalidraw/element";
 import { newElementWith } from "@excalidraw/element";
 import { getContainerElement } from "@excalidraw/element";
 import {
+  getBindableElementAnchorPoints,
+  removeBindableElementAnchorPoint,
+} from "@excalidraw/element";
+import {
   isBoundToContainer,
   isElbowArrow,
   isFrameLikeElement,
@@ -211,6 +215,42 @@ export const actionDeleteSelected = register({
   icon: TrashIcon,
   trackEvent: { category: "element", action: "delete" },
   perform: (elements, appState, formData, app) => {
+    if (
+      appState.editingAnchorElementId &&
+      appState.selectedAnchorPointIndex !== null
+    ) {
+      const element = app.scene
+        .getSelectedElements(appState)
+        .find((candidate) => candidate.id === appState.editingAnchorElementId);
+
+      if (!element || element.type !== "rectangle") {
+        return false;
+      }
+
+      const anchorPoints = getBindableElementAnchorPoints(element);
+
+      if (appState.selectedAnchorPointIndex >= anchorPoints.length) {
+        return false;
+      }
+
+      app.scene.mutateElement(element, {
+        customData: removeBindableElementAnchorPoint(
+          element,
+          appState.selectedAnchorPointIndex,
+        ),
+      });
+
+      return {
+        elements,
+        appState: {
+          ...appState,
+          selectedAnchorPointIndex: null,
+          draggedAnchorPointIndex: null,
+        },
+        captureUpdate: CaptureUpdateAction.IMMEDIATELY,
+      };
+    }
+
     if (appState.selectedLinearElement?.isEditing) {
       const { elementId, selectedPointsIndices } =
         appState.selectedLinearElement;
@@ -293,6 +333,9 @@ export const actionDeleteSelected = register({
         newElement: null,
         activeEmbeddable: null,
         selectedLinearElement: null,
+        editingAnchorElementId: null,
+        selectedAnchorPointIndex: null,
+        draggedAnchorPointIndex: null,
       },
       captureUpdate: isSomeElementSelected(
         getNonDeletedElements(elements),
