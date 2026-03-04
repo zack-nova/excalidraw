@@ -35,6 +35,8 @@ import { TextField } from "./TextField";
 import { useEditorInterface } from "./App";
 
 import { Button } from "./Button";
+import { InlineIcon } from "./InlineIcon";
+import { collapseDownIcon, collapseUpIcon } from "./icons";
 
 import type { ExcalidrawLibraryIds } from "../data/types";
 
@@ -51,6 +53,124 @@ const ITEMS_RENDERED_PER_BATCH = 17;
 // when render outputs cached we can render many more items per batch to
 // speed it up
 const CACHED_ITEMS_RENDERED_PER_BATCH = 64;
+const PERSONAL_LIBRARY_SOURCE_ID = "personal-library";
+const PUBLISHED_LIBRARY_SOURCE_ID = "published-library";
+
+type GroupedLibraryItems = {
+  sourceId: string;
+  sourceName: string;
+  sourceKind: "personal" | "public";
+  groups: {
+    groupId: string;
+    groupName: string;
+    items: LibraryItems;
+  }[];
+}[];
+
+const dedupeLibraryItemsById = (items: LibraryItems): LibraryItems => {
+  const seenIds = new Set<LibraryItem["id"]>();
+
+  return items.filter((item) => {
+    if (seenIds.has(item.id)) {
+      return false;
+    }
+
+    seenIds.add(item.id);
+    return true;
+  });
+};
+
+const getLibraryItemSource = (item: LibraryItem) => {
+  const sourceKind =
+    item.sourceKind || (item.status === "published" ? "public" : "personal");
+
+  return {
+    sourceId:
+      item.sourceId ||
+      (item.sourceName
+        ? `${sourceKind}:${item.sourceName}`
+        : sourceKind === "public"
+        ? PUBLISHED_LIBRARY_SOURCE_ID
+        : PERSONAL_LIBRARY_SOURCE_ID),
+    sourceName:
+      item.sourceName ||
+      (sourceKind === "public"
+        ? t("labels.excalidrawLib")
+        : t("labels.personalLib")),
+    sourceKind,
+  };
+};
+
+const getLibraryItemGroupName = (item: LibraryItem) =>
+  item.componentGroup?.trim() || t("library.ungrouped");
+
+const getLibraryItemSearchText = (item: LibraryItem) =>
+  [item.name, ...(item.searchKeywords || [])]
+    .filter(Boolean)
+    .join(" ")
+    .trim()
+    .toLowerCase();
+
+const groupLibraryItems = (items: LibraryItems): GroupedLibraryItems => {
+  const sources = new Map<
+    string,
+    {
+      sourceId: string;
+      sourceName: string;
+      sourceKind: "personal" | "public";
+      groups: Map<
+        string,
+        {
+          groupId: string;
+          groupName: string;
+          items: LibraryItem[];
+        }
+      >;
+    }
+  >();
+
+  items.forEach((item) => {
+    const { sourceId, sourceName, sourceKind } = getLibraryItemSource(item);
+    const groupName = getLibraryItemGroupName(item);
+    const groupId = `${sourceId}:${groupName}`;
+
+    if (!sources.has(sourceId)) {
+      sources.set(sourceId, {
+        sourceId,
+        sourceName,
+        sourceKind,
+        groups: new Map(),
+      });
+    }
+
+    const source = sources.get(sourceId)!;
+
+    if (!source.groups.has(groupId)) {
+      source.groups.set(groupId, {
+        groupId,
+        groupName,
+        items: [],
+      });
+    }
+
+    source.groups.get(groupId)!.items.push(item);
+  });
+
+  return Array.from(sources.values()).map((source) => ({
+    sourceId: source.sourceId,
+    sourceName: source.sourceName,
+    sourceKind: source.sourceKind,
+    groups: Array.from(source.groups.values()).map((group) => ({
+      groupId: group.groupId,
+      groupName: group.groupName,
+      items: group.items,
+    })),
+  }));
+};
+
+const flattenSourceItems = (
+  source: GroupedLibraryItems[number] | undefined,
+): LibraryItems => source?.groups.flatMap((group) => group.items) || [];
 
 export default function LibraryMenuItems({
   isLoading,
@@ -78,6 +198,10 @@ export default function LibraryMenuItems({
   const editorInterface = useEditorInterface();
   const libraryContainerRef = useRef<HTMLDivElement>(null);
   const scrollPosition = useScrollPosition<HTMLDivElement>(libraryContainerRef);
+  const dedupedLibraryItems = useMemo(
+    () => dedupeLibraryItemsById(libraryItems),
+    [libraryItems],
+  );
 
   // This effect has to be called only on first render, therefore  `scrollPosition` isn't in the dependency array
   useEffect(() => {
@@ -93,7 +217,8 @@ export default function LibraryMenuItems({
 
   const [searchInputValue, setSearchInputValue] = useState("");
 
-  const IS_LIBRARY_EMPTY = !libraryItems.length && !pendingElements.length;
+  const IS_LIBRARY_EMPTY =
+    !dedupedLibraryItems.length && !pendingElements.length;
 
   const IS_SEARCHING = !IS_LIBRARY_EMPTY && !!searchInputValue.trim();
 
@@ -103,28 +228,67 @@ export default function LibraryMenuItems({
       return [];
     }
 
-    return libraryItems.filter((item) => {
-      const itemName = item.name || "";
-      return (
-        itemName.trim() && deburr(itemName.toLowerCase()).includes(searchQuery)
-      );
+    return dedupedLibraryItems.filter((item) => {
+      const searchableText = deburr(getLibraryItemSearchText(item));
+      return searchableText.includes(searchQuery);
     });
-  }, [libraryItems, searchInputValue]);
+  }, [dedupedLibraryItems, searchInputValue]);
 
-  const unpublishedItems = useMemo(
-    () => libraryItems.filter((item) => item.status !== "published"),
-    [libraryItems],
+  const visibleItems = useMemo(
+    () => (IS_SEARCHING ? filteredItems : dedupedLibraryItems),
+    [IS_SEARCHING, filteredItems, dedupedLibraryItems],
   );
 
-  const publishedItems = useMemo(
-    () => libraryItems.filter((item) => item.status === "published"),
-    [libraryItems],
+  const allGroupedItems = useMemo(
+    () => groupLibraryItems(dedupedLibraryItems),
+    [dedupedLibraryItems],
   );
+
+  const groupedItems = useMemo(
+    () => groupLibraryItems(visibleItems),
+    [visibleItems],
+  );
+
+  const sourceGroupCounts = useMemo(
+    () =>
+      allGroupedItems.reduce((acc, source) => {
+        acc[source.sourceId] = source.groups.length;
+        return acc;
+      }, {} as Record<string, number>),
+    [allGroupedItems],
+  );
+
+  const personalSource = useMemo(
+    () =>
+      groupedItems.find((source) => source.sourceKind === "personal") || {
+        sourceId: PERSONAL_LIBRARY_SOURCE_ID,
+        sourceName: t("labels.personalLib"),
+        sourceKind: "personal" as const,
+        groups: [],
+      },
+    [groupedItems],
+  );
+
+  const externalSources = useMemo(
+    () => groupedItems.filter((source) => source.sourceKind === "public"),
+    [groupedItems],
+  );
+  const personalItems = useMemo(
+    () => flattenSourceItems(personalSource),
+    [personalSource],
+  );
+
+  const [collapsedSources, setCollapsedSources] = useState<
+    Record<string, boolean>
+  >({});
+  const [collapsedGroups, setCollapsedGroups] = useState<
+    Record<string, boolean>
+  >({});
 
   const onItemSelectToggle = useCallback(
     (id: LibraryItem["id"], event: React.MouseEvent) => {
       const shouldSelect = !selectedItems.includes(id);
-      const orderedItems = [...unpublishedItems, ...publishedItems];
+      const orderedItems = IS_SEARCHING ? filteredItems : dedupedLibraryItems;
       if (shouldSelect) {
         if (event.shiftKey && lastSelectedItem) {
           const rangeStart = orderedItems.findIndex(
@@ -164,11 +328,12 @@ export default function LibraryMenuItems({
       }
     },
     [
+      filteredItems,
+      IS_SEARCHING,
+      dedupedLibraryItems,
       lastSelectedItem,
       onSelectItems,
-      publishedItems,
       selectedItems,
-      unpublishedItems,
     ],
   );
 
@@ -184,11 +349,14 @@ export default function LibraryMenuItems({
     (id: string) => {
       let targetElements;
       if (selectedItems.includes(id)) {
-        targetElements = libraryItems.filter((item) =>
+        targetElements = dedupedLibraryItems.filter((item) =>
           selectedItems.includes(item.id),
         );
       } else {
-        targetElements = libraryItems.filter((item) => item.id === id);
+        const item = dedupedLibraryItems.find(
+          (libraryItem) => libraryItem.id === id,
+        );
+        targetElements = item ? [item] : [];
       }
       return targetElements.map((item) => {
         return {
@@ -203,7 +371,7 @@ export default function LibraryMenuItems({
         };
       });
     },
-    [libraryItems, selectedItems],
+    [dedupedLibraryItems, selectedItems],
   );
 
   const onItemDrag = useCallback(
@@ -245,8 +413,7 @@ export default function LibraryMenuItems({
   );
 
   const itemsRenderedPerBatch =
-    svgCache.size >=
-    (filteredItems.length ? filteredItems : libraryItems).length
+    svgCache.size >= visibleItems.length
       ? CACHED_ITEMS_RENDERED_PER_BATCH
       : ITEMS_RENDERED_PER_BATCH;
 
@@ -258,6 +425,107 @@ export default function LibraryMenuItems({
     });
   }, []);
 
+  const toggleSource = useCallback(
+    (sourceId: string) => {
+      if (IS_SEARCHING) {
+        return;
+      }
+      setCollapsedSources((prev) => ({
+        ...prev,
+        [sourceId]: !(prev[sourceId] ?? false),
+      }));
+    },
+    [IS_SEARCHING],
+  );
+
+  const toggleGroup = useCallback(
+    (groupId: string) => {
+      if (IS_SEARCHING) {
+        return;
+      }
+      setCollapsedGroups((prev) => ({
+        ...prev,
+        [groupId]: !(prev[groupId] ?? false),
+      }));
+    },
+    [IS_SEARCHING],
+  );
+
+  const renderItemsGrid = (items: LibraryItems) => (
+    <LibraryMenuSectionGrid>
+      <LibraryMenuSection
+        itemsRenderedPerBatch={itemsRenderedPerBatch}
+        items={items}
+        onItemSelectToggle={onItemSelectToggle}
+        onItemDrag={onItemDrag}
+        onClick={onItemClick}
+        isItemSelected={isItemSelected}
+        svgCache={svgCache}
+      />
+    </LibraryMenuSectionGrid>
+  );
+
+  const renderSourceContent = (source: GroupedLibraryItems[number]) => {
+    if (sourceGroupCounts[source.sourceId] === 1 && source.groups.length > 0) {
+      return renderItemsGrid(source.groups[0].items);
+    }
+
+    return source.groups.map((group) => {
+      const isGroupOpen = IS_SEARCHING || !collapsedGroups[group.groupId];
+
+      return (
+        <div
+          className="library-menu-items-container__subsection"
+          key={group.groupId}
+        >
+          <button
+            aria-expanded={isGroupOpen}
+            className="library-menu-items-container__accordion library-menu-items-container__accordion--group"
+            onClick={() => toggleGroup(group.groupId)}
+            type="button"
+          >
+            <span className="library-menu-items-container__accordion-label">
+              {group.groupName}
+            </span>
+            <InlineIcon
+              className="library-menu-items-container__accordion-icon"
+              icon={isGroupOpen ? collapseUpIcon : collapseDownIcon}
+            />
+          </button>
+          {isGroupOpen && renderItemsGrid(group.items)}
+        </div>
+      );
+    });
+  };
+
+  const renderLibraryGroups = (items: GroupedLibraryItems) =>
+    items.map((source) => {
+      const isSourceOpen = IS_SEARCHING || !collapsedSources[source.sourceId];
+
+      return (
+        <div
+          className="library-menu-items-container__section"
+          key={source.sourceId}
+        >
+          <button
+            aria-expanded={isSourceOpen}
+            className="library-menu-items-container__accordion"
+            onClick={() => toggleSource(source.sourceId)}
+            type="button"
+          >
+            <span className="library-menu-items-container__accordion-label">
+              {source.sourceName}
+            </span>
+            <InlineIcon
+              className="library-menu-items-container__accordion-icon"
+              icon={isSourceOpen ? collapseUpIcon : collapseDownIcon}
+            />
+          </button>
+          {isSourceOpen && renderSourceContent(source)}
+        </div>
+      );
+    });
+
   const JSX_whenNotSearching = !IS_SEARCHING && (
     <>
       {!IS_LIBRARY_EMPTY && (
@@ -265,64 +533,49 @@ export default function LibraryMenuItems({
           {t("labels.personalLib")}
         </div>
       )}
-      {!pendingElements.length && !unpublishedItems.length ? (
-        <div className="library-menu-items__no-items">
-          {!publishedItems.length && (
-            <div className="library-menu-items__no-items__label">
-              {t("library.noItems")}
+      <div className="library-menu-items-private-library-container">
+        {!pendingElements.length && !personalItems.length ? (
+          <div className="library-menu-items__no-items">
+            {!externalSources.length && (
+              <div className="library-menu-items__no-items__label">
+                {t("library.noItems")}
+              </div>
+            )}
+            <div className="library-menu-items__no-items__hint">
+              {externalSources.length
+                ? t("library.hint_emptyPrivateLibrary")
+                : t("library.hint_emptyLibrary")}
             </div>
-          )}
-          <div className="library-menu-items__no-items__hint">
-            {publishedItems.length > 0
-              ? t("library.hint_emptyPrivateLibrary")
-              : t("library.hint_emptyLibrary")}
           </div>
-        </div>
-      ) : (
-        <LibraryMenuSectionGrid>
-          {pendingElements.length > 0 && (
+        ) : (
+          <LibraryMenuSectionGrid>
+            {pendingElements.length > 0 && (
+              <LibraryMenuSection
+                itemsRenderedPerBatch={itemsRenderedPerBatch}
+                items={[{ id: null, elements: pendingElements }]}
+                onItemSelectToggle={onItemSelectToggle}
+                onItemDrag={onItemDrag}
+                onClick={onAddToLibraryClick}
+                isItemSelected={isItemSelected}
+                svgCache={svgCache}
+              />
+            )}
             <LibraryMenuSection
               itemsRenderedPerBatch={itemsRenderedPerBatch}
-              items={[{ id: null, elements: pendingElements }]}
+              items={personalItems}
               onItemSelectToggle={onItemSelectToggle}
               onItemDrag={onItemDrag}
-              onClick={onAddToLibraryClick}
+              onClick={onItemClick}
               isItemSelected={isItemSelected}
               svgCache={svgCache}
             />
-          )}
-          <LibraryMenuSection
-            itemsRenderedPerBatch={itemsRenderedPerBatch}
-            items={unpublishedItems}
-            onItemSelectToggle={onItemSelectToggle}
-            onItemDrag={onItemDrag}
-            onClick={onItemClick}
-            isItemSelected={isItemSelected}
-            svgCache={svgCache}
-          />
-        </LibraryMenuSectionGrid>
-      )}
-
-      {publishedItems.length > 0 && (
-        <div
-          className="library-menu-items-container__header"
-          style={{ marginTop: "0.75rem" }}
-        >
-          {t("labels.excalidrawLib")}
+          </LibraryMenuSectionGrid>
+        )}
+      </div>
+      {externalSources.length > 0 && (
+        <div className="library-menu-items-container__external-libraries">
+          {renderLibraryGroups(externalSources)}
         </div>
-      )}
-      {publishedItems.length > 0 && (
-        <LibraryMenuSectionGrid>
-          <LibraryMenuSection
-            itemsRenderedPerBatch={itemsRenderedPerBatch}
-            items={publishedItems}
-            onItemSelectToggle={onItemSelectToggle}
-            onItemDrag={onItemDrag}
-            onClick={onItemClick}
-            isItemSelected={isItemSelected}
-            svgCache={svgCache}
-          />
-        </LibraryMenuSectionGrid>
       )}
     </>
   );
@@ -345,17 +598,7 @@ export default function LibraryMenuItems({
         )}
       </div>
       {filteredItems.length > 0 ? (
-        <LibraryMenuSectionGrid>
-          <LibraryMenuSection
-            itemsRenderedPerBatch={itemsRenderedPerBatch}
-            items={filteredItems}
-            onItemSelectToggle={onItemSelectToggle}
-            onItemDrag={onItemDrag}
-            onClick={onItemClick}
-            isItemSelected={isItemSelected}
-            svgCache={svgCache}
-          />
-        </LibraryMenuSectionGrid>
+        renderLibraryGroups(groupedItems)
       ) : (
         <div className="library-menu-items__no-items">
           <div className="library-menu-items__no-items__hint">
@@ -379,9 +622,7 @@ export default function LibraryMenuItems({
     <div
       className="library-menu-items-container"
       style={
-        pendingElements.length ||
-        unpublishedItems.length ||
-        publishedItems.length
+        pendingElements.length || dedupedLibraryItems.length
           ? { justifyContent: "flex-start" }
           : { borderBottom: 0 }
       }
@@ -410,7 +651,7 @@ export default function LibraryMenuItems({
         align="start"
         gap={1}
         style={{
-          flex: publishedItems.length > 0 ? 1 : "0 1 auto",
+          flex: dedupedLibraryItems.length > 0 ? 1 : "0 1 auto",
           margin: IS_LIBRARY_EMPTY ? "auto" : 0,
         }}
         ref={libraryContainerRef}

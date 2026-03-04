@@ -7,6 +7,7 @@ import {
   EVENT,
   DEFAULT_SIDEBAR,
   LIBRARY_SIDEBAR_TAB,
+  MIME_TYPES,
   arrayToMap,
   cloneJSON,
   preventUnload,
@@ -42,6 +43,7 @@ import type {
   ExcalidrawImperativeAPI,
   LibraryItemsSource,
   LibraryItems_anyVersion,
+  BinaryFiles,
 } from "../types";
 
 /**
@@ -56,6 +58,78 @@ const ALLOWED_LIBRARY_URLS = [
   // when installing from github PRs
   "raw.githubusercontent.com/excalidraw/excalidraw-libraries",
 ];
+
+const getLibraryFileNameFromUrl = (libraryUrl: string) => {
+  try {
+    const url = new URL(libraryUrl);
+    const queryName =
+      url.searchParams.get("name") ||
+      url.searchParams.get("title") ||
+      url.searchParams.get("libraryName");
+    const pathnameName = url.pathname.split("/").filter(Boolean).at(-1);
+    const rawName = decodeURIComponent(
+      queryName || pathnameName || "online-library",
+    );
+
+    return /\.(excalidrawlib|json)$/i.test(rawName)
+      ? rawName
+      : `${rawName}.excalidrawlib`;
+  } catch (error) {
+    return "online-library.excalidrawlib";
+  }
+};
+
+const getLibrarySourceNameFromFile = (file: File) =>
+  decodeURIComponent(file.name)
+    .replace(/\.(excalidrawlib|json)$/i, "")
+    .trim();
+
+const annotateLibraryItemsWithSource = (
+  libraryItems: LibraryItems,
+  source: {
+    sourceId: string;
+    sourceName: string;
+    sourceKind: "personal" | "public";
+  } | null,
+) => {
+  if (!source) {
+    return libraryItems;
+  }
+
+  return libraryItems.map((item) => {
+    if (item.sourceId || item.sourceName) {
+      return item;
+    }
+
+    return {
+      ...item,
+      sourceId: source.sourceId,
+      sourceName: source.sourceName,
+      sourceKind: source.sourceKind,
+    };
+  });
+};
+
+const getLibrarySourceFromBlob = (
+  blob: Blob,
+  defaultStatus: LibraryItem["status"],
+) => {
+  if (!(blob instanceof File) || defaultStatus !== "published") {
+    return null;
+  }
+
+  const sourceName = getLibrarySourceNameFromFile(blob);
+
+  if (!sourceName) {
+    return null;
+  }
+
+  return {
+    sourceId: `published-library:${sourceName.toLowerCase()}`,
+    sourceName,
+    sourceKind: "public" as const,
+  };
+};
 
 type LibraryUpdate = {
   /** deleted library items since last onLibraryChange event */
@@ -115,6 +189,19 @@ export const libraryItemsAtom = atom<{
 
 const cloneLibraryItems = (libraryItems: LibraryItems): LibraryItems =>
   cloneJSON(libraryItems);
+
+export const getLibraryItemsFiles = (
+  libraryItems: LibraryItems,
+): BinaryFiles | null => {
+  const files = libraryItems.reduce((acc, item) => {
+    if (item.files) {
+      Object.assign(acc, item.files);
+    }
+    return acc;
+  }, {} as BinaryFiles);
+
+  return Object.keys(files).length ? files : null;
+};
 
 /**
  * checks if library item does not exist already in current library
@@ -314,7 +401,10 @@ class Library {
           let nextItems;
 
           if (source instanceof Blob) {
-            nextItems = await loadLibraryFromBlob(source, defaultStatus);
+            nextItems = annotateLibraryItemsWithSource(
+              await loadLibraryFromBlob(source, defaultStatus),
+              getLibrarySourceFromBlob(source, defaultStatus),
+            );
           } else {
             nextItems = restoreLibraryItems(source, defaultStatus);
           }
@@ -722,7 +812,7 @@ export const useHandleLibrary = (
       libraryUrl: string;
       idToken: string | null;
     }) => {
-      const libraryPromise = new Promise<Blob>(async (resolve, reject) => {
+      const libraryPromise = new Promise<File>(async (resolve, reject) => {
         try {
           libraryUrl = decodeURIComponent(libraryUrl);
 
@@ -732,7 +822,11 @@ export const useHandleLibrary = (
 
           const request = await fetch(libraryUrl);
           const blob = await request.blob();
-          resolve(blob);
+          resolve(
+            new File([blob], getLibraryFileNameFromUrl(libraryUrl), {
+              type: blob.type || MIME_TYPES.excalidrawlib,
+            }),
+          );
         } catch (error: any) {
           reject(error);
         }

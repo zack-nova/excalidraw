@@ -232,6 +232,7 @@ function CommandPaletteInner({
             <LibraryItemIcon
               id={libraryItem.id}
               elements={libraryItem.elements}
+              files={libraryItem.files}
             />
           ),
           category: "Library",
@@ -976,14 +977,16 @@ function CommandPaletteInner({
 const LibraryItemIcon = ({
   id,
   elements,
+  files,
 }: {
   id: LibraryItem["id"] | null;
   elements: LibraryItem["elements"] | undefined;
+  files: LibraryItem["files"] | undefined;
 }) => {
   const ref = useRef<HTMLDivElement | null>(null);
   const { svgCache } = useLibraryCache();
 
-  useLibraryItemSvg(id, elements, svgCache, ref);
+  useLibraryItemSvg(id, elements, files, svgCache, ref);
 
   return <div className="library-item-icon" ref={ref} />;
 };

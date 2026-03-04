@@ -112,6 +112,10 @@ import {
   importFromBackend,
   isCollaborationLink,
 } from "./data";
+import {
+  buildLibraryItemsFromComponentSources,
+  mockComponentLibrarySources,
+} from "./data/componentLibrary";
 
 import { updateStaleImageStatuses } from "./data/FileManager";
 import {
@@ -219,6 +223,10 @@ const initializeScene = async (opts: {
     | { isExternalScene: false; id?: null; key?: null }
   )
 > => {
+  const mockLibraryItemsPromise = buildLibraryItemsFromComponentSources(
+    mockComponentLibrarySources,
+  );
+
   const searchParams = new URLSearchParams(window.location.search);
   const id = searchParams.get("id");
   const jsonBackendMatch = window.location.hash.match(
@@ -308,7 +316,13 @@ const initializeScene = async (opts: {
         !scene.elements.length ||
         (await openConfirmModal(shareableLinkConfirmDialog))
       ) {
-        return { scene: data, isExternalScene };
+        return {
+          scene: {
+            ...data,
+            libraryItems: mockLibraryItemsPromise,
+          },
+          isExternalScene,
+        };
       }
     } catch (error: any) {
       return {
@@ -316,6 +330,7 @@ const initializeScene = async (opts: {
           appState: {
             errorMessage: t("alerts.invalidSceneUrl"),
           },
+          libraryItems: mockLibraryItemsPromise,
         },
         isExternalScene,
       };
@@ -333,6 +348,7 @@ const initializeScene = async (opts: {
       // elements and appState with existing state
       scene: {
         ...scene,
+        libraryItems: mockLibraryItemsPromise,
         appState: {
           ...restoreAppState(
             {
@@ -358,12 +374,21 @@ const initializeScene = async (opts: {
   } else if (scene) {
     return isExternalScene && jsonBackendMatch
       ? {
-          scene,
+          scene: {
+            ...scene,
+            libraryItems: mockLibraryItemsPromise,
+          },
           isExternalScene,
           id: jsonBackendMatch[1],
           key: jsonBackendMatch[2],
         }
-      : { scene, isExternalScene: false };
+      : {
+          scene: {
+            ...scene,
+            libraryItems: mockLibraryItemsPromise,
+          },
+          isExternalScene: false,
+        };
   }
   return { scene: null, isExternalScene: false };
 };
