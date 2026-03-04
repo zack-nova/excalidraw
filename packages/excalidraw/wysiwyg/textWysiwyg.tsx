@@ -33,6 +33,7 @@ import {
   getBoundTextElement,
 } from "@excalidraw/element";
 import { getTextWidth } from "@excalidraw/element";
+import { measureText } from "@excalidraw/element";
 import { normalizeText } from "@excalidraw/element";
 import { wrapText } from "@excalidraw/element";
 import {
@@ -120,6 +121,9 @@ export const textWysiwyg = ({
   app: App;
   autoSelect?: boolean;
 }): SubmitHandler => {
+  const isEngineeringTemplateText = (text: string) =>
+    text.includes("{{") && text.includes("}}");
+
   const textPropertiesUpdated = (
     updatedTextElement: ExcalidrawTextElement,
     editable: HTMLTextAreaElement,
@@ -160,6 +164,8 @@ export const textWysiwyg = ({
         updatedTextElement,
         app.scene.getNonDeletedElementsMap(),
       );
+      const isEngineeringFormulaEditing =
+        !!container && isEngineeringTemplateText(editable.value);
 
       let width = updatedTextElement.width;
 
@@ -209,7 +215,11 @@ export const textWysiwyg = ({
         );
 
         // autogrow container height if text exceeds
-        if (!isArrowElement(container) && height > maxHeight) {
+        if (
+          !isEngineeringFormulaEditing &&
+          !isArrowElement(container) &&
+          height > maxHeight
+        ) {
           const targetContainerHeight = computeContainerDimensionForBoundText(
             height,
             container.type,
@@ -221,6 +231,7 @@ export const textWysiwyg = ({
         } else if (
           // autoshrink container height until original container height
           // is reached when text is removed
+          !isEngineeringFormulaEditing &&
           !isArrowElement(container) &&
           container.height > originalContainerData.height &&
           height < maxHeight
@@ -240,8 +251,22 @@ export const textWysiwyg = ({
           coordX = x;
           coordY = y;
         }
+
+        if (isEngineeringFormulaEditing) {
+          const formulaMetrics = measureText(
+            editable.value || " ",
+            getFontString(updatedTextElement),
+            updatedTextElement.lineHeight,
+          );
+          width = formulaMetrics.width;
+          height = formulaMetrics.height;
+          maxWidth = width;
+        }
       }
       const [viewportX, viewportY] = getViewportCoords(coordX, coordY);
+      const shouldWrapEditor =
+        (container && !isEngineeringFormulaEditing) ||
+        (!container && !updatedTextElement.autoResize);
 
       if (!container) {
         maxWidth = (appState.width - 8 - viewportX) / appState.zoom.value;
@@ -282,6 +307,9 @@ export const textWysiwyg = ({
             : updatedTextElement.strokeColor,
         opacity: updatedTextElement.opacity / 100,
         maxHeight: `${editorMaxHeight}px`,
+        wordBreak: shouldWrapEditor ? "break-word" : "normal",
+        whiteSpace: shouldWrapEditor ? "pre-wrap" : "pre",
+        overflowWrap: shouldWrapEditor ? "break-word" : "normal",
       });
       editable.scrollTop = 0;
       // For some reason updating font attribute doesn't set font family

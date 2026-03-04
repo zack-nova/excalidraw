@@ -99,4 +99,58 @@ describe("engineering data templates", () => {
       ),
     ).toBe("Alias=16, UUID=16, Quoted=5, Calc=80");
   });
+
+  it("supports conditional aggregations and round()", () => {
+    const context = createEngineeringDataContext([
+      {
+        uuid: "pump-pressure-1",
+        alias: "pressure_1",
+        group: "pump",
+        measurement: "pressure",
+        value: 10.1,
+        tags: {
+          area: "A1",
+        },
+      },
+      {
+        uuid: "pump-pressure-2",
+        alias: "pressure_2",
+        group: "pump",
+        measurement: "pressure",
+        value: 20.5,
+        tags: {
+          area: "A1",
+        },
+      },
+      {
+        uuid: "pump-pressure-3",
+        alias: "pressure_3",
+        group: "pump",
+        measurement: "pressure",
+        value: 31.2,
+        tags: {
+          area: "A2",
+        },
+      },
+      {
+        uuid: "valve-pressure-1",
+        alias: "valve_pressure",
+        group: "valve",
+        measurement: "pressure",
+        value: 8.5,
+        tags: {
+          area: "A1",
+        },
+      },
+    ]);
+
+    expect(
+      renderEngineeringTemplate(
+        'Sum={{sumWhere("value", "group", "pump")}}, Count={{countWhere("group", "pump", "tags.area", "A1")}}, Avg={{round(avgWhere("value", "group", "pump", "tags.area", "A1"), 2)}}, Min={{minWhere("value", "group", "pump")}}, Max={{maxWhere("value", "group", "pump")}}, Rounded={{round(pressure_1 / 3, 1)}}',
+        context,
+      ),
+    ).toBe(
+      "Sum=61.8, Count=2, Avg=15.3, Min=10.1, Max=31.2, Rounded=3.4",
+    );
+  });
 });

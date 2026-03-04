@@ -409,6 +409,7 @@ const ExcalidrawWrapper = () => {
   const [excalidrawAPI, excalidrawRefCallback] =
     useCallbackRefState<ExcalidrawImperativeAPI>();
   const engineeringDataContextRef = useRef<EngineeringDataContext>({
+    rows: [],
     data: {},
     items: {},
     values: {},
