@@ -8,7 +8,8 @@ Each item can include fields such as:
 
 ```ts
 {
-  uuid?: string;
+  id?: string; // variableId, required for stable addressing
+  uuid?: string; // legacy fallback, to be migrated
   alias?: string;
   name?: string;
   value?: number | string | boolean | null;
@@ -27,7 +28,7 @@ Examples:
 
 ```text
 {{pressure}}
-{{data[550e8400-e29b-41d4-a716-446655440000].value}}
+{{data[var:ambient].value}}
 {{items.pressure.unit}}
 {{pressure * current}}
 {{round(pressure / 3, 1)}}
@@ -39,10 +40,21 @@ Supported expression roots:
 
 - `{{pressure}}`
   Uses the item's `alias` directly.
-- `{{data[uuid].value}}`
-  Reads a full item by `uuid`.
+- `{{data[id].value}}`
+  Reads a full item by `id` (variableId).
 - `{{items.alias.unit}}`
   Reads the full item by alias.
+
+Alias constraints:
+
+- Alias is optional and only acts as a shortcut.
+- Alias must map uniquely to exactly one `id` (`alias -> variableId`).
+- Alias conflicts throw an error immediately.
+
+Identifier resolution constraints:
+
+- `name` / `name_cn` are display fields only.
+- Template expression matching does not use `name` / `name_cn`.
 
 ## Conditional Aggregation
 
@@ -75,7 +87,7 @@ If backend sends:
 ```json
 [
   {
-    "uuid": "pump-pressure-1",
+    "id": "var:pump-pressure-1",
     "alias": "pressure_1",
     "group": "pump",
     "measurement": "pressure",
@@ -83,7 +95,7 @@ If backend sends:
     "tags": { "area": "A1" }
   },
   {
-    "uuid": "pump-pressure-2",
+    "id": "var:pump-pressure-2",
     "alias": "pressure_2",
     "group": "pump",
     "measurement": "pressure",
@@ -91,7 +103,7 @@ If backend sends:
     "tags": { "area": "A1" }
   },
   {
-    "uuid": "pump-pressure-3",
+    "id": "var:pump-pressure-3",
     "alias": "pressure_3",
     "group": "pump",
     "measurement": "pressure",
@@ -136,7 +148,7 @@ You can also push data manually in browser devtools:
 ```js
 window.__EXCALIDRAW_ENGINEERING_DATA__.publish([
   {
-    uuid: "pump-pressure-1",
+    id: "var:pump-pressure-1",
     alias: "pressure_1",
     group: "pump",
     value: 10.1,

@@ -20,10 +20,20 @@ import {
 import { afterEach, describe, expect, it } from "vitest";
 
 import ExcalidrawApp from "../App";
+import { appJotaiStore } from "../app-jotai";
 import {
   publishEngineeringData,
   resetEngineeringDataChannelForTests,
 } from "../data/engineeringData";
+import {
+  createProjectDocument,
+  createScenarioDocument,
+  createValueSnapshot,
+} from "../engineering-domain";
+import {
+  engineeringProjectDocumentAtom,
+  engineeringScenarioDocumentAtom,
+} from "../engineering-domain-state";
 
 const mouse = new Pointer("mouse");
 
@@ -31,6 +41,73 @@ describe("engineering data driven text updates", () => {
   afterEach(() => {
     resetEngineeringDataChannelForTests();
     cleanup();
+  });
+
+  it("renders templates using data[variableId] directly from engineering domain state", async () => {
+    const project = createProjectDocument({
+      id: "project:domain-text",
+    });
+    project.variableCatalog.variablesById = {
+      "var:ambient": {
+        id: "var:ambient",
+        owner: { kind: "environment", id: "environment:default" },
+        key: "ambient",
+        name: "Ambient",
+        valueType: "float",
+        role: "input",
+        stage: "raw",
+      },
+    };
+    project.variableCatalog.providersById = {
+      "provider:ambient:manual": {
+        id: "provider:ambient:manual",
+        variableId: "var:ambient",
+        kind: "manual",
+      },
+    };
+    project.variableCatalog.providerIdsByVariableId = {
+      "var:ambient": ["provider:ambient:manual"],
+    };
+
+    const scenario = createScenarioDocument(project.id, {
+      manualInputs: {
+        "var:ambient": createValueSnapshot({
+          variableId: "var:ambient",
+          value: 25,
+          source: "frontend_manual_input",
+          status: "ok",
+          providerId: "provider:ambient:manual",
+        }),
+      },
+    });
+
+    appJotaiStore.set(engineeringProjectDocumentAtom, project);
+    appJotaiStore.set(engineeringScenarioDocumentAtom, scenario);
+
+    await render(<ExcalidrawApp />);
+
+    const textElement = newElementWith(
+      API.createElement({
+        type: "text",
+        text:
+          'Ambient={{data[var:ambient].value}}, Sum={{sumWhere("value", "group", "input")}}',
+      }),
+      {},
+      true,
+    );
+
+    API.updateScene({
+      elements: [textElement],
+      captureUpdate: CaptureUpdateAction.IMMEDIATELY,
+    });
+
+    await waitFor(() => {
+      expect(window.h.elements[0]).toEqual(
+        expect.objectContaining({
+          text: "Ambient=25, Sum=25",
+        }),
+      );
+    });
   });
 
   it("updates text elements when simulated backend data arrives without polluting history", async () => {

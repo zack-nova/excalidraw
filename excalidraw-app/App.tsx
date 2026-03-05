@@ -117,8 +117,10 @@ import {
 } from "./data";
 import {
   applyEngineeringDataToTextElements,
+  buildEngineeringDataRowsFromRuntimeProjection,
   type EngineeringDataContext,
   maybeStartEngineeringDataMockFromUrl,
+  publishEngineeringDomainData,
   registerEngineeringDataDevTools,
   subscribeEngineeringData,
 } from "./data/engineeringData";
@@ -171,6 +173,10 @@ import {
   persistEngineeringSelectedShapeActionsWidthsToStorage,
   readEngineeringSelectedShapeActionsWidthsFromStorage,
 } from "./engineering-ui-state";
+import {
+  engineeringProjectDocumentAtom,
+  engineeringRuntimeProjectionAtom,
+} from "./engineering-domain-state";
 
 import type { CollabAPI } from "./collab/Collab";
 
@@ -454,6 +460,7 @@ const ExcalidrawWrapper = () => {
     data: {},
     items: {},
     values: {},
+    aliasToId: {},
   });
   const isApplyingEngineeringDataRef = useRef(false);
 
@@ -464,6 +471,10 @@ const ExcalidrawWrapper = () => {
   });
   const collabError = useAtomValue(collabErrorIndicatorAtom);
   const workspaceMode = useAtomValue(engineeringWorkspaceModeAtom);
+  const engineeringProject = useAtomValue(engineeringProjectDocumentAtom);
+  const engineeringRuntimeProjection = useAtomValue(
+    engineeringRuntimeProjectionAtom,
+  );
   const syncEngineeringSceneToModel = useSetAtom(
     syncEngineeringSceneToModelAtom,
   );
@@ -476,6 +487,15 @@ const ExcalidrawWrapper = () => {
       selectedShapeActionsWidths,
     );
   }, [selectedShapeActionsWidths]);
+
+  useEffect(() => {
+    publishEngineeringDomainData(
+      buildEngineeringDataRowsFromRuntimeProjection({
+        project: engineeringProject,
+        runtimeProjection: engineeringRuntimeProjection,
+      }),
+    );
+  }, [engineeringProject, engineeringRuntimeProjection]);
 
   useHandleLibrary({
     excalidrawAPI,

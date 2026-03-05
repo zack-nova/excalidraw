@@ -1,28 +1,37 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  buildEngineeringDataRowsFromRuntimeProjection,
   createEngineeringDataContext,
   renderEngineeringTemplate,
 } from "./engineeringData";
+import {
+  buildRuntimeProjection,
+  createProjectDocument,
+  createScenarioDocument,
+  createValueSnapshot,
+} from "../engineering-domain";
 
 describe("engineering data templates", () => {
   it("renders variables, normalized aliases, and arithmetic expressions", () => {
     const context = createEngineeringDataContext([
       {
-        uuid: "sensor-pressure-001",
+        id: "var:pressure",
         alias: "pressure",
         name: "pressure",
         value: 12.5,
         unit: "kPa",
       },
       {
-        uuid: "sensor-current-001",
+        id: "var:current",
         alias: "current",
         name: "current",
         value: 4,
         unit: "A",
       },
       {
+        id: "var:flow-rate",
+        alias: "flow-rate",
         name: "flow-rate",
         value: 10,
       },
@@ -39,7 +48,8 @@ describe("engineering data templates", () => {
   it("keeps unresolved placeholders and invalid expressions unchanged", () => {
     const context = createEngineeringDataContext([
       {
-        uuid: "sensor-temperature-001",
+        id: "var:temperature",
+        alias: "temperature",
         name: "temperature",
         value: 28,
       },
@@ -55,37 +65,36 @@ describe("engineering data templates", () => {
     );
   });
 
-  it("supports aliases derived from tpis_key and point_name", () => {
+  it("does not resolve placeholders from name or name_cn without alias", () => {
     const context = createEngineeringDataContext([
       {
-        uuid: "sensor-pump-speed-001",
-        tpis_key: "pump_speed",
-        point_name: "main.pump.speed",
+        id: "var:pump_speed",
+        name: "pump_speed",
+        name_cn: "泵速",
         value: 1450,
-        unit: "rpm",
       },
     ]);
 
     expect(
       renderEngineeringTemplate(
-        "Speed={{pump_speed}} {{items.pump_speed.unit}}, Point={{main_pump_speed}}",
+        "EN={{pump_speed}}, CN={{泵速}}",
         context,
       ),
-    ).toBe("Speed=1450 rpm, Point=1450");
+    ).toBe("EN={{pump_speed}}, CN={{泵速}}");
   });
 
-  it("supports direct alias field and uuid-addressable data map access", () => {
-    const pressureUuid = "550e8400-e29b-41d4-a716-446655440000";
-    const currentUuid = "660e8400-e29b-41d4-a716-446655440000";
+  it("supports direct alias field and id-addressable data map access", () => {
+    const pressureId = "var:pressure";
+    const currentId = "var:current";
     const context = createEngineeringDataContext([
       {
-        uuid: pressureUuid,
+        id: pressureId,
         alias: "pressure",
         value: 16,
         unit: "kPa",
       },
       {
-        uuid: currentUuid,
+        id: currentId,
         alias: "current",
         value: 5,
         unit: "A",
@@ -94,16 +103,16 @@ describe("engineering data templates", () => {
 
     expect(
       renderEngineeringTemplate(
-        `Alias={{pressure}}, UUID={{data[${pressureUuid}].value}}, Quoted={{data["${currentUuid}"].value}}, Calc={{data[${pressureUuid}].value * current}}`,
+        `Alias={{pressure}}, ID={{data[${pressureId}].value}}, Quoted={{data["${currentId}"].value}}, Calc={{data[${pressureId}].value * current}}`,
         context,
       ),
-    ).toBe("Alias=16, UUID=16, Quoted=5, Calc=80");
+    ).toBe("Alias=16, ID=16, Quoted=5, Calc=80");
   });
 
   it("supports conditional aggregations and round()", () => {
     const context = createEngineeringDataContext([
       {
-        uuid: "pump-pressure-1",
+        id: "var:pump-pressure-1",
         alias: "pressure_1",
         group: "pump",
         measurement: "pressure",
@@ -113,7 +122,7 @@ describe("engineering data templates", () => {
         },
       },
       {
-        uuid: "pump-pressure-2",
+        id: "var:pump-pressure-2",
         alias: "pressure_2",
         group: "pump",
         measurement: "pressure",
@@ -123,7 +132,7 @@ describe("engineering data templates", () => {
         },
       },
       {
-        uuid: "pump-pressure-3",
+        id: "var:pump-pressure-3",
         alias: "pressure_3",
         group: "pump",
         measurement: "pressure",
@@ -133,7 +142,7 @@ describe("engineering data templates", () => {
         },
       },
       {
-        uuid: "valve-pressure-1",
+        id: "var:valve-pressure-1",
         alias: "valve_pressure",
         group: "valve",
         measurement: "pressure",
@@ -152,5 +161,79 @@ describe("engineering data templates", () => {
     ).toBe(
       "Sum=61.8, Count=2, Avg=15.3, Min=10.1, Max=31.2, Rounded=3.4",
     );
+  });
+
+  it("throws immediately when alias points to different variable ids", () => {
+    expect(() =>
+      createEngineeringDataContext([
+        {
+          id: "var:a",
+          alias: "dup_alias",
+          value: 1,
+        },
+        {
+          id: "var:b",
+          alias: "dup_alias",
+          value: 2,
+        },
+      ]),
+    ).toThrow(/alias/i);
+  });
+
+  it("builds runtime rows from engineering domain and supports data[id] + where", () => {
+    const project = createProjectDocument({
+      id: "project:runtime",
+    });
+    project.variableCatalog.variablesById = {
+      "var:ambient": {
+        id: "var:ambient",
+        owner: { kind: "environment", id: "environment:default" },
+        key: "ambient",
+        name: "Ambient",
+        valueType: "float",
+        role: "input",
+        stage: "raw",
+        displayUnit: "℃",
+      },
+    };
+    project.variableCatalog.providersById = {
+      "provider:ambient:manual": {
+        id: "provider:ambient:manual",
+        variableId: "var:ambient",
+        kind: "manual",
+      },
+    };
+    project.variableCatalog.providerIdsByVariableId = {
+      "var:ambient": ["provider:ambient:manual"],
+    };
+    const scenario = createScenarioDocument(project.id, {
+      manualInputs: {
+        "var:ambient": createValueSnapshot({
+          variableId: "var:ambient",
+          value: 25,
+          source: "frontend_manual_input",
+          status: "ok",
+          providerId: "provider:ambient:manual",
+        }),
+      },
+    });
+    const runtimeProjection = buildRuntimeProjection({
+      project,
+      scenario,
+    });
+
+    const context = createEngineeringDataContext(
+      buildEngineeringDataRowsFromRuntimeProjection({
+        project,
+        runtimeProjection,
+      }),
+    );
+
+    expect(
+      renderEngineeringTemplate(
+        'Ambient={{data[var:ambient].value}}, Sum={{sumWhere("value", "group", "input")}}',
+        context,
+      ),
+    ).toBe("Ambient=25, Sum=25");
   });
 });

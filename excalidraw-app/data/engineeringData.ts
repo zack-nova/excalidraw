@@ -13,10 +13,16 @@ import type {
   ExcalidrawTextElementWithContainer,
   OrderedExcalidrawElement,
 } from "@excalidraw/element/types";
+import type {
+  ProjectDocument,
+  RuntimeProjection,
+  ValueProvider,
+} from "../engineering-domain";
 
 type EngineeringPrimitive = number | string | boolean | null | undefined;
 
 export interface EngineeringData {
+  id?: string | null;
   uuid?: string | null;
   alias?: string | null;
   name?: string | null;
@@ -55,6 +61,7 @@ export type EngineeringDataContext = {
   data: Record<string, EngineeringData>;
   items: Record<string, EngineeringData>;
   values: Record<string, EngineeringPrimitive>;
+  aliasToId: Record<string, string>;
 };
 
 type ExpressionNode =
@@ -127,11 +134,14 @@ const IDENTIFIER_PART = /^[$_\p{L}\p{N}]$/u;
 const MOCK_QUERY_PARAM = "engineeringDataMock";
 
 let engineeringDataSnapshot: EngineeringData[] = [];
+let engineeringExternalDataSnapshot: EngineeringData[] = [];
+let engineeringDomainDataSnapshot: EngineeringData[] = [];
 let engineeringDataContext: EngineeringDataContext = {
   rows: [],
   data: {},
   items: {},
   values: {},
+  aliasToId: {},
 };
 const listeners = new Set<EngineeringDataListener>();
 let mockTimerId: number | null = null;
@@ -171,19 +181,21 @@ const normalizeAlias = (value: string) => {
   return /^\p{N}/u.test(normalized) ? `_${normalized}` : normalized;
 };
 
+const resolveEngineeringDataItemId = (item: EngineeringData) => {
+  if (isNonEmptyString(item.id)) {
+    return item.id.trim();
+  }
+
+  if (isNonEmptyString(item.uuid)) {
+    return item.uuid.trim();
+  }
+
+  return null;
+};
+
 const collectAliases = (item: EngineeringData) => {
   const aliases = new Set<string>();
-  const candidates = [
-    item.alias,
-    item.name,
-    item.name_cn,
-    item.tpis_key,
-    item.point_name,
-    item.physical_entity_id,
-    item.component_id,
-    item.anchor_id,
-    item.uuid,
-  ];
+  const candidates = [item.alias];
 
   candidates.forEach((candidate) => {
     if (!isNonEmptyString(candidate)) {
@@ -205,18 +217,36 @@ export const createEngineeringDataContext = (
   data: EngineeringData | EngineeringData[],
 ): EngineeringDataContext => {
   const items = Array.isArray(data) ? data : [data];
+  const aliasToId: Record<string, string> = {};
   const context: EngineeringDataContext = {
     rows: items.slice(),
     data: {},
     items: {},
     values: {},
+    aliasToId,
   };
 
   items.forEach((item) => {
-    if (isNonEmptyString(item.uuid)) {
-      context.data[item.uuid] = item;
+    const itemId = resolveEngineeringDataItemId(item);
+    if (itemId) {
+      context.data[itemId] = item;
     }
+
     collectAliases(item).forEach((alias) => {
+      if (!itemId) {
+        throw new Error(
+          `Alias "${alias}" requires item id`,
+        );
+      }
+
+      const currentVariableId = aliasToId[alias];
+      if (currentVariableId && currentVariableId !== itemId) {
+        throw new Error(
+          `Alias "${alias}" conflicts between "${currentVariableId}" and "${itemId}"`,
+        );
+      }
+
+      aliasToId[alias] = itemId;
       context.items[alias] = item;
       context.values[alias] = item.value;
     });
@@ -224,6 +254,96 @@ export const createEngineeringDataContext = (
 
   return context;
 };
+
+const getProviderIdsForVariable = (
+  project: ProjectDocument,
+  variableId: string,
+) => {
+  const explicitProviderIds =
+    project.variableCatalog.providerIdsByVariableId[variableId] ?? [];
+  const fallbackProviderIds = Object.values(project.variableCatalog.providersById)
+    .filter((provider) => provider.variableId === variableId)
+    .map((provider) => provider.id);
+
+  return explicitProviderIds.length > 0 ? explicitProviderIds : fallbackProviderIds;
+};
+
+const getProviderById = (
+  project: ProjectDocument,
+  providerId: string | undefined,
+) => {
+  if (!providerId) {
+    return null;
+  }
+
+  return project.variableCatalog.providersById[providerId] ?? null;
+};
+
+const findProviderByKind = (
+  project: ProjectDocument,
+  variableId: string,
+  providerKind: ValueProvider["kind"],
+) =>
+  getProviderIdsForVariable(project, variableId)
+    .map((providerId) => project.variableCatalog.providersById[providerId])
+    .find((provider) => provider?.kind === providerKind) || null;
+
+const toDataRowGroup = (projectVariable: ProjectDocument["variableCatalog"]["variablesById"][string]) => {
+  if (typeof projectVariable.tags?.group === "string" && projectVariable.tags.group.trim()) {
+    return projectVariable.tags.group.trim();
+  }
+
+  return projectVariable.role;
+};
+
+export const buildEngineeringDataRowsFromRuntimeProjection = ({
+  project,
+  runtimeProjection,
+}: {
+  project: ProjectDocument;
+  runtimeProjection: RuntimeProjection;
+}): EngineeringData[] =>
+  Object.values(project.variableCatalog.variablesById)
+    .sort((left, right) => left.id.localeCompare(right.id))
+    .map((variable) => {
+      const snapshot = runtimeProjection.effectiveValues[variable.id];
+      const currentProvider =
+        getProviderById(project, snapshot?.providerId) ||
+        findProviderByKind(project, variable.id, "manual") ||
+        findProviderByKind(project, variable.id, "sensor") ||
+        findProviderByKind(project, variable.id, "backend") ||
+        findProviderByKind(project, variable.id, "expression");
+      const sensorProvider =
+        currentProvider?.kind === "sensor"
+          ? currentProvider
+          : findProviderByKind(project, variable.id, "sensor");
+
+      return {
+        id: variable.id,
+        alias: typeof variable.tags?.alias === "string" ? variable.tags.alias : null,
+        name: variable.name,
+        name_cn: variable.nameCn || null,
+        value: snapshot?.value,
+        source: snapshot?.source,
+        timestamp: snapshot?.timestamp ?? null,
+        status: snapshot?.status,
+        unit: variable.displayUnit || variable.canonicalUnit || null,
+        group: toDataRowGroup(variable),
+        measurement: sensorProvider?.kind === "sensor" ? sensorProvider.measurement : null,
+        point_name: sensorProvider?.kind === "sensor" ? sensorProvider.pointName : null,
+        field: sensorProvider?.kind === "sensor" ? sensorProvider.field : null,
+        physical_entity_type: variable.owner.kind,
+        physical_entity_id: variable.owner.id,
+        component_id: variable.owner.kind === "component" ? variable.owner.id : null,
+        anchor_id: variable.owner.kind === "anchor" ? variable.owner.id : null,
+        value_type: variable.valueType,
+        tags: variable.tags ?? null,
+        variable_id: variable.id,
+        provider_id: snapshot?.providerId || null,
+        role: variable.role,
+        stage: variable.stage,
+      };
+    });
 
 class ExpressionParser {
   private index = 0;
@@ -956,11 +1076,27 @@ const emitEngineeringData = () => {
   listeners.forEach((listener) => listener(engineeringDataContext));
 };
 
+const rebuildEngineeringDataContext = () => {
+  engineeringDataSnapshot = [
+    ...engineeringDomainDataSnapshot,
+    ...engineeringExternalDataSnapshot,
+  ];
+  engineeringDataContext = createEngineeringDataContext(engineeringDataSnapshot);
+};
+
 export const publishEngineeringData = (
   data: EngineeringData | EngineeringData[],
 ) => {
-  engineeringDataSnapshot = Array.isArray(data) ? data : [data];
-  engineeringDataContext = createEngineeringDataContext(engineeringDataSnapshot);
+  engineeringExternalDataSnapshot = Array.isArray(data) ? data : [data];
+  rebuildEngineeringDataContext();
+  emitEngineeringData();
+};
+
+export const publishEngineeringDomainData = (
+  data: EngineeringData | EngineeringData[],
+) => {
+  engineeringDomainDataSnapshot = Array.isArray(data) ? data : [data];
+  rebuildEngineeringDataContext();
   emitEngineeringData();
 };
 
@@ -1067,6 +1203,8 @@ export const registerEngineeringDataDevTools = () => {
 
 export const resetEngineeringDataChannelForTests = () => {
   stopMockEngineeringDataFeed();
+  engineeringExternalDataSnapshot = [];
+  engineeringDomainDataSnapshot = [];
   engineeringDataSnapshot = [];
   engineeringDataContext = createEngineeringDataContext([]);
   listeners.clear();
