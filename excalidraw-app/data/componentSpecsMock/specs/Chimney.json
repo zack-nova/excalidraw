@@ -1,0 +1,522 @@
+{
+  "componentType": "Chimney",
+  "id": null,
+  "uuid": null,
+  "group": "烟气/空气设备",
+  "icon": "/PNG/Chimney.png",
+  "measured": {
+    "width": 40,
+    "height": 80
+  },
+  "operationMode": null,
+  "data": {
+    "name": "Chimney",
+    "name_cn": "烟囱",
+    "component_type": "Chimney",
+    "supported_operation_modes": [
+      "design_mode"
+    ],
+    "operation_mode": "design_mode",
+    "image": "/PNG/Chimney.png",
+    "anchors": [
+      {
+        "position": {
+          "x": 0,
+          "y": 0.875
+        },
+        "data": {
+          "interface_type": "InGas",
+          "name": "InGas",
+          "name_cn": "进口烟气",
+          "material_type": "gas",
+          "connection_type": "inlet",
+          "is_visible": true,
+          "allow_not_display": false,
+          "is_connected": false,
+          "tpis_extra_info": null
+        },
+        "uuid": null,
+        "id": null,
+        "component_id": null,
+        "parameters": [
+          {
+            "uuid": null,
+            "name": "Q",
+            "name_cn": "流量",
+            "source": "backend_calculation",
+            "value": null,
+            "value_type": "string",
+            "tips": "流量",
+            "unit": "t/h",
+            "enum_options": [],
+            "physical_entity_type": "anchor",
+            "group": "进口烟气",
+            "tpis_key": "Q",
+            "tpis_operation_mode": [
+              "design_mode",
+              "interpolation_mode",
+              "calculation_mode"
+            ],
+            "require": false,
+            "input_status": "unknown",
+            "allow_not_display": false,
+            "tpis_extra_info": "",
+            "curve_data": null
+          },
+          {
+            "uuid": null,
+            "name": "P",
+            "name_cn": "压力",
+            "source": "backend_calculation",
+            "value": null,
+            "value_type": "string",
+            "tips": "压力",
+            "unit": "MPa",
+            "enum_options": [
+              "MPa",
+              "kPa",
+              "Pa",
+              "Pa(g)"
+            ],
+            "physical_entity_type": "anchor",
+            "group": "进口烟气",
+            "tpis_key": "P",
+            "tpis_operation_mode": [
+              "design_mode",
+              "interpolation_mode",
+              "calculation_mode"
+            ],
+            "require": false,
+            "input_status": "unknown",
+            "allow_not_display": false,
+            "tpis_extra_info": "",
+            "curve_data": null
+          },
+          {
+            "uuid": null,
+            "name": "T",
+            "name_cn": "温度",
+            "source": "backend_calculation",
+            "value": null,
+            "value_type": "string",
+            "tips": "温度",
+            "unit": "℃",
+            "enum_options": [
+              "℃",
+              "K"
+            ],
+            "physical_entity_type": "anchor",
+            "group": "进口烟气",
+            "tpis_key": "T",
+            "tpis_operation_mode": [
+              "design_mode",
+              "interpolation_mode",
+              "calculation_mode"
+            ],
+            "require": false,
+            "input_status": "unknown",
+            "allow_not_display": false,
+            "tpis_extra_info": "",
+            "curve_data": null
+          },
+          {
+            "uuid": null,
+            "name": "H",
+            "name_cn": "焓值",
+            "source": "backend_calculation",
+            "value": null,
+            "value_type": "string",
+            "tips": "气体本身显热",
+            "unit": "KJ/Kg",
+            "enum_options": [],
+            "physical_entity_type": "anchor",
+            "group": "进口烟气",
+            "tpis_key": "H",
+            "tpis_operation_mode": [
+              "design_mode",
+              "interpolation_mode",
+              "calculation_mode"
+            ],
+            "require": false,
+            "input_status": "unknown",
+            "allow_not_display": false,
+            "tpis_extra_info": "",
+            "curve_data": null
+          },
+          {
+            "uuid": null,
+            "name": "LHV",
+            "name_cn": "低位发热量",
+            "source": "backend_calculation",
+            "value": null,
+            "value_type": "string",
+            "tips": "低位发热量",
+            "unit": "KJ/Kg",
+            "enum_options": [],
+            "physical_entity_type": "anchor",
+            "group": "进口烟气",
+            "tpis_key": "LHV",
+            "tpis_operation_mode": [
+              "design_mode",
+              "interpolation_mode",
+              "calculation_mode"
+            ],
+            "require": false,
+            "input_status": "unknown",
+            "allow_not_display": true,
+            "tpis_extra_info": "",
+            "curve_data": null
+          },
+          {
+            "uuid": null,
+            "name": "X",
+            "name_cn": "相对湿度",
+            "source": "backend_calculation",
+            "value": null,
+            "value_type": "string",
+            "tips": "相对湿度",
+            "unit": "%",
+            "enum_options": [],
+            "physical_entity_type": "anchor",
+            "group": "进口烟气",
+            "tpis_key": "X",
+            "tpis_operation_mode": [
+              "design_mode",
+              "interpolation_mode",
+              "calculation_mode"
+            ],
+            "require": false,
+            "input_status": "unknown",
+            "allow_not_display": false,
+            "tpis_extra_info": "",
+            "curve_data": null
+          }
+        ]
+      }
+    ],
+    "interfaces": [
+      {
+        "position": {
+          "x": 0,
+          "y": 0.875
+        },
+        "data": {
+          "interface_type": "InGas",
+          "name": "InGas",
+          "name_cn": "进口烟气",
+          "material_type": "gas",
+          "connection_type": "inlet",
+          "is_visible": true,
+          "allow_not_display": false,
+          "is_connected": false,
+          "tpis_extra_info": null
+        },
+        "uuid": null,
+        "id": null,
+        "component_id": null,
+        "parameters": [
+          {
+            "uuid": null,
+            "name": "Q",
+            "name_cn": "流量",
+            "source": "backend_calculation",
+            "value": null,
+            "value_type": "string",
+            "tips": "流量",
+            "unit": "t/h",
+            "enum_options": [],
+            "physical_entity_type": "anchor",
+            "group": "进口烟气",
+            "tpis_key": "Q",
+            "tpis_operation_mode": [
+              "design_mode",
+              "interpolation_mode",
+              "calculation_mode"
+            ],
+            "require": false,
+            "input_status": "unknown",
+            "allow_not_display": false,
+            "tpis_extra_info": "",
+            "curve_data": null
+          },
+          {
+            "uuid": null,
+            "name": "P",
+            "name_cn": "压力",
+            "source": "backend_calculation",
+            "value": null,
+            "value_type": "string",
+            "tips": "压力",
+            "unit": "MPa",
+            "enum_options": [
+              "MPa",
+              "kPa",
+              "Pa",
+              "Pa(g)"
+            ],
+            "physical_entity_type": "anchor",
+            "group": "进口烟气",
+            "tpis_key": "P",
+            "tpis_operation_mode": [
+              "design_mode",
+              "interpolation_mode",
+              "calculation_mode"
+            ],
+            "require": false,
+            "input_status": "unknown",
+            "allow_not_display": false,
+            "tpis_extra_info": "",
+            "curve_data": null
+          },
+          {
+            "uuid": null,
+            "name": "T",
+            "name_cn": "温度",
+            "source": "backend_calculation",
+            "value": null,
+            "value_type": "string",
+            "tips": "温度",
+            "unit": "℃",
+            "enum_options": [
+              "℃",
+              "K"
+            ],
+            "physical_entity_type": "anchor",
+            "group": "进口烟气",
+            "tpis_key": "T",
+            "tpis_operation_mode": [
+              "design_mode",
+              "interpolation_mode",
+              "calculation_mode"
+            ],
+            "require": false,
+            "input_status": "unknown",
+            "allow_not_display": false,
+            "tpis_extra_info": "",
+            "curve_data": null
+          },
+          {
+            "uuid": null,
+            "name": "H",
+            "name_cn": "焓值",
+            "source": "backend_calculation",
+            "value": null,
+            "value_type": "string",
+            "tips": "气体本身显热",
+            "unit": "KJ/Kg",
+            "enum_options": [],
+            "physical_entity_type": "anchor",
+            "group": "进口烟气",
+            "tpis_key": "H",
+            "tpis_operation_mode": [
+              "design_mode",
+              "interpolation_mode",
+              "calculation_mode"
+            ],
+            "require": false,
+            "input_status": "unknown",
+            "allow_not_display": false,
+            "tpis_extra_info": "",
+            "curve_data": null
+          },
+          {
+            "uuid": null,
+            "name": "LHV",
+            "name_cn": "低位发热量",
+            "source": "backend_calculation",
+            "value": null,
+            "value_type": "string",
+            "tips": "低位发热量",
+            "unit": "KJ/Kg",
+            "enum_options": [],
+            "physical_entity_type": "anchor",
+            "group": "进口烟气",
+            "tpis_key": "LHV",
+            "tpis_operation_mode": [
+              "design_mode",
+              "interpolation_mode",
+              "calculation_mode"
+            ],
+            "require": false,
+            "input_status": "unknown",
+            "allow_not_display": true,
+            "tpis_extra_info": "",
+            "curve_data": null
+          },
+          {
+            "uuid": null,
+            "name": "X",
+            "name_cn": "相对湿度",
+            "source": "backend_calculation",
+            "value": null,
+            "value_type": "string",
+            "tips": "相对湿度",
+            "unit": "%",
+            "enum_options": [],
+            "physical_entity_type": "anchor",
+            "group": "进口烟气",
+            "tpis_key": "X",
+            "tpis_operation_mode": [
+              "design_mode",
+              "interpolation_mode",
+              "calculation_mode"
+            ],
+            "require": false,
+            "input_status": "unknown",
+            "allow_not_display": false,
+            "tpis_extra_info": "",
+            "curve_data": null
+          }
+        ]
+      }
+    ]
+  },
+  "inputParameters": [
+    {
+      "id": "Name",
+      "uuid": null,
+      "key": "Name",
+      "name": "Name",
+      "nameCn": "元件名称",
+      "source": "frontend_manual_input",
+      "valueType": "string",
+      "unit": "",
+      "defaultValue": "烟囱1",
+      "tips": "元件名称",
+      "enumOptions": null,
+      "physicalEntityType": "component",
+      "group": "基本",
+      "required": false,
+      "inputStatus": "unknown",
+      "allowNotDisplay": false,
+      "tpisKey": "Name",
+      "tpisOperationMode": [
+        "design_mode"
+      ],
+      "tpisExtraInfo": "",
+      "hasCurveData": false
+    },
+    {
+      "id": "ChimneyH",
+      "uuid": null,
+      "key": "ChimneyH",
+      "name": "ChimneyH",
+      "nameCn": "烟囱高度",
+      "source": "frontend_manual_input",
+      "valueType": "float",
+      "unit": "m",
+      "defaultValue": null,
+      "tips": "应满足国家《环境空气质量标准》(GB3095—2012)\r\n和《锅炉大气污染物排放标准》(GB13271-2001)\r\n模数系列:30m、45m、60m、80m、\r\n100m、120m、150m、180m、210m 、240 m",
+      "enumOptions": null,
+      "physicalEntityType": "component",
+      "group": "基本",
+      "required": false,
+      "inputStatus": "unknown",
+      "allowNotDisplay": false,
+      "tpisKey": "ChimneyH",
+      "tpisOperationMode": [
+        "design_mode"
+      ],
+      "tpisExtraInfo": "",
+      "hasCurveData": false
+    },
+    {
+      "id": "OutVelocity",
+      "uuid": null,
+      "key": "OutVelocity",
+      "name": "OutVelocity",
+      "nameCn": "出口流速",
+      "source": "frontend_manual_input",
+      "valueType": "float",
+      "unit": "m/s",
+      "defaultValue": null,
+      "tips": "中小热电联产工程设计手册:\r\n最小负荷时不低于4~5m/s\r\n最大流速机力引风12~20m/s,自然引风10~15m/s 见表7-28",
+      "enumOptions": null,
+      "physicalEntityType": "component",
+      "group": "基本",
+      "required": false,
+      "inputStatus": "unknown",
+      "allowNotDisplay": false,
+      "tpisKey": "OutVelocity",
+      "tpisOperationMode": [
+        "design_mode"
+      ],
+      "tpisExtraInfo": "",
+      "hasCurveData": false
+    },
+    {
+      "id": "ChimneyDT",
+      "uuid": null,
+      "key": "ChimneyDT",
+      "name": "ChimneyDT",
+      "nameCn": "烟囱温降",
+      "source": "frontend_manual_input",
+      "valueType": "float",
+      "unit": "℃/m",
+      "defaultValue": null,
+      "tips": "中小热电联产工程设计手册:\r\n砖砌烟囱取0.1\r\n钢制烟囱取0.5",
+      "enumOptions": null,
+      "physicalEntityType": "component",
+      "group": "基本",
+      "required": false,
+      "inputStatus": "unknown",
+      "allowNotDisplay": false,
+      "tpisKey": "ChimneyDT",
+      "tpisOperationMode": [
+        "design_mode"
+      ],
+      "tpisExtraInfo": "",
+      "hasCurveData": false
+    }
+  ],
+  "outputParameters": [
+    {
+      "id": "SuckP",
+      "uuid": null,
+      "key": "SuckP",
+      "name": "SuckP",
+      "nameCn": "自生抽力",
+      "source": "backend_calculation",
+      "valueType": "string",
+      "unit": "Pa",
+      "defaultValue": null,
+      "tips": "自生抽力",
+      "enumOptions": null,
+      "physicalEntityType": "component",
+      "group": "基本",
+      "required": false,
+      "inputStatus": "unknown",
+      "allowNotDisplay": false,
+      "tpisKey": "SuckP",
+      "tpisOperationMode": [
+        "design_mode"
+      ],
+      "tpisExtraInfo": "",
+      "hasCurveData": false
+    },
+    {
+      "id": "OutDiameter",
+      "uuid": null,
+      "key": "OutDiameter",
+      "name": "OutDiameter",
+      "nameCn": "出口计算直径",
+      "source": "backend_calculation",
+      "valueType": "string",
+      "unit": "m",
+      "defaultValue": null,
+      "tips": "出口计算直径",
+      "enumOptions": null,
+      "physicalEntityType": "component",
+      "group": "基本",
+      "required": false,
+      "inputStatus": "unknown",
+      "allowNotDisplay": false,
+      "tpisKey": "OutDiameter",
+      "tpisOperationMode": [
+        "design_mode"
+      ],
+      "tpisExtraInfo": "",
+      "hasCurveData": false
+    }
+  ]
+}

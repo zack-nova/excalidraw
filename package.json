@@ -78,6 +78,7 @@
     "fix": "yarn fix:other && yarn fix:code",
     "locales-coverage": "node scripts/build-locales-coverage.js",
     "locales-coverage:description": "node scripts/locales-coverage-description.js",
+    "generate:component-spec-mocks": "python3 scripts/generate_component_spec_mocks.py",
     "prepare": "husky install",
     "prettier": "prettier \"**/*.{css,scss,json,md,html,yml}\" --ignore-path=.eslintignore",
     "release": "node scripts/release.js",

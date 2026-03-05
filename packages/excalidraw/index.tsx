@@ -32,7 +32,13 @@ const ExcalidrawBase = (props: ExcalidrawProps) => {
     renderToolbarEndUI,
     renderTopRightUI,
     selectedShapeActionsLayout,
+    selectedShapeActionsResizable,
+    selectedShapeActionsWidth,
+    selectedShapeActionsMinWidth,
+    selectedShapeActionsMaxWidth,
+    onSelectedShapeActionsWidthChange,
     renderSelectedShapeActionsFooter,
+    renderSelectedShapeActionsPanel,
     langCode = defaultLang.code,
     viewModeEnabled,
     zenModeEnabled,
@@ -128,7 +134,15 @@ const ExcalidrawBase = (props: ExcalidrawProps) => {
           renderToolbarEndUI={renderToolbarEndUI}
           renderTopRightUI={renderTopRightUI}
           selectedShapeActionsLayout={selectedShapeActionsLayout}
+          selectedShapeActionsResizable={selectedShapeActionsResizable}
+          selectedShapeActionsWidth={selectedShapeActionsWidth}
+          selectedShapeActionsMinWidth={selectedShapeActionsMinWidth}
+          selectedShapeActionsMaxWidth={selectedShapeActionsMaxWidth}
+          onSelectedShapeActionsWidthChange={
+            onSelectedShapeActionsWidthChange
+          }
           renderSelectedShapeActionsFooter={renderSelectedShapeActionsFooter}
+          renderSelectedShapeActionsPanel={renderSelectedShapeActionsPanel}
           langCode={langCode}
           viewModeEnabled={viewModeEnabled}
           zenModeEnabled={zenModeEnabled}

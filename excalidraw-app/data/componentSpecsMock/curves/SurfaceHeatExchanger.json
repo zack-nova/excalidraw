@@ -1,0 +1,17 @@
+{
+  "componentType": "SurfaceHeatExchanger",
+  "curvesByParameterId": {
+    "FTLine": {
+      "name": "水侧流量-温度",
+      "curves": [],
+      "single_curve_only": true,
+      "x_label": "",
+      "y_label": "",
+      "x_unit": "t/h",
+      "y_unit": "℃",
+      "scale_label": "",
+      "scale_unit": null,
+      "scale_fit_order": 2
+    }
+  }
+}

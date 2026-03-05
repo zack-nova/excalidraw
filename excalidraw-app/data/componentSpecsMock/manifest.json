@@ -1,0 +1,506 @@
+[
+  {
+    "componentType": "Airisland",
+    "inputCount": 4,
+    "outputCount": 0,
+    "curveParameterCount": 0,
+    "specPath": "./specs/Airisland.json",
+    "curvePath": "./curves/Airisland.json"
+  },
+  {
+    "componentType": "BagFilter",
+    "inputCount": 4,
+    "outputCount": 2,
+    "curveParameterCount": 0,
+    "specPath": "./specs/BagFilter.json",
+    "curvePath": "./curves/BagFilter.json"
+  },
+  {
+    "componentType": "Boiler",
+    "inputCount": 30,
+    "outputCount": 2,
+    "curveParameterCount": 6,
+    "specPath": "./specs/Boiler.json",
+    "curvePath": "./curves/Boiler.json"
+  },
+  {
+    "componentType": "CFB",
+    "inputCount": 17,
+    "outputCount": 2,
+    "curveParameterCount": 0,
+    "specPath": "./specs/CFB.json",
+    "curvePath": "./curves/CFB.json"
+  },
+  {
+    "componentType": "Calorifier",
+    "inputCount": 15,
+    "outputCount": 1,
+    "curveParameterCount": 3,
+    "specPath": "./specs/Calorifier.json",
+    "curvePath": "./curves/Calorifier.json"
+  },
+  {
+    "componentType": "Chimney",
+    "inputCount": 4,
+    "outputCount": 2,
+    "curveParameterCount": 0,
+    "specPath": "./specs/Chimney.json",
+    "curvePath": "./curves/Chimney.json"
+  },
+  {
+    "componentType": "CoalSource",
+    "inputCount": 11,
+    "outputCount": 2,
+    "curveParameterCount": 0,
+    "specPath": "./specs/CoalSource.json",
+    "curvePath": "./curves/CoalSource.json"
+  },
+  {
+    "componentType": "Compressor",
+    "inputCount": 5,
+    "outputCount": 7,
+    "curveParameterCount": 0,
+    "specPath": "./specs/Compressor.json",
+    "curvePath": "./curves/Compressor.json"
+  },
+  {
+    "componentType": "Compressor_Steam",
+    "inputCount": 4,
+    "outputCount": 2,
+    "curveParameterCount": 0,
+    "specPath": "./specs/Compressor_Steam.json",
+    "curvePath": "./curves/Compressor_Steam.json"
+  },
+  {
+    "componentType": "ConTank",
+    "inputCount": 4,
+    "outputCount": 1,
+    "curveParameterCount": 0,
+    "specPath": "./specs/ConTank.json",
+    "curvePath": "./curves/ConTank.json"
+  },
+  {
+    "componentType": "Condenser",
+    "inputCount": 18,
+    "outputCount": 5,
+    "curveParameterCount": 0,
+    "specPath": "./specs/Condenser.json",
+    "curvePath": "./curves/Condenser.json"
+  },
+  {
+    "componentType": "ControlDot",
+    "inputCount": 5,
+    "outputCount": 5,
+    "curveParameterCount": 0,
+    "specPath": "./specs/ControlDot.json",
+    "curvePath": "./curves/ControlDot.json"
+  },
+  {
+    "componentType": "ControlDotGas",
+    "inputCount": 24,
+    "outputCount": 17,
+    "curveParameterCount": 0,
+    "specPath": "./specs/ControlDotGas.json",
+    "curvePath": "./curves/ControlDotGas.json"
+  },
+  {
+    "componentType": "ControlValve",
+    "inputCount": 7,
+    "outputCount": 2,
+    "curveParameterCount": 1,
+    "specPath": "./specs/ControlValve.json",
+    "curvePath": "./curves/ControlValve.json"
+  },
+  {
+    "componentType": "Controllingstage",
+    "inputCount": 23,
+    "outputCount": 20,
+    "curveParameterCount": 1,
+    "specPath": "./specs/Controllingstage.json",
+    "curvePath": "./curves/Controllingstage.json"
+  },
+  {
+    "componentType": "Coolingtower",
+    "inputCount": 5,
+    "outputCount": 1,
+    "curveParameterCount": 0,
+    "specPath": "./specs/Coolingtower.json",
+    "curvePath": "./curves/Coolingtower.json"
+  },
+  {
+    "componentType": "Deaerator",
+    "inputCount": 4,
+    "outputCount": 2,
+    "curveParameterCount": 0,
+    "specPath": "./specs/Deaerator.json",
+    "curvePath": "./curves/Deaerator.json"
+  },
+  {
+    "componentType": "Dehumidifier",
+    "inputCount": 2,
+    "outputCount": 0,
+    "curveParameterCount": 0,
+    "specPath": "./specs/Dehumidifier.json",
+    "curvePath": "./curves/Dehumidifier.json"
+  },
+  {
+    "componentType": "DehumidifierGas",
+    "inputCount": 2,
+    "outputCount": 0,
+    "curveParameterCount": 0,
+    "specPath": "./specs/DehumidifierGas.json",
+    "curvePath": "./curves/DehumidifierGas.json"
+  },
+  {
+    "componentType": "ECON",
+    "inputCount": 6,
+    "outputCount": 1,
+    "curveParameterCount": 0,
+    "specPath": "./specs/ECON.json",
+    "curvePath": "./curves/ECON.json"
+  },
+  {
+    "componentType": "ECONDehumidifier",
+    "inputCount": 7,
+    "outputCount": 2,
+    "curveParameterCount": 0,
+    "specPath": "./specs/ECONDehumidifier.json",
+    "curvePath": "./curves/ECONDehumidifier.json"
+  },
+  {
+    "componentType": "EVAP",
+    "inputCount": 8,
+    "outputCount": 1,
+    "curveParameterCount": 0,
+    "specPath": "./specs/EVAP.json",
+    "curvePath": "./curves/EVAP.json"
+  },
+  {
+    "componentType": "EVAP2",
+    "inputCount": 7,
+    "outputCount": 0,
+    "curveParameterCount": 0,
+    "specPath": "./specs/EVAP2.json",
+    "curvePath": "./curves/EVAP2.json"
+  },
+  {
+    "componentType": "Ejector",
+    "inputCount": 4,
+    "outputCount": 1,
+    "curveParameterCount": 0,
+    "specPath": "./specs/Ejector.json",
+    "curvePath": "./curves/Ejector.json"
+  },
+  {
+    "componentType": "FanSteam",
+    "inputCount": 8,
+    "outputCount": 6,
+    "curveParameterCount": 2,
+    "specPath": "./specs/FanSteam.json",
+    "curvePath": "./curves/FanSteam.json"
+  },
+  {
+    "componentType": "GasBoiler",
+    "inputCount": 19,
+    "outputCount": 1,
+    "curveParameterCount": 5,
+    "specPath": "./specs/GasBoiler.json",
+    "curvePath": "./curves/GasBoiler.json"
+  },
+  {
+    "componentType": "GasBurner",
+    "inputCount": 4,
+    "outputCount": 1,
+    "curveParameterCount": 0,
+    "specPath": "./specs/GasBurner.json",
+    "curvePath": "./curves/GasBurner.json"
+  },
+  {
+    "componentType": "GasHeatExchanger",
+    "inputCount": 8,
+    "outputCount": 12,
+    "curveParameterCount": 0,
+    "specPath": "./specs/GasHeatExchanger.json",
+    "curvePath": "./curves/GasHeatExchanger.json"
+  },
+  {
+    "componentType": "GasHeater",
+    "inputCount": 8,
+    "outputCount": 1,
+    "curveParameterCount": 0,
+    "specPath": "./specs/GasHeater.json",
+    "curvePath": "./curves/GasHeater.json"
+  },
+  {
+    "componentType": "GasSoource",
+    "inputCount": 25,
+    "outputCount": 0,
+    "curveParameterCount": 0,
+    "specPath": "./specs/GasSoource.json",
+    "curvePath": "./curves/GasSoource.json"
+  },
+  {
+    "componentType": "GasTurbin",
+    "inputCount": 4,
+    "outputCount": 2,
+    "curveParameterCount": 0,
+    "specPath": "./specs/GasTurbin.json",
+    "curvePath": "./curves/GasTurbin.json"
+  },
+  {
+    "componentType": "Generator",
+    "inputCount": 8,
+    "outputCount": 3,
+    "curveParameterCount": 1,
+    "specPath": "./specs/Generator.json",
+    "curvePath": "./curves/Generator.json"
+  },
+  {
+    "componentType": "HeatSupply",
+    "inputCount": 3,
+    "outputCount": 1,
+    "curveParameterCount": 0,
+    "specPath": "./specs/HeatSupply.json",
+    "curvePath": "./curves/HeatSupply.json"
+  },
+  {
+    "componentType": "IterateDot",
+    "inputCount": 5,
+    "outputCount": 4,
+    "curveParameterCount": 0,
+    "specPath": "./specs/IterateDot.json",
+    "curvePath": "./curves/IterateDot.json"
+  },
+  {
+    "componentType": "IterateDotGas",
+    "inputCount": 22,
+    "outputCount": 21,
+    "curveParameterCount": 0,
+    "specPath": "./specs/IterateDotGas.json",
+    "curvePath": "./curves/IterateDotGas.json"
+  },
+  {
+    "componentType": "MixedHeatExchanger",
+    "inputCount": 2,
+    "outputCount": 0,
+    "curveParameterCount": 0,
+    "specPath": "./specs/MixedHeatExchanger.json",
+    "curvePath": "./curves/MixedHeatExchanger.json"
+  },
+  {
+    "componentType": "Motor",
+    "inputCount": 3,
+    "outputCount": 1,
+    "curveParameterCount": 0,
+    "specPath": "./specs/Motor.json",
+    "curvePath": "./curves/Motor.json"
+  },
+  {
+    "componentType": "PTReducer",
+    "inputCount": 4,
+    "outputCount": 0,
+    "curveParameterCount": 0,
+    "specPath": "./specs/PTReducer.json",
+    "curvePath": "./curves/PTReducer.json"
+  },
+  {
+    "componentType": "PipeEle",
+    "inputCount": 8,
+    "outputCount": 3,
+    "curveParameterCount": 2,
+    "specPath": "./specs/PipeEle.json",
+    "curvePath": "./curves/PipeEle.json"
+  },
+  {
+    "componentType": "PipeEleGas",
+    "inputCount": 9,
+    "outputCount": 3,
+    "curveParameterCount": 2,
+    "specPath": "./specs/PipeEleGas.json",
+    "curvePath": "./curves/PipeEleGas.json"
+  },
+  {
+    "componentType": "PumpSteam",
+    "inputCount": 8,
+    "outputCount": 2,
+    "curveParameterCount": 2,
+    "specPath": "./specs/PumpSteam.json",
+    "curvePath": "./curves/PumpSteam.json"
+  },
+  {
+    "componentType": "PumpSteamGroup",
+    "inputCount": 19,
+    "outputCount": 13,
+    "curveParameterCount": 3,
+    "specPath": "./specs/PumpSteamGroup.json",
+    "curvePath": "./curves/PumpSteamGroup.json"
+  },
+  {
+    "componentType": "SealedLeakage",
+    "inputCount": 4,
+    "outputCount": 1,
+    "curveParameterCount": 0,
+    "specPath": "./specs/SealedLeakage.json",
+    "curvePath": "./curves/SealedLeakage.json"
+  },
+  {
+    "componentType": "SlagCooler",
+    "inputCount": 3,
+    "outputCount": 1,
+    "curveParameterCount": 0,
+    "specPath": "./specs/SlagCooler.json",
+    "curvePath": "./curves/SlagCooler.json"
+  },
+  {
+    "componentType": "SmallTurbin",
+    "inputCount": 14,
+    "outputCount": 12,
+    "curveParameterCount": 1,
+    "specPath": "./specs/SmallTurbin.json",
+    "curvePath": "./curves/SmallTurbin.json"
+  },
+  {
+    "componentType": "SteamHeader",
+    "inputCount": 10,
+    "outputCount": 0,
+    "curveParameterCount": 0,
+    "specPath": "./specs/SteamHeader.json",
+    "curvePath": "./curves/SteamHeader.json"
+  },
+  {
+    "componentType": "SuperHeater",
+    "inputCount": 7,
+    "outputCount": 1,
+    "curveParameterCount": 0,
+    "specPath": "./specs/SuperHeater.json",
+    "curvePath": "./curves/SuperHeater.json"
+  },
+  {
+    "componentType": "SurfaceHeatExchanger",
+    "inputCount": 24,
+    "outputCount": 8,
+    "curveParameterCount": 1,
+    "specPath": "./specs/SurfaceHeatExchanger.json",
+    "curvePath": "./curves/SurfaceHeatExchanger.json"
+  },
+  {
+    "componentType": "TeeCoal",
+    "inputCount": 2,
+    "outputCount": 9,
+    "curveParameterCount": 0,
+    "specPath": "./specs/TeeCoal.json",
+    "curvePath": "./curves/TeeCoal.json"
+  },
+  {
+    "componentType": "TeeGas",
+    "inputCount": 2,
+    "outputCount": 0,
+    "curveParameterCount": 0,
+    "specPath": "./specs/TeeGas.json",
+    "curvePath": "./curves/TeeGas.json"
+  },
+  {
+    "componentType": "TeePower",
+    "inputCount": 2,
+    "outputCount": 0,
+    "curveParameterCount": 0,
+    "specPath": "./specs/TeePower.json",
+    "curvePath": "./curves/TeePower.json"
+  },
+  {
+    "componentType": "TeeWater",
+    "inputCount": 3,
+    "outputCount": 0,
+    "curveParameterCount": 0,
+    "specPath": "./specs/TeeWater.json",
+    "curvePath": "./curves/TeeWater.json"
+  },
+  {
+    "componentType": "TeeWaterValve",
+    "inputCount": 1,
+    "outputCount": 0,
+    "curveParameterCount": 0,
+    "specPath": "./specs/TeeWaterValve.json",
+    "curvePath": "./curves/TeeWaterValve.json"
+  },
+  {
+    "componentType": "Thionizer",
+    "inputCount": 5,
+    "outputCount": 1,
+    "curveParameterCount": 0,
+    "specPath": "./specs/Thionizer.json",
+    "curvePath": "./curves/Thionizer.json"
+  },
+  {
+    "componentType": "Throttle",
+    "inputCount": 2,
+    "outputCount": 0,
+    "curveParameterCount": 0,
+    "specPath": "./specs/Throttle.json",
+    "curvePath": "./curves/Throttle.json"
+  },
+  {
+    "componentType": "Turbin",
+    "inputCount": 23,
+    "outputCount": 12,
+    "curveParameterCount": 5,
+    "specPath": "./specs/Turbin.json",
+    "curvePath": "./curves/Turbin.json"
+  },
+  {
+    "componentType": "TurbinEffCal",
+    "inputCount": 1,
+    "outputCount": 1,
+    "curveParameterCount": 0,
+    "specPath": "./specs/TurbinEffCal.json",
+    "curvePath": "./curves/TurbinEffCal.json"
+  },
+  {
+    "componentType": "WaterHeater",
+    "inputCount": 41,
+    "outputCount": 21,
+    "curveParameterCount": 3,
+    "specPath": "./specs/WaterHeater.json",
+    "curvePath": "./curves/WaterHeater.json"
+  },
+  {
+    "componentType": "WaterHeaterWithPump",
+    "inputCount": 33,
+    "outputCount": 18,
+    "curveParameterCount": 0,
+    "specPath": "./specs/WaterHeaterWithPump.json",
+    "curvePath": "./curves/WaterHeaterWithPump.json"
+  },
+  {
+    "componentType": "WaterPool",
+    "inputCount": 5,
+    "outputCount": 0,
+    "curveParameterCount": 0,
+    "specPath": "./specs/WaterPool.json",
+    "curvePath": "./curves/WaterPool.json"
+  },
+  {
+    "componentType": "WaterSource",
+    "inputCount": 5,
+    "outputCount": 0,
+    "curveParameterCount": 0,
+    "specPath": "./specs/WaterSource.json",
+    "curvePath": "./curves/WaterSource.json"
+  },
+  {
+    "componentType": "WaterTag",
+    "inputCount": 1,
+    "outputCount": 0,
+    "curveParameterCount": 0,
+    "specPath": "./specs/WaterTag.json",
+    "curvePath": "./curves/WaterTag.json"
+  },
+  {
+    "componentType": "WaterValve",
+    "inputCount": 4,
+    "outputCount": 1,
+    "curveParameterCount": 0,
+    "specPath": "./specs/WaterValve.json",
+    "curvePath": "./curves/WaterValve.json"
+  }
+]

@@ -603,8 +603,17 @@ export interface ExcalidrawProps {
     appState: UIAppState,
   ) => JSX.Element | null;
   selectedShapeActionsLayout?: "tabbed" | "properties-only" | "data-tabs";
+  selectedShapeActionsResizable?: boolean;
+  selectedShapeActionsWidth?: number;
+  selectedShapeActionsMinWidth?: number;
+  selectedShapeActionsMaxWidth?: number;
+  onSelectedShapeActionsWidthChange?: (width: number) => void;
   renderSelectedShapeActionsFooter?: (
     isMobile: boolean,
+    appState: UIAppState,
+  ) => JSX.Element | null;
+  renderSelectedShapeActionsPanel?: (
+    panel: "input" | "output" | "anchors" | "data" | "placeholder" | "properties",
     appState: UIAppState,
   ) => JSX.Element | null;
   langCode?: Language["code"];

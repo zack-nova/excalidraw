@@ -1,0 +1,851 @@
+{
+  "componentType": "ControlValve",
+  "id": null,
+  "uuid": null,
+  "group": "汽水连接件",
+  "icon": "/PNG/ControlValve.png",
+  "measured": {
+    "width": 20,
+    "height": 40
+  },
+  "operationMode": null,
+  "data": {
+    "name": "ControlValve",
+    "name_cn": "控制阀",
+    "component_type": "ControlValve",
+    "supported_operation_modes": [
+      "design_mode",
+      "interpolation_mode"
+    ],
+    "operation_mode": "design_mode",
+    "image": "/PNG/ControlValve.png",
+    "anchors": [
+      {
+        "position": {
+          "x": 0,
+          "y": 0.5
+        },
+        "data": {
+          "interface_type": "Inlet",
+          "name": "Inlet",
+          "name_cn": "入口",
+          "material_type": "water",
+          "connection_type": "inlet",
+          "is_visible": true,
+          "allow_not_display": false,
+          "is_connected": false,
+          "tpis_extra_info": null
+        },
+        "uuid": null,
+        "id": null,
+        "component_id": null,
+        "parameters": [
+          {
+            "uuid": null,
+            "name": "Q",
+            "name_cn": "流量",
+            "source": "backend_calculation",
+            "value": null,
+            "value_type": "string",
+            "tips": "流量",
+            "unit": "t/h",
+            "enum_options": [],
+            "physical_entity_type": "anchor",
+            "group": "入口",
+            "tpis_key": "Q",
+            "tpis_operation_mode": [
+              "design_mode",
+              "interpolation_mode",
+              "calculation_mode"
+            ],
+            "require": false,
+            "input_status": "unknown",
+            "allow_not_display": false,
+            "tpis_extra_info": "",
+            "curve_data": null
+          },
+          {
+            "uuid": null,
+            "name": "P",
+            "name_cn": "压力",
+            "source": "backend_calculation",
+            "value": null,
+            "value_type": "string",
+            "tips": "压力",
+            "unit": "MPa",
+            "enum_options": [
+              "MPa",
+              "kPa",
+              "Pa",
+              "Pa(g)"
+            ],
+            "physical_entity_type": "anchor",
+            "group": "入口",
+            "tpis_key": "P",
+            "tpis_operation_mode": [
+              "design_mode",
+              "interpolation_mode",
+              "calculation_mode"
+            ],
+            "require": false,
+            "input_status": "unknown",
+            "allow_not_display": false,
+            "tpis_extra_info": "",
+            "curve_data": null
+          },
+          {
+            "uuid": null,
+            "name": "T",
+            "name_cn": "温度",
+            "source": "backend_calculation",
+            "value": null,
+            "value_type": "string",
+            "tips": "温度",
+            "unit": "℃",
+            "enum_options": [
+              "℃",
+              "K"
+            ],
+            "physical_entity_type": "anchor",
+            "group": "入口",
+            "tpis_key": "T",
+            "tpis_operation_mode": [
+              "design_mode",
+              "interpolation_mode",
+              "calculation_mode"
+            ],
+            "require": false,
+            "input_status": "unknown",
+            "allow_not_display": false,
+            "tpis_extra_info": "",
+            "curve_data": null
+          },
+          {
+            "uuid": null,
+            "name": "H",
+            "name_cn": "焓值",
+            "source": "backend_calculation",
+            "value": null,
+            "value_type": "string",
+            "tips": "焓值",
+            "unit": "KJ/Kg",
+            "enum_options": [],
+            "physical_entity_type": "anchor",
+            "group": "入口",
+            "tpis_key": "H",
+            "tpis_operation_mode": [
+              "design_mode",
+              "interpolation_mode",
+              "calculation_mode"
+            ],
+            "require": false,
+            "input_status": "unknown",
+            "allow_not_display": false,
+            "tpis_extra_info": "",
+            "curve_data": null
+          },
+          {
+            "uuid": null,
+            "name": "X",
+            "name_cn": "干度",
+            "source": "backend_calculation",
+            "value": null,
+            "value_type": "string",
+            "tips": "0.0 ~ 1.0",
+            "unit": "",
+            "enum_options": [],
+            "physical_entity_type": "anchor",
+            "group": "入口",
+            "tpis_key": "X",
+            "tpis_operation_mode": [
+              "design_mode",
+              "interpolation_mode",
+              "calculation_mode"
+            ],
+            "require": false,
+            "input_status": "unknown",
+            "allow_not_display": false,
+            "tpis_extra_info": "",
+            "curve_data": null
+          }
+        ]
+      },
+      {
+        "position": {
+          "x": 1,
+          "y": 0.5
+        },
+        "data": {
+          "interface_type": "Outlet",
+          "name": "Outlet",
+          "name_cn": "出口",
+          "material_type": "water",
+          "connection_type": "outlet",
+          "is_visible": true,
+          "allow_not_display": false,
+          "is_connected": false,
+          "tpis_extra_info": null
+        },
+        "uuid": null,
+        "id": null,
+        "component_id": null,
+        "parameters": [
+          {
+            "uuid": null,
+            "name": "Q",
+            "name_cn": "流量",
+            "source": "backend_calculation",
+            "value": null,
+            "value_type": "string",
+            "tips": "流量",
+            "unit": "t/h",
+            "enum_options": [],
+            "physical_entity_type": "anchor",
+            "group": "出口",
+            "tpis_key": "Q",
+            "tpis_operation_mode": [
+              "design_mode",
+              "interpolation_mode",
+              "calculation_mode"
+            ],
+            "require": false,
+            "input_status": "unknown",
+            "allow_not_display": false,
+            "tpis_extra_info": "",
+            "curve_data": null
+          },
+          {
+            "uuid": null,
+            "name": "P",
+            "name_cn": "压力",
+            "source": "backend_calculation",
+            "value": null,
+            "value_type": "string",
+            "tips": "压力",
+            "unit": "MPa",
+            "enum_options": [
+              "MPa",
+              "kPa",
+              "Pa",
+              "Pa(g)"
+            ],
+            "physical_entity_type": "anchor",
+            "group": "出口",
+            "tpis_key": "P",
+            "tpis_operation_mode": [
+              "design_mode",
+              "interpolation_mode",
+              "calculation_mode"
+            ],
+            "require": false,
+            "input_status": "unknown",
+            "allow_not_display": false,
+            "tpis_extra_info": "",
+            "curve_data": null
+          },
+          {
+            "uuid": null,
+            "name": "T",
+            "name_cn": "温度",
+            "source": "backend_calculation",
+            "value": null,
+            "value_type": "string",
+            "tips": "温度",
+            "unit": "℃",
+            "enum_options": [
+              "℃",
+              "K"
+            ],
+            "physical_entity_type": "anchor",
+            "group": "出口",
+            "tpis_key": "T",
+            "tpis_operation_mode": [
+              "design_mode",
+              "interpolation_mode",
+              "calculation_mode"
+            ],
+            "require": false,
+            "input_status": "unknown",
+            "allow_not_display": false,
+            "tpis_extra_info": "",
+            "curve_data": null
+          },
+          {
+            "uuid": null,
+            "name": "H",
+            "name_cn": "焓值",
+            "source": "backend_calculation",
+            "value": null,
+            "value_type": "string",
+            "tips": "焓值",
+            "unit": "KJ/Kg",
+            "enum_options": [],
+            "physical_entity_type": "anchor",
+            "group": "出口",
+            "tpis_key": "H",
+            "tpis_operation_mode": [
+              "design_mode",
+              "interpolation_mode",
+              "calculation_mode"
+            ],
+            "require": false,
+            "input_status": "unknown",
+            "allow_not_display": false,
+            "tpis_extra_info": "",
+            "curve_data": null
+          },
+          {
+            "uuid": null,
+            "name": "X",
+            "name_cn": "干度",
+            "source": "backend_calculation",
+            "value": null,
+            "value_type": "string",
+            "tips": "0.0 ~ 1.0",
+            "unit": "",
+            "enum_options": [],
+            "physical_entity_type": "anchor",
+            "group": "出口",
+            "tpis_key": "X",
+            "tpis_operation_mode": [
+              "design_mode",
+              "interpolation_mode",
+              "calculation_mode"
+            ],
+            "require": false,
+            "input_status": "unknown",
+            "allow_not_display": false,
+            "tpis_extra_info": "",
+            "curve_data": null
+          }
+        ]
+      }
+    ],
+    "interfaces": [
+      {
+        "position": {
+          "x": 0,
+          "y": 0.5
+        },
+        "data": {
+          "interface_type": "Inlet",
+          "name": "Inlet",
+          "name_cn": "入口",
+          "material_type": "water",
+          "connection_type": "inlet",
+          "is_visible": true,
+          "allow_not_display": false,
+          "is_connected": false,
+          "tpis_extra_info": null
+        },
+        "uuid": null,
+        "id": null,
+        "component_id": null,
+        "parameters": [
+          {
+            "uuid": null,
+            "name": "Q",
+            "name_cn": "流量",
+            "source": "backend_calculation",
+            "value": null,
+            "value_type": "string",
+            "tips": "流量",
+            "unit": "t/h",
+            "enum_options": [],
+            "physical_entity_type": "anchor",
+            "group": "入口",
+            "tpis_key": "Q",
+            "tpis_operation_mode": [
+              "design_mode",
+              "interpolation_mode",
+              "calculation_mode"
+            ],
+            "require": false,
+            "input_status": "unknown",
+            "allow_not_display": false,
+            "tpis_extra_info": "",
+            "curve_data": null
+          },
+          {
+            "uuid": null,
+            "name": "P",
+            "name_cn": "压力",
+            "source": "backend_calculation",
+            "value": null,
+            "value_type": "string",
+            "tips": "压力",
+            "unit": "MPa",
+            "enum_options": [
+              "MPa",
+              "kPa",
+              "Pa",
+              "Pa(g)"
+            ],
+            "physical_entity_type": "anchor",
+            "group": "入口",
+            "tpis_key": "P",
+            "tpis_operation_mode": [
+              "design_mode",
+              "interpolation_mode",
+              "calculation_mode"
+            ],
+            "require": false,
+            "input_status": "unknown",
+            "allow_not_display": false,
+            "tpis_extra_info": "",
+            "curve_data": null
+          },
+          {
+            "uuid": null,
+            "name": "T",
+            "name_cn": "温度",
+            "source": "backend_calculation",
+            "value": null,
+            "value_type": "string",
+            "tips": "温度",
+            "unit": "℃",
+            "enum_options": [
+              "℃",
+              "K"
+            ],
+            "physical_entity_type": "anchor",
+            "group": "入口",
+            "tpis_key": "T",
+            "tpis_operation_mode": [
+              "design_mode",
+              "interpolation_mode",
+              "calculation_mode"
+            ],
+            "require": false,
+            "input_status": "unknown",
+            "allow_not_display": false,
+            "tpis_extra_info": "",
+            "curve_data": null
+          },
+          {
+            "uuid": null,
+            "name": "H",
+            "name_cn": "焓值",
+            "source": "backend_calculation",
+            "value": null,
+            "value_type": "string",
+            "tips": "焓值",
+            "unit": "KJ/Kg",
+            "enum_options": [],
+            "physical_entity_type": "anchor",
+            "group": "入口",
+            "tpis_key": "H",
+            "tpis_operation_mode": [
+              "design_mode",
+              "interpolation_mode",
+              "calculation_mode"
+            ],
+            "require": false,
+            "input_status": "unknown",
+            "allow_not_display": false,
+            "tpis_extra_info": "",
+            "curve_data": null
+          },
+          {
+            "uuid": null,
+            "name": "X",
+            "name_cn": "干度",
+            "source": "backend_calculation",
+            "value": null,
+            "value_type": "string",
+            "tips": "0.0 ~ 1.0",
+            "unit": "",
+            "enum_options": [],
+            "physical_entity_type": "anchor",
+            "group": "入口",
+            "tpis_key": "X",
+            "tpis_operation_mode": [
+              "design_mode",
+              "interpolation_mode",
+              "calculation_mode"
+            ],
+            "require": false,
+            "input_status": "unknown",
+            "allow_not_display": false,
+            "tpis_extra_info": "",
+            "curve_data": null
+          }
+        ]
+      },
+      {
+        "position": {
+          "x": 1,
+          "y": 0.5
+        },
+        "data": {
+          "interface_type": "Outlet",
+          "name": "Outlet",
+          "name_cn": "出口",
+          "material_type": "water",
+          "connection_type": "outlet",
+          "is_visible": true,
+          "allow_not_display": false,
+          "is_connected": false,
+          "tpis_extra_info": null
+        },
+        "uuid": null,
+        "id": null,
+        "component_id": null,
+        "parameters": [
+          {
+            "uuid": null,
+            "name": "Q",
+            "name_cn": "流量",
+            "source": "backend_calculation",
+            "value": null,
+            "value_type": "string",
+            "tips": "流量",
+            "unit": "t/h",
+            "enum_options": [],
+            "physical_entity_type": "anchor",
+            "group": "出口",
+            "tpis_key": "Q",
+            "tpis_operation_mode": [
+              "design_mode",
+              "interpolation_mode",
+              "calculation_mode"
+            ],
+            "require": false,
+            "input_status": "unknown",
+            "allow_not_display": false,
+            "tpis_extra_info": "",
+            "curve_data": null
+          },
+          {
+            "uuid": null,
+            "name": "P",
+            "name_cn": "压力",
+            "source": "backend_calculation",
+            "value": null,
+            "value_type": "string",
+            "tips": "压力",
+            "unit": "MPa",
+            "enum_options": [
+              "MPa",
+              "kPa",
+              "Pa",
+              "Pa(g)"
+            ],
+            "physical_entity_type": "anchor",
+            "group": "出口",
+            "tpis_key": "P",
+            "tpis_operation_mode": [
+              "design_mode",
+              "interpolation_mode",
+              "calculation_mode"
+            ],
+            "require": false,
+            "input_status": "unknown",
+            "allow_not_display": false,
+            "tpis_extra_info": "",
+            "curve_data": null
+          },
+          {
+            "uuid": null,
+            "name": "T",
+            "name_cn": "温度",
+            "source": "backend_calculation",
+            "value": null,
+            "value_type": "string",
+            "tips": "温度",
+            "unit": "℃",
+            "enum_options": [
+              "℃",
+              "K"
+            ],
+            "physical_entity_type": "anchor",
+            "group": "出口",
+            "tpis_key": "T",
+            "tpis_operation_mode": [
+              "design_mode",
+              "interpolation_mode",
+              "calculation_mode"
+            ],
+            "require": false,
+            "input_status": "unknown",
+            "allow_not_display": false,
+            "tpis_extra_info": "",
+            "curve_data": null
+          },
+          {
+            "uuid": null,
+            "name": "H",
+            "name_cn": "焓值",
+            "source": "backend_calculation",
+            "value": null,
+            "value_type": "string",
+            "tips": "焓值",
+            "unit": "KJ/Kg",
+            "enum_options": [],
+            "physical_entity_type": "anchor",
+            "group": "出口",
+            "tpis_key": "H",
+            "tpis_operation_mode": [
+              "design_mode",
+              "interpolation_mode",
+              "calculation_mode"
+            ],
+            "require": false,
+            "input_status": "unknown",
+            "allow_not_display": false,
+            "tpis_extra_info": "",
+            "curve_data": null
+          },
+          {
+            "uuid": null,
+            "name": "X",
+            "name_cn": "干度",
+            "source": "backend_calculation",
+            "value": null,
+            "value_type": "string",
+            "tips": "0.0 ~ 1.0",
+            "unit": "",
+            "enum_options": [],
+            "physical_entity_type": "anchor",
+            "group": "出口",
+            "tpis_key": "X",
+            "tpis_operation_mode": [
+              "design_mode",
+              "interpolation_mode",
+              "calculation_mode"
+            ],
+            "require": false,
+            "input_status": "unknown",
+            "allow_not_display": false,
+            "tpis_extra_info": "",
+            "curve_data": null
+          }
+        ]
+      }
+    ]
+  },
+  "inputParameters": [
+    {
+      "id": "Name",
+      "uuid": null,
+      "key": "Name",
+      "name": "Name",
+      "nameCn": "元件名称",
+      "source": "frontend_manual_input",
+      "valueType": "string",
+      "unit": "",
+      "defaultValue": "控制阀",
+      "tips": "元件名称",
+      "enumOptions": null,
+      "physicalEntityType": "component",
+      "group": "基本",
+      "required": false,
+      "inputStatus": "unknown",
+      "allowNotDisplay": false,
+      "tpisKey": "Name",
+      "tpisOperationMode": [
+        "design_mode",
+        "interpolation_mode"
+      ],
+      "tpisExtraInfo": "",
+      "hasCurveData": false
+    },
+    {
+      "id": "Open",
+      "uuid": null,
+      "key": "Open",
+      "name": "Open",
+      "nameCn": "阀门开度",
+      "source": "frontend_manual_input",
+      "valueType": "float",
+      "unit": "%",
+      "defaultValue": null,
+      "tips": "阀门开度大小0~100",
+      "enumOptions": null,
+      "physicalEntityType": "component",
+      "group": "",
+      "required": false,
+      "inputStatus": "unknown",
+      "allowNotDisplay": false,
+      "tpisKey": "Open",
+      "tpisOperationMode": [
+        "design_mode"
+      ],
+      "tpisExtraInfo": "",
+      "hasCurveData": false
+    },
+    {
+      "id": "DertP",
+      "uuid": null,
+      "key": "DertP",
+      "name": "DertP",
+      "nameCn": "阀门压损",
+      "source": "frontend_manual_input",
+      "valueType": "float",
+      "unit": "MPa",
+      "defaultValue": null,
+      "tips": "管道压损",
+      "enumOptions": null,
+      "physicalEntityType": "component",
+      "group": "",
+      "required": false,
+      "inputStatus": "unknown",
+      "allowNotDisplay": false,
+      "tpisKey": "DertP",
+      "tpisOperationMode": [
+        "design_mode"
+      ],
+      "tpisExtraInfo": "",
+      "hasCurveData": false
+    },
+    {
+      "id": "OutSteamP",
+      "uuid": null,
+      "key": "OutSteamP",
+      "name": "OutSteamP",
+      "nameCn": "阀出口压力",
+      "source": "frontend_manual_input",
+      "valueType": "float",
+      "unit": "MPa(a)",
+      "defaultValue": null,
+      "tips": "",
+      "enumOptions": null,
+      "physicalEntityType": "component",
+      "group": "基本",
+      "required": false,
+      "inputStatus": "unknown",
+      "allowNotDisplay": false,
+      "tpisKey": "OutSteamP",
+      "tpisOperationMode": [
+        "design_mode"
+      ],
+      "tpisExtraInfo": "",
+      "hasCurveData": false
+    },
+    {
+      "id": "SetP",
+      "uuid": null,
+      "key": "SetP",
+      "name": "SetP",
+      "nameCn": "设置压力",
+      "source": "frontend_manual_input",
+      "valueType": "float",
+      "unit": "MPa",
+      "defaultValue": null,
+      "tips": "流量变化时阀固定维持的压力值",
+      "enumOptions": null,
+      "physicalEntityType": "component",
+      "group": "基本",
+      "required": false,
+      "inputStatus": "unknown",
+      "allowNotDisplay": false,
+      "tpisKey": "SetP",
+      "tpisOperationMode": [
+        "interpolation_mode"
+      ],
+      "tpisExtraInfo": "",
+      "hasCurveData": false
+    },
+    {
+      "id": "SetPSel",
+      "uuid": null,
+      "key": "SetPSel",
+      "name": "SetPSel",
+      "nameCn": "恒压位置",
+      "source": "frontend_manual_input",
+      "valueType": "enum",
+      "unit": "阀进口",
+      "defaultValue": "0",
+      "tips": "保证压力不变的位置",
+      "enumOptions": [
+        "阀进口",
+        "阀出口"
+      ],
+      "physicalEntityType": "component",
+      "group": "基本",
+      "required": false,
+      "inputStatus": "unknown",
+      "allowNotDisplay": false,
+      "tpisKey": "SetPSel",
+      "tpisOperationMode": [
+        "interpolation_mode"
+      ],
+      "tpisExtraInfo": "",
+      "hasCurveData": false
+    },
+    {
+      "id": "qopencv",
+      "uuid": null,
+      "key": "qopencv",
+      "name": "qopencv",
+      "nameCn": "质量流量-开度",
+      "source": "frontend_manual_input",
+      "valueType": "curve",
+      "unit": null,
+      "defaultValue": null,
+      "tips": "质量流量-开度",
+      "enumOptions": null,
+      "physicalEntityType": "component",
+      "group": "",
+      "required": false,
+      "inputStatus": "unknown",
+      "allowNotDisplay": false,
+      "tpisKey": "qopencv",
+      "tpisOperationMode": [
+        "interpolation_mode"
+      ],
+      "tpisExtraInfo": "",
+      "hasCurveData": true
+    }
+  ],
+  "outputParameters": [
+    {
+      "id": "dertp",
+      "uuid": null,
+      "key": "dertp",
+      "name": "dertp",
+      "nameCn": "阀门压损",
+      "source": "backend_calculation",
+      "valueType": "string",
+      "unit": "MPa",
+      "defaultValue": null,
+      "tips": "阀门压损",
+      "enumOptions": null,
+      "physicalEntityType": "component",
+      "group": "",
+      "required": false,
+      "inputStatus": "unknown",
+      "allowNotDisplay": false,
+      "tpisKey": "dertp",
+      "tpisOperationMode": [
+        "interpolation_mode"
+      ],
+      "tpisExtraInfo": "",
+      "hasCurveData": false
+    },
+    {
+      "id": "Open",
+      "uuid": null,
+      "key": "Open",
+      "name": "Open",
+      "nameCn": "阀门开度",
+      "source": "backend_calculation",
+      "valueType": "string",
+      "unit": "%",
+      "defaultValue": null,
+      "tips": "阀门开度",
+      "enumOptions": null,
+      "physicalEntityType": "component",
+      "group": "",
+      "required": false,
+      "inputStatus": "unknown",
+      "allowNotDisplay": false,
+      "tpisKey": "Open",
+      "tpisOperationMode": [
+        "interpolation_mode"
+      ],
+      "tpisExtraInfo": "",
+      "hasCurveData": false
+    }
+  ]
+}

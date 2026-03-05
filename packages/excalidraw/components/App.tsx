@@ -2033,7 +2033,13 @@ class App extends React.Component<AppProps, AppState> {
       renderTopLeftUI,
       renderToolbarEndUI,
       selectedShapeActionsLayout,
+      selectedShapeActionsResizable,
+      selectedShapeActionsWidth,
+      selectedShapeActionsMinWidth,
+      selectedShapeActionsMaxWidth,
+      onSelectedShapeActionsWidthChange,
       renderSelectedShapeActionsFooter,
+      renderSelectedShapeActionsPanel,
       renderCustomStats,
     } = this.props;
 
@@ -2128,8 +2134,26 @@ class App extends React.Component<AppProps, AppState> {
                           selectedShapeActionsLayout={
                             selectedShapeActionsLayout
                           }
+                          selectedShapeActionsResizable={
+                            selectedShapeActionsResizable
+                          }
+                          selectedShapeActionsWidth={
+                            selectedShapeActionsWidth
+                          }
+                          selectedShapeActionsMinWidth={
+                            selectedShapeActionsMinWidth
+                          }
+                          selectedShapeActionsMaxWidth={
+                            selectedShapeActionsMaxWidth
+                          }
+                          onSelectedShapeActionsWidthChange={
+                            onSelectedShapeActionsWidthChange
+                          }
                           renderSelectedShapeActionsFooter={
                             renderSelectedShapeActionsFooter
+                          }
+                          renderSelectedShapeActionsPanel={
+                            renderSelectedShapeActionsPanel
                           }
                           renderCustomStats={renderCustomStats}
                           showExitZenModeBtn={

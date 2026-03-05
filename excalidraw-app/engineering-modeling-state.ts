@@ -1,4 +1,5 @@
 import { atom } from "./app-jotai";
+import { syncEngineeringComponentSpecBridgeAtom } from "./engineering-component-spec-bridge-state";
 import {
   applyEngineeringProjectMutationAtom,
   engineeringProjectDocumentAtom,
@@ -36,6 +37,7 @@ export const syncEngineeringSceneToModelAtom = atom(
     const projection = buildEngineeringModelingProjection(currentProject, elements);
 
     if (isEngineeringModelingProjectionInSync(currentProject, projection)) {
+      set(syncEngineeringComponentSpecBridgeAtom);
       return;
     }
 
@@ -47,5 +49,6 @@ export const syncEngineeringSceneToModelAtom = atom(
         topology: projection.topology,
       }),
     });
+    set(syncEngineeringComponentSpecBridgeAtom);
   },
 );

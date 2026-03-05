@@ -1,0 +1,65 @@
+{
+  "componentType": "GasBoiler",
+  "curvesByParameterId": {
+    "MainDPcv": {
+      "name": "主流量-主汽压降",
+      "curves": [],
+      "single_curve_only": true,
+      "x_label": "",
+      "y_label": "",
+      "x_unit": "t/h",
+      "y_unit": "MPa",
+      "scale_label": "",
+      "scale_unit": null,
+      "scale_fit_order": 2
+    },
+    "Effcv": {
+      "name": "主流量-锅炉效率",
+      "curves": [],
+      "single_curve_only": true,
+      "x_label": "",
+      "y_label": "",
+      "x_unit": "t/h",
+      "y_unit": "%",
+      "scale_label": "",
+      "scale_unit": null,
+      "scale_fit_order": 2
+    },
+    "AAir_APHcv": {
+      "name": "主流量-炉膛过量空气系数",
+      "curves": [],
+      "single_curve_only": true,
+      "x_label": "",
+      "y_label": "",
+      "x_unit": "t/h",
+      "y_unit": "",
+      "scale_label": "",
+      "scale_unit": null,
+      "scale_fit_order": 2
+    },
+    "ReSteamDPcv": {
+      "name": "一再流量-一再压降",
+      "curves": [],
+      "single_curve_only": true,
+      "x_label": "",
+      "y_label": "",
+      "x_unit": "t/h",
+      "y_unit": "MPa",
+      "scale_label": "",
+      "scale_unit": null,
+      "scale_fit_order": 2
+    },
+    "ReSteamDP2cv": {
+      "name": "二再流量-二再压降",
+      "curves": [],
+      "single_curve_only": true,
+      "x_label": "",
+      "y_label": "",
+      "x_unit": "t/h",
+      "y_unit": "MPa",
+      "scale_label": "",
+      "scale_unit": null,
+      "scale_fit_order": 2
+    }
+  }
+}

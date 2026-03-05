@@ -144,6 +144,8 @@ type PropertiesSectionTab =
   | "placeholder"
   | "properties";
 
+let lastSelectedShapeActionsDataTab: PropertiesSectionTab = "data";
+
 type ComponentAnchorMetadata = {
   id?: string | null;
   uuid?: string | null;
@@ -615,6 +617,7 @@ export const SelectedShapeActions = ({
   app,
   layout = "tabbed",
   footer = null,
+  renderPanel,
 }: {
   appState: UIAppState;
   elementsMap: NonDeletedElementsMap | NonDeletedSceneElementsMap;
@@ -622,6 +625,10 @@ export const SelectedShapeActions = ({
   app: AppClassProperties;
   layout?: "tabbed" | "properties-only" | "data-tabs";
   footer?: ReactNode;
+  renderPanel?: (
+    panel: PropertiesSectionTab,
+    appState: UIAppState,
+  ) => ReactNode | null;
 }) => {
   const targetElements = getTargetElements(elementsMap, appState);
   const selectedElementWithComponent =
@@ -652,8 +659,14 @@ export const SelectedShapeActions = ({
     .join(",")}`;
   const [activeTab, setActiveTab] =
     useState<PropertiesSectionTab>(
-      layout === "data-tabs" ? "data" : "properties",
+      layout === "data-tabs" ? lastSelectedShapeActionsDataTab : "properties",
     );
+  const renderedInputPanel = renderPanel?.("input", appState);
+  const renderedOutputPanel = renderPanel?.("output", appState);
+  const renderedAnchorsPanel = renderPanel?.("anchors", appState);
+  const renderedDataPanel = renderPanel?.("data", appState);
+  const renderedPlaceholderPanel = renderPanel?.("placeholder", appState);
+  const renderedPropertiesPanel = renderPanel?.("properties", appState);
   const tabs: Array<{
     value: PropertiesSectionTab;
     label: string;
@@ -678,7 +691,22 @@ export const SelectedShapeActions = ({
         ];
 
   useEffect(() => {
-    setActiveTab(layout === "data-tabs" ? "data" : "properties");
+    setActiveTab((current) => {
+      if (layout === "data-tabs") {
+        return current === "properties" ? lastSelectedShapeActionsDataTab : current;
+      }
+      if (current !== "properties") {
+        lastSelectedShapeActionsDataTab = current;
+      }
+      return "properties";
+    });
+  }, [layout]);
+
+  useEffect(() => {
+    if (layout === "data-tabs") {
+      return;
+    }
+    setActiveTab("properties");
   }, [layout, tabsResetKey]);
 
   if (layout === "properties-only") {
@@ -710,7 +738,12 @@ export const SelectedShapeActions = ({
             data-state={activeTab === tab.value ? "active" : "inactive"}
             id={`selected-shape-actions-tab-${tab.value}`}
             key={tab.value}
-            onClick={() => setActiveTab(tab.value)}
+            onClick={() => {
+              setActiveTab(tab.value);
+              if (tab.value !== "properties") {
+                lastSelectedShapeActionsDataTab = tab.value;
+              }
+            }}
             role="tab"
             type="button"
           >
@@ -727,10 +760,12 @@ export const SelectedShapeActions = ({
         role="tabpanel"
         tabIndex={0}
       >
-        <ShapeActionsInspectorPanel
-          emptyMessage={t("labels.propertiesTabs.emptyInput")}
-          items={inputItems}
-        />
+        {renderedInputPanel ?? (
+          <ShapeActionsInspectorPanel
+            emptyMessage={t("labels.propertiesTabs.emptyInput")}
+            items={inputItems}
+          />
+        )}
       </div>
       <div
         aria-labelledby="selected-shape-actions-tab-output"
@@ -741,10 +776,12 @@ export const SelectedShapeActions = ({
         role="tabpanel"
         tabIndex={0}
       >
-        <ShapeActionsInspectorPanel
-          emptyMessage={t("labels.propertiesTabs.emptyOutput")}
-          items={outputItems}
-        />
+        {renderedOutputPanel ?? (
+          <ShapeActionsInspectorPanel
+            emptyMessage={t("labels.propertiesTabs.emptyOutput")}
+            items={outputItems}
+          />
+        )}
       </div>
       <div
         aria-labelledby="selected-shape-actions-tab-anchors"
@@ -755,10 +792,12 @@ export const SelectedShapeActions = ({
         role="tabpanel"
         tabIndex={0}
       >
-        <ShapeActionsInspectorPanel
-          emptyMessage={t("labels.propertiesTabs.emptyAnchors")}
-          items={anchorItems}
-        />
+        {renderedAnchorsPanel ?? (
+          <ShapeActionsInspectorPanel
+            emptyMessage={t("labels.propertiesTabs.emptyAnchors")}
+            items={anchorItems}
+          />
+        )}
       </div>
       <div
         aria-labelledby="selected-shape-actions-tab-data"
@@ -769,10 +808,12 @@ export const SelectedShapeActions = ({
         role="tabpanel"
         tabIndex={0}
       >
-        <ShapeActionsDataPanel
-          componentName={componentName}
-          dataEntries={dataEntries}
-        />
+        {renderedDataPanel ?? (
+          <ShapeActionsDataPanel
+            componentName={componentName}
+            dataEntries={dataEntries}
+          />
+        )}
       </div>
       <div
         aria-labelledby="selected-shape-actions-tab-placeholder"
@@ -784,11 +825,13 @@ export const SelectedShapeActions = ({
         role="tabpanel"
         tabIndex={0}
       >
-        <div className="selected-shape-actions-data-card">
-          <div className="selected-shape-actions-placeholder">
-            {t("labels.propertiesTabs.emptyPlaceholder")}
+        {renderedPlaceholderPanel ?? (
+          <div className="selected-shape-actions-data-card">
+            <div className="selected-shape-actions-placeholder">
+              {t("labels.propertiesTabs.emptyPlaceholder")}
+            </div>
           </div>
-        </div>
+        )}
       </div>
       <div
         aria-labelledby="selected-shape-actions-tab-properties"
@@ -799,12 +842,14 @@ export const SelectedShapeActions = ({
         role="tabpanel"
         tabIndex={0}
       >
-        <SelectedShapeActionsPropertiesPanel
-          app={app}
-          appState={appState}
-          elementsMap={elementsMap}
-          renderAction={renderAction}
-        />
+        {renderedPropertiesPanel ?? (
+          <SelectedShapeActionsPropertiesPanel
+            app={app}
+            appState={appState}
+            elementsMap={elementsMap}
+            renderAction={renderAction}
+          />
+        )}
       </div>
     </div>
   );

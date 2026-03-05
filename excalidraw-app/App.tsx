@@ -101,6 +101,7 @@ import Collab, {
 import { AppFooter } from "./components/AppFooter";
 import { AppMainMenu } from "./components/AppMainMenu";
 import { EngineeringModelingFooter } from "./components/EngineeringModelingFooter";
+import { EngineeringComponentParameterPanel } from "./components/EngineeringComponentParameterPanel";
 import { AppWelcomeScreen } from "./components/AppWelcomeScreen";
 import {
   ExportToExcalidrawPlus,
@@ -163,6 +164,12 @@ import {
 } from "./components/EngineeringWorkspaceControls";
 import { syncEngineeringSceneToModelAtom } from "./engineering-modeling-state";
 import { engineeringWorkspaceModeAtom } from "./engineering-ui-state";
+import {
+  ENGINEERING_SELECTED_SHAPE_ACTIONS_MAX_WIDTH,
+  ENGINEERING_SELECTED_SHAPE_ACTIONS_MIN_WIDTH,
+  persistEngineeringSelectedShapeActionsWidthsToStorage,
+  readEngineeringSelectedShapeActionsWidthsFromStorage,
+} from "./engineering-ui-state";
 
 import type { CollabAPI } from "./collab/Collab";
 
@@ -459,6 +466,15 @@ const ExcalidrawWrapper = () => {
   const syncEngineeringSceneToModel = useSetAtom(
     syncEngineeringSceneToModelAtom,
   );
+  const [selectedShapeActionsWidths, setSelectedShapeActionsWidths] = useState(
+    () => readEngineeringSelectedShapeActionsWidthsFromStorage(),
+  );
+
+  useEffect(() => {
+    persistEngineeringSelectedShapeActionsWidthsToStorage(
+      selectedShapeActionsWidths,
+    );
+  }, [selectedShapeActionsWidths]);
 
   useHandleLibrary({
     excalidrawAPI,
@@ -1054,12 +1070,56 @@ const ExcalidrawWrapper = () => {
         selectedShapeActionsLayout={
           workspaceMode === "data" ? "data-tabs" : "properties-only"
         }
+        selectedShapeActionsResizable={true}
+        selectedShapeActionsWidth={selectedShapeActionsWidths[workspaceMode]}
+        selectedShapeActionsMinWidth={
+          ENGINEERING_SELECTED_SHAPE_ACTIONS_MIN_WIDTH
+        }
+        selectedShapeActionsMaxWidth={
+          ENGINEERING_SELECTED_SHAPE_ACTIONS_MAX_WIDTH
+        }
+        onSelectedShapeActionsWidthChange={(nextWidth) => {
+          const clampedWidth = Math.max(
+            ENGINEERING_SELECTED_SHAPE_ACTIONS_MIN_WIDTH,
+            Math.min(ENGINEERING_SELECTED_SHAPE_ACTIONS_MAX_WIDTH, nextWidth),
+          );
+
+          setSelectedShapeActionsWidths((current) => {
+            if (current[workspaceMode] === clampedWidth) {
+              return current;
+            }
+
+            return {
+              ...current,
+              [workspaceMode]: clampedWidth,
+            };
+          });
+        }}
         renderSelectedShapeActionsFooter={(isMobile) => {
           if (isMobile || workspaceMode !== "modeling") {
             return null;
           }
 
           return <EngineeringModelingFooter />;
+        }}
+        renderSelectedShapeActionsPanel={(panel) => {
+          if (workspaceMode !== "data") {
+            return null;
+          }
+
+          if (panel === "input") {
+            return <EngineeringComponentParameterPanel section="input" />;
+          }
+
+          if (panel === "output") {
+            return <EngineeringComponentParameterPanel section="output" />;
+          }
+
+          if (panel === "anchors") {
+            return <EngineeringComponentParameterPanel section="anchors" />;
+          }
+
+          return null;
         }}
         onLinkOpen={(element, event) => {
           if (element.link && isElementLink(element.link)) {

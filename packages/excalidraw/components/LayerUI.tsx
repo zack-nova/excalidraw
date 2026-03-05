@@ -93,7 +93,13 @@ interface LayerUIProps {
   renderToolbarEndUI?: ExcalidrawProps["renderToolbarEndUI"];
   renderTopRightUI?: ExcalidrawProps["renderTopRightUI"];
   selectedShapeActionsLayout?: ExcalidrawProps["selectedShapeActionsLayout"];
+  selectedShapeActionsResizable?: ExcalidrawProps["selectedShapeActionsResizable"];
+  selectedShapeActionsWidth?: ExcalidrawProps["selectedShapeActionsWidth"];
+  selectedShapeActionsMinWidth?: ExcalidrawProps["selectedShapeActionsMinWidth"];
+  selectedShapeActionsMaxWidth?: ExcalidrawProps["selectedShapeActionsMaxWidth"];
+  onSelectedShapeActionsWidthChange?: ExcalidrawProps["onSelectedShapeActionsWidthChange"];
   renderSelectedShapeActionsFooter?: ExcalidrawProps["renderSelectedShapeActionsFooter"];
+  renderSelectedShapeActionsPanel?: ExcalidrawProps["renderSelectedShapeActionsPanel"];
   renderCustomStats?: ExcalidrawProps["renderCustomStats"];
   UIOptions: AppProps["UIOptions"];
   onExportImage: AppClassProperties["onExportImage"];
@@ -155,7 +161,13 @@ const LayerUI = ({
   renderToolbarEndUI,
   renderTopRightUI,
   selectedShapeActionsLayout,
+  selectedShapeActionsResizable,
+  selectedShapeActionsWidth,
+  selectedShapeActionsMinWidth,
+  selectedShapeActionsMaxWidth,
+  onSelectedShapeActionsWidthChange,
   renderSelectedShapeActionsFooter,
+  renderSelectedShapeActionsPanel,
   renderCustomStats,
   UIOptions,
   onExportImage,
@@ -169,6 +181,21 @@ const LayerUI = ({
   const stylesPanelMode = useStylesPanelMode();
   const isCompactStylesPanel = stylesPanelMode === "compact";
   const isRTL = document.documentElement.getAttribute("dir") === "rtl";
+  const selectedShapeActionsMin =
+    selectedShapeActionsMinWidth == null ? 280 : selectedShapeActionsMinWidth;
+  const selectedShapeActionsMax =
+    selectedShapeActionsMaxWidth == null ? 560 : selectedShapeActionsMaxWidth;
+  const clampedSelectedShapeActionsWidth =
+    selectedShapeActionsWidth == null || !Number.isFinite(selectedShapeActionsWidth)
+      ? null
+      : Math.max(
+          selectedShapeActionsMin,
+          Math.min(selectedShapeActionsMax, Math.round(selectedShapeActionsWidth)),
+        );
+  const shouldAllowSelectedShapeActionsResize =
+    selectedShapeActionsResizable === true &&
+    editorInterface.formFactor !== "phone" &&
+    !!onSelectedShapeActionsWidthChange;
   const tunnels = useInitializeTunnels();
 
   const spacing = isCompactStylesPanel
@@ -280,6 +307,7 @@ const LayerUI = ({
               // we want to make sure this doesn't overflow so subtracting the
               // approximate height of hamburgerMenu + footer
               maxHeight: `${appState.height - 166}px`,
+              width: clampedSelectedShapeActionsWidth == null ? undefined : "100%",
             }}
           >
             <SelectedShapeActions
@@ -289,6 +317,7 @@ const LayerUI = ({
               app={app}
               layout={selectedShapeActionsLayout}
               footer={renderSelectedShapeActionsFooter?.(false, appState)}
+              renderPanel={renderSelectedShapeActionsPanel}
             />
           </Island>
         )}
@@ -301,6 +330,56 @@ const LayerUI = ({
       appState,
       elements,
     );
+    const startSelectedShapeActionsResize = (startX: number) => {
+      if (!shouldAllowSelectedShapeActionsResize) {
+        return;
+      }
+
+      const startWidth =
+        clampedSelectedShapeActionsWidth == null
+          ? selectedShapeActionsMin
+          : clampedSelectedShapeActionsWidth;
+      const initialCursor = document.body.style.cursor;
+      const initialUserSelect = document.body.style.userSelect;
+      document.body.style.cursor = "col-resize";
+      document.body.style.userSelect = "none";
+
+      const onPointerMove = (moveEvent: PointerEvent) => {
+        const deltaX = startX - moveEvent.clientX;
+        const nextWidth = Math.max(
+          selectedShapeActionsMin,
+          Math.min(selectedShapeActionsMax, Math.round(startWidth + deltaX)),
+        );
+
+        onSelectedShapeActionsWidthChange?.(nextWidth);
+      };
+
+      const onPointerUp = () => {
+        window.removeEventListener("pointermove", onPointerMove);
+        window.removeEventListener("pointerup", onPointerUp);
+        document.body.style.cursor = initialCursor;
+        document.body.style.userSelect = initialUserSelect;
+      };
+
+      window.addEventListener("pointermove", onPointerMove);
+      window.addEventListener("pointerup", onPointerUp);
+    };
+    const handleSelectedShapeActionsResizePointerDown = (
+      event: React.PointerEvent<HTMLButtonElement>,
+    ) => {
+      event.preventDefault();
+      event.currentTarget.setPointerCapture?.(event.pointerId);
+      startSelectedShapeActionsResize(event.clientX);
+    };
+    const handleSelectedShapeActionsResizeMouseDown = (
+      event: React.MouseEvent<HTMLButtonElement>,
+    ) => {
+      if (typeof window !== "undefined" && "PointerEvent" in window) {
+        return;
+      }
+      event.preventDefault();
+      startSelectedShapeActionsResize(event.clientX);
+    };
 
     const shouldShowStats =
       appState.stats.open &&
@@ -445,7 +524,26 @@ const LayerUI = ({
                 "selected-shape-actions-container--compact":
                   isCompactStylesPanel,
               })}
+              style={{
+                width:
+                  shouldRenderSelectedShapeActions &&
+                  clampedSelectedShapeActionsWidth != null
+                    ? `${clampedSelectedShapeActionsWidth}px`
+                    : undefined,
+              }}
             >
+              {shouldRenderSelectedShapeActions &&
+                shouldAllowSelectedShapeActionsResize && (
+                  <button
+                    aria-label="调整属性栏宽度"
+                    aria-orientation="vertical"
+                    className="selected-shape-actions-resize-handle"
+                    onMouseDown={handleSelectedShapeActionsResizeMouseDown}
+                    onPointerDown={handleSelectedShapeActionsResizePointerDown}
+                    role="separator"
+                    type="button"
+                  />
+                )}
               {shouldRenderSelectedShapeActions && renderSelectedShapeActions()}
             </div>
           </div>
