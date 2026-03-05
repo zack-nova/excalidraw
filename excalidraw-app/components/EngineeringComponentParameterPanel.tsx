@@ -16,7 +16,23 @@ import {
   interfaceSpecCatalogAtom,
   type ComponentSpecParameter,
 } from "../component-spec-store";
+import {
+  createValueSnapshot,
+  type EngineeringValue,
+  type ProjectDocument,
+  type ScenarioDocument,
+} from "../engineering-domain";
 import { syncEngineeringComponentSpecBridgeAtom } from "../engineering-component-spec-bridge-state";
+import {
+  applyEngineeringScenarioMutationAtom,
+  engineeringProjectDocumentAtom,
+  engineeringScenarioDocumentAtom,
+  upsertEngineeringPointBindingAtom,
+} from "../engineering-domain-state";
+import {
+  toComponentParameterLookupKey,
+  toComponentParameterStableToken,
+} from "../engineering-parameter-identity";
 import "./EngineeringComponentParameterPanel.scss";
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -42,6 +58,7 @@ type SelectedComponentAnchor = {
 };
 
 type SelectedComponentContext = {
+  elementId: string;
   componentType: string;
   anchors: SelectedComponentAnchor[];
 };
@@ -123,6 +140,7 @@ const getSelectedComponentContext = (
     : [];
 
   return {
+    elementId: selectedElements[0].id,
     componentType,
     anchors,
   };
@@ -228,6 +246,171 @@ const toStringValue = (value: unknown) => {
   return "";
 };
 
+type InputType = ReturnType<typeof getInputType>;
+
+type ResolvedInputParameterBinding = {
+  variableId: string;
+  providerId: string | undefined;
+  snapshotValue: EngineeringValue | undefined;
+};
+
+const normalizeLookupKey = (value: string) => value.trim().toLowerCase();
+
+const getComponentEntityIdForElement = (
+  project: ProjectDocument,
+  elementId: string | null,
+) => {
+  if (!elementId) {
+    return null;
+  }
+
+  for (const component of Object.values(project.topology.componentsById)) {
+    const directElementId =
+      typeof component.props.elementId === "string"
+        ? component.props.elementId
+        : null;
+    const elementIds = Array.isArray(component.props.elementIds)
+      ? component.props.elementIds.filter(
+          (value): value is string => typeof value === "string",
+        )
+      : [];
+
+    if (
+      directElementId === elementId ||
+      elementIds.includes(elementId)
+    ) {
+      return component.id;
+    }
+  }
+
+  return null;
+};
+
+const resolveManualProviderId = (
+  project: ProjectDocument,
+  variableId: string,
+): string | undefined => {
+  const explicitProviderIds =
+    project.variableCatalog.providerIdsByVariableId[variableId] ?? [];
+  const fallbackProviderIds = Object.values(project.variableCatalog.providersById)
+    .filter((provider) => provider.variableId === variableId)
+    .map((provider) => provider.id);
+  const providerIds =
+    explicitProviderIds.length > 0 ? explicitProviderIds : fallbackProviderIds;
+
+  return providerIds.find((providerId) => {
+    const provider = project.variableCatalog.providersById[providerId];
+    return provider?.kind === "manual";
+  });
+};
+
+const resolveInputParameterBinding = ({
+  project,
+  scenario,
+  componentEntityId,
+  parameter,
+  index,
+}: {
+  project: ProjectDocument;
+  scenario: ScenarioDocument;
+  componentEntityId: string | null;
+  parameter: ComponentSpecParameter;
+  index: number;
+}): ResolvedInputParameterBinding | null => {
+  if (!componentEntityId) {
+    return null;
+  }
+
+  const stableToken = toComponentParameterStableToken(parameter, index);
+  const lookupKeyRaw = toComponentParameterLookupKey(parameter);
+  const lookupKey = lookupKeyRaw ? normalizeLookupKey(lookupKeyRaw) : null;
+
+  const componentInputVariables = Object.values(project.variableCatalog.variablesById)
+    .filter(
+      (variable) =>
+        variable.owner.kind === "component" &&
+        variable.owner.id === componentEntityId &&
+        variable.role === "input",
+    );
+
+  const byTagToken =
+    componentInputVariables.find(
+      (variable) => variable.tags?.specParameterToken === stableToken,
+    ) || null;
+  const byTpisKey =
+    !byTagToken && lookupKey
+      ? componentInputVariables.find(
+          (variable) => normalizeLookupKey(variable.backend?.tpisKey || "") === lookupKey,
+        ) || null
+      : null;
+  const byVariableKey =
+    !byTagToken && !byTpisKey && lookupKey
+      ? componentInputVariables.find(
+          (variable) => normalizeLookupKey(variable.key) === lookupKey,
+        ) || null
+      : null;
+  const resolvedVariable = byTagToken || byTpisKey || byVariableKey;
+
+  if (!resolvedVariable) {
+    return null;
+  }
+
+  const providerId =
+    resolveManualProviderId(project, resolvedVariable.id) ||
+    scenario.manualInputs[resolvedVariable.id]?.providerId;
+  const snapshot = scenario.manualInputs[resolvedVariable.id];
+
+  return {
+    variableId: resolvedVariable.id,
+    providerId,
+    snapshotValue: snapshot?.value,
+  };
+};
+
+const toManualInputValue = (
+  inputType: InputType,
+  rawValue: string | boolean,
+): EngineeringValue | undefined => {
+  if (inputType === "boolean") {
+    return Boolean(rawValue);
+  }
+
+  if (inputType === "number") {
+    if (typeof rawValue !== "string") {
+      return undefined;
+    }
+    const normalized = rawValue.trim();
+
+    if (!normalized) {
+      return undefined;
+    }
+
+    const parsed = Number(normalized);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  }
+
+  if (typeof rawValue === "string") {
+    return rawValue;
+  }
+
+  return undefined;
+};
+
+const toInputFieldValue = (
+  inputType: InputType,
+  value: EngineeringValue | undefined,
+) => {
+  if (inputType === "boolean") {
+    return typeof value === "boolean" ? value : Boolean(value);
+  }
+
+  if (typeof value === "undefined") {
+    return "";
+  }
+
+  return toStringValue(value);
+};
+
 const SensorBindingIcon = () => (
   <svg
     aria-hidden="true"
@@ -241,15 +424,29 @@ const SensorBindingIcon = () => (
 );
 
 const InputParameterRows = ({
+  componentEntityId,
   componentType,
   parameters,
   onOpenBindingPanel,
   onOpenCurvePanel,
+  resolveStoredBinding,
+  onPersistValue,
 }: {
+  componentEntityId: string | null;
   componentType: string;
   parameters: ComponentSpecParameter[];
   onOpenBindingPanel: (parameter: ComponentSpecParameter, index: number) => void;
   onOpenCurvePanel: (parameter: ComponentSpecParameter, index: number) => void;
+  resolveStoredBinding: (
+    parameter: ComponentSpecParameter,
+    index: number,
+  ) => ResolvedInputParameterBinding | null;
+  onPersistValue: (
+    parameter: ComponentSpecParameter,
+    index: number,
+    inputValue: EngineeringValue | undefined,
+    inputType: InputType,
+  ) => void;
 }) => {
   const [draftValuesByParameterId, setDraftValuesByParameterId] = useState<
     Record<string, string | boolean>
@@ -278,10 +475,23 @@ const InputParameterRows = ({
           <div className="engineering-parameter-panel__groupRow">{group.name}</div>
           {group.items.map(({ parameter, index }) => {
             const parameterId = getParameterIdentity(parameter, index);
+            const parameterDraftKey = `${
+              componentEntityId || componentType
+            }:${parameterId}`;
             const parameterTitle = getParameterTitle(parameter);
             const description = getParameterDescription(parameter);
             const inputType = getInputType(parameter);
-            const draftValue = draftValuesByParameterId[parameterId];
+            const draftValue = draftValuesByParameterId[parameterDraftKey];
+            const persistedBinding = resolveStoredBinding(parameter, index);
+            const persistedValue =
+              typeof persistedBinding?.snapshotValue !== "undefined"
+                ? persistedBinding.snapshotValue
+                : (parameter.defaultValue as EngineeringValue | undefined);
+
+            const persistInputValue = (nextRawValue: string | boolean) => {
+              const nextValue = toManualInputValue(inputType, nextRawValue);
+              onPersistValue(parameter, index, nextValue, inputType);
+            };
 
             return (
               <div className="engineering-parameter-panel__tableRow" key={parameterId}>
@@ -303,10 +513,15 @@ const InputParameterRows = ({
                       onChange={(event) => {
                         setDraftValuesByParameterId((current) => ({
                           ...current,
-                          [parameterId]: event.target.value,
+                          [parameterDraftKey]: event.target.value,
                         }));
+                        persistInputValue(event.target.value);
                       }}
-                      value={typeof draftValue === "string" ? draftValue : toStringValue(parameter.defaultValue)}
+                      value={
+                        typeof draftValue === "string"
+                          ? draftValue
+                          : toStringValue(toInputFieldValue(inputType, persistedValue))
+                      }
                     >
                       {getEnumOptions(parameter).map((option) => (
                         <option key={option} value={option}>
@@ -318,12 +533,17 @@ const InputParameterRows = ({
                     <input
                       className="engineering-parameter-panel__checkbox"
                       aria-label={`参数输入-${componentType}-${parameterId}`}
-                      checked={typeof draftValue === "boolean" ? draftValue : Boolean(parameter.defaultValue)}
+                      checked={
+                        typeof draftValue === "boolean"
+                          ? draftValue
+                          : Boolean(toInputFieldValue(inputType, persistedValue))
+                      }
                       onChange={(event) => {
                         setDraftValuesByParameterId((current) => ({
                           ...current,
-                          [parameterId]: event.target.checked,
+                          [parameterDraftKey]: event.target.checked,
                         }));
+                        persistInputValue(event.target.checked);
                       }}
                       type="checkbox"
                     />
@@ -343,11 +563,16 @@ const InputParameterRows = ({
                       onChange={(event) => {
                         setDraftValuesByParameterId((current) => ({
                           ...current,
-                          [parameterId]: event.target.value,
+                          [parameterDraftKey]: event.target.value,
                         }));
+                        persistInputValue(event.target.value);
                       }}
                       type={inputType === "number" ? "number" : "text"}
-                      value={typeof draftValue === "string" ? draftValue : toStringValue(parameter.defaultValue)}
+                      value={
+                        typeof draftValue === "string"
+                          ? draftValue
+                          : toStringValue(toInputFieldValue(inputType, persistedValue))
+                      }
                     />
                   )}
                 </div>
@@ -507,11 +732,24 @@ export const EngineeringComponentParameterPanel = ({
   const syncEngineeringComponentSpecBridge = useSetAtom(
     syncEngineeringComponentSpecBridgeAtom,
   );
+  const applyEngineeringScenarioMutation = useSetAtom(
+    applyEngineeringScenarioMutationAtom,
+  );
+  const upsertEngineeringPointBinding = useSetAtom(
+    upsertEngineeringPointBindingAtom,
+  );
+  const project = useAtomValue(engineeringProjectDocumentAtom);
+  const scenario = useAtomValue(engineeringScenarioDocumentAtom);
   const specCatalog = useAtomValue(componentSpecCatalogAtom);
   const curveCatalog = useAtomValue(componentCurveCatalogAtom);
   const interfaceCatalog = useAtomValue(interfaceSpecCatalogAtom);
   const selectedComponent = getSelectedComponentContext(elements, appState);
   const componentType = selectedComponent?.componentType || null;
+  const selectedComponentElementId = selectedComponent?.elementId || null;
+  const selectedComponentEntityId = getComponentEntityIdForElement(
+    project,
+    selectedComponentElementId,
+  );
   const selectedComponentAnchors = selectedComponent?.anchors || [];
   const status = componentType
     ? specCatalog.loadStatusByType[componentType]
@@ -522,7 +760,13 @@ export const EngineeringComponentParameterPanel = ({
   const [bindingTarget, setBindingTarget] = useState<{
     id: string;
     name: string;
+    variableId: string | null;
   } | null>(null);
+  const [bindingDraft, setBindingDraft] = useState({
+    measurement: "",
+    pointName: "",
+    field: "",
+  });
   const [curveTarget, setCurveTarget] = useState<{
     id: string;
     name: string;
@@ -651,9 +895,95 @@ export const EngineeringComponentParameterPanel = ({
     parameter: ComponentSpecParameter,
     index: number,
   ) => {
+    const resolvedBinding = resolveStoredBinding(parameter, index);
+    const variableId = resolvedBinding?.variableId || null;
+    const storedPointBinding = variableId
+      ? scenario.pointBindings[variableId]
+      : undefined;
+
     setBindingTarget({
       id: getParameterIdentity(parameter, index),
       name: getParameterTitle(parameter),
+      variableId,
+    });
+    setBindingDraft({
+      measurement: storedPointBinding?.measurement || "",
+      pointName: storedPointBinding?.pointName || "",
+      field: storedPointBinding?.field || "value",
+    });
+  };
+
+  const resolveStoredBinding = (
+    parameter: ComponentSpecParameter,
+    index: number,
+  ) =>
+    resolveInputParameterBinding({
+      project,
+      scenario,
+      componentEntityId: selectedComponentEntityId,
+      parameter,
+      index,
+    });
+
+  const persistInputValue = (
+    parameter: ComponentSpecParameter,
+    index: number,
+    inputValue: EngineeringValue | undefined,
+    _inputType: InputType,
+  ) => {
+    const binding = resolveStoredBinding(parameter, index);
+
+    if (!binding) {
+      return;
+    }
+
+    const currentSnapshot = scenario.manualInputs[binding.variableId];
+    const shouldUnset = typeof inputValue === "undefined";
+    const hasCurrentSnapshot = !!currentSnapshot;
+    const isSameValue =
+      !shouldUnset &&
+      hasCurrentSnapshot &&
+      Object.is(currentSnapshot.value, inputValue) &&
+      currentSnapshot.providerId === binding.providerId &&
+      currentSnapshot.source === "frontend_manual_input" &&
+      currentSnapshot.status === "ok";
+
+    if ((shouldUnset && !hasCurrentSnapshot) || isSameValue) {
+      return;
+    }
+
+    applyEngineeringScenarioMutation({
+      updater: (current) => {
+        if (shouldUnset) {
+          if (!(binding.variableId in current.manualInputs)) {
+            return current;
+          }
+
+          const nextManualInputs = {
+            ...current.manualInputs,
+          };
+          delete nextManualInputs[binding.variableId];
+
+          return {
+            ...current,
+            manualInputs: nextManualInputs,
+          };
+        }
+
+        return {
+          ...current,
+          manualInputs: {
+            ...current.manualInputs,
+            [binding.variableId]: createValueSnapshot({
+              variableId: binding.variableId,
+              value: inputValue as EngineeringValue,
+              source: "frontend_manual_input",
+              status: "ok",
+              providerId: binding.providerId,
+            }),
+          },
+        };
+      },
     });
   };
 
@@ -661,10 +991,13 @@ export const EngineeringComponentParameterPanel = ({
     <div className="selected-shape-actions__stack engineering-parameter-panel">
       {section === "input" ? (
         <InputParameterRows
+          componentEntityId={selectedComponentEntityId}
           componentType={componentType}
           onOpenBindingPanel={openBindingPanel}
           onOpenCurvePanel={openCurvePanel}
+          onPersistValue={persistInputValue}
           parameters={componentSpec.inputParameters}
+          resolveStoredBinding={resolveStoredBinding}
         />
       ) : section === "output" ? (
         <OutputParameterRows parameters={componentSpec.outputParameters} />
@@ -685,8 +1018,15 @@ export const EngineeringComponentParameterPanel = ({
               <input
                 aria-label="measurement-input"
                 className="engineering-parameter-panel__field"
+                onChange={(event) =>
+                  setBindingDraft((current) => ({
+                    ...current,
+                    measurement: event.target.value,
+                  }))
+                }
                 placeholder="measurement"
                 type="text"
+                value={bindingDraft.measurement}
               />
             </label>
             <label className="selected-shape-actions-data-row engineering-parameter-panel__row">
@@ -694,8 +1034,15 @@ export const EngineeringComponentParameterPanel = ({
               <input
                 aria-label="point-name-input"
                 className="engineering-parameter-panel__field"
+                onChange={(event) =>
+                  setBindingDraft((current) => ({
+                    ...current,
+                    pointName: event.target.value,
+                  }))
+                }
                 placeholder="point_name"
                 type="text"
+                value={bindingDraft.pointName}
               />
             </label>
             <label className="selected-shape-actions-data-row engineering-parameter-panel__row">
@@ -703,13 +1050,39 @@ export const EngineeringComponentParameterPanel = ({
               <input
                 aria-label="field-input"
                 className="engineering-parameter-panel__field"
+                onChange={(event) =>
+                  setBindingDraft((current) => ({
+                    ...current,
+                    field: event.target.value,
+                  }))
+                }
                 placeholder="field"
                 type="text"
+                value={bindingDraft.field}
               />
             </label>
           </div>
           <div className="selected-shape-actions-data-row engineering-parameter-panel__row">
             <span />
+            <button
+              className="engineering-parameter-panel__button"
+              onClick={() => {
+                if (!bindingTarget.variableId) {
+                  return;
+                }
+
+                upsertEngineeringPointBinding({
+                  variableId: bindingTarget.variableId,
+                  measurement: bindingDraft.measurement.trim(),
+                  pointName: bindingDraft.pointName.trim(),
+                  field: bindingDraft.field.trim(),
+                });
+                setBindingTarget(null);
+              }}
+              type="button"
+            >
+              保存绑定
+            </button>
             <button
               className="engineering-parameter-panel__button"
               onClick={() => setBindingTarget(null)}

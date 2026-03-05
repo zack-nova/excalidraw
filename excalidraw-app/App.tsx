@@ -151,6 +151,7 @@ import DebugCanvas, {
   isVisualDebuggerEnabled,
   loadSavedDebugState,
 } from "./components/DebugCanvas";
+import { EngineeringVariableCatalogInspectorPage } from "./components/EngineeringVariableCatalogInspectorPage";
 import { AIComponents } from "./components/AI";
 import { ExcalidrawPlusIframeExport } from "./ExcalidrawPlusIframeExport";
 
@@ -1414,8 +1415,13 @@ const ExcalidrawWrapper = () => {
 const ExcalidrawApp = () => {
   const isCloudExportWindow =
     window.location.pathname === "/excalidraw-plus-export";
+  const isVariableInspectorWindow =
+    window.location.pathname === "/engineering-variable-catalog-inspector";
   if (isCloudExportWindow) {
     return <ExcalidrawPlusIframeExport />;
+  }
+  if (isVariableInspectorWindow) {
+    return <EngineeringVariableCatalogInspectorPage />;
   }
 
   return (

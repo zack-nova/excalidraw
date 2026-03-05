@@ -7,12 +7,83 @@ import {
 } from "@excalidraw/excalidraw/components/App";
 
 import { useAtomValue } from "../app-jotai";
+import type { ProjectDocument, RuntimeProjection } from "../engineering-domain";
 import type { EngineeringStructureTree } from "../engineering-modeling";
 import { engineeringStructureTreeAtom } from "../engineering-modeling-state";
+import {
+  engineeringProjectDocumentAtom,
+  engineeringRuntimeProjectionAtom,
+} from "../engineering-domain-state";
 
 import "./EngineeringStructureTreePanel.scss";
 
 type StructureTreeItem = EngineeringStructureTree["components"][number];
+
+const normalizeLookupKey = (value: string) => value.trim().toLowerCase();
+const COMPONENT_NAME_LOOKUP_KEY = "name";
+
+const buildComponentNameVariableIdByComponentId = (
+  structureTree: EngineeringStructureTree,
+  project: ProjectDocument,
+) => {
+  const componentIds = new Set(
+    structureTree.components.map((component) => component.entityId),
+  );
+  const componentNameVariableIdByComponentId: Record<string, string> = {};
+
+  Object.values(project.variableCatalog.variablesById).forEach((variable) => {
+    if (variable.owner.kind !== "component") {
+      return;
+    }
+    if (!componentIds.has(variable.owner.id)) {
+      return;
+    }
+
+    const lookupKey =
+      normalizeLookupKey(variable.backend?.tpisKey || "") ===
+      COMPONENT_NAME_LOOKUP_KEY
+        ? variable.backend?.tpisKey || ""
+        : variable.key;
+
+    if (normalizeLookupKey(lookupKey) !== COMPONENT_NAME_LOOKUP_KEY) {
+      return;
+    }
+
+    if (componentNameVariableIdByComponentId[variable.owner.id]) {
+      return;
+    }
+
+    componentNameVariableIdByComponentId[variable.owner.id] = variable.id;
+  });
+
+  return componentNameVariableIdByComponentId;
+};
+
+const toResolvedComponentLabel = ({
+  componentId,
+  fallbackLabel,
+  project,
+  runtimeProjection,
+  componentNameVariableIdByComponentId,
+}: {
+  componentId: string;
+  fallbackLabel: string;
+  project: ProjectDocument;
+  runtimeProjection: RuntimeProjection;
+  componentNameVariableIdByComponentId: Record<string, string>;
+}) => {
+  const componentNameVariableId = componentNameVariableIdByComponentId[componentId];
+
+  if (componentNameVariableId) {
+    const resolvedValue = runtimeProjection.effectiveValues[componentNameVariableId]?.value;
+    if (typeof resolvedValue === "string" && resolvedValue.trim().length > 0) {
+      return resolvedValue.trim();
+    }
+  }
+
+  const topologyName = project.topology.componentsById[componentId]?.name;
+  return topologyName || fallbackLabel;
+};
 
 const StructureTreeSection = ({
   title,
@@ -72,6 +143,58 @@ export const EngineeringStructureTreePanel = () => {
   const elements = useExcalidrawElements();
   const setAppState = useExcalidrawSetAppState();
   const structureTree = useAtomValue(engineeringStructureTreeAtom);
+  const project = useAtomValue(engineeringProjectDocumentAtom);
+  const runtimeProjection = useAtomValue(engineeringRuntimeProjectionAtom);
+  const componentNameVariableIdByComponentId =
+    buildComponentNameVariableIdByComponentId(structureTree, project);
+  const components = structureTree.components.map((component) => ({
+    ...component,
+    label: toResolvedComponentLabel({
+      componentId: component.entityId,
+      fallbackLabel: component.label,
+      project,
+      runtimeProjection,
+      componentNameVariableIdByComponentId,
+    }),
+  }));
+  const pipes = structureTree.pipes.map((pipe) => {
+    const topologyPipe = project.topology.pipesById[pipe.entityId];
+    if (!topologyPipe) {
+      return pipe;
+    }
+
+    const sourceAnchor = project.topology.anchorsById[topologyPipe.fromAnchorId];
+    const targetAnchor = project.topology.anchorsById[topologyPipe.toAnchorId];
+    const sourceComponentId = sourceAnchor?.componentId;
+    const targetComponentId = targetAnchor?.componentId;
+    const sourceComponentLabel = sourceComponentId
+      ? toResolvedComponentLabel({
+          componentId: sourceComponentId,
+          fallbackLabel:
+            project.topology.componentsById[sourceComponentId]?.id ||
+            sourceComponentId,
+          project,
+          runtimeProjection,
+          componentNameVariableIdByComponentId,
+        })
+      : "Unknown";
+    const targetComponentLabel = targetComponentId
+      ? toResolvedComponentLabel({
+          componentId: targetComponentId,
+          fallbackLabel:
+            project.topology.componentsById[targetComponentId]?.id ||
+            targetComponentId,
+          project,
+          runtimeProjection,
+          componentNameVariableIdByComponentId,
+        })
+      : "Unknown";
+
+    return {
+      ...pipe,
+      detail: `${sourceComponentLabel} -> ${targetComponentLabel}`,
+    };
+  });
 
   const handleSelect = (item: StructureTreeItem) => {
     const selectedElements = item.elementIds
@@ -110,19 +233,19 @@ export const EngineeringStructureTreePanel = () => {
       <div className="engineering-structure-tree__header">
         <h3 className="engineering-structure-tree__title">结构树</h3>
         <span className="engineering-structure-tree__summary">
-          {structureTree.components.length} 组件 / {structureTree.pipes.length} 管段
+          {components.length} 组件 / {pipes.length} 管段
         </span>
       </div>
       <StructureTreeSection
         title="组件"
-        items={structureTree.components}
+        items={components}
         testId="engineering-structure-components"
         onSelect={handleSelect}
         selectedElementIds={appState.selectedElementIds}
       />
       <StructureTreeSection
         title="管段"
-        items={structureTree.pipes}
+        items={pipes}
         testId="engineering-structure-pipes"
         onSelect={handleSelect}
         selectedElementIds={appState.selectedElementIds}

@@ -97,12 +97,3 @@ export const getNextEngineeringWorkspaceMode = (
 
   return ENGINEERING_WORKSPACE_MODE_ORDER[nextIndex];
 };
-
-export const engineeringCalculationRequestedAtAtom = atom<number | null>(null);
-
-export const requestEngineeringCalculationAtom = atom(
-  null,
-  (_get, set) => {
-    set(engineeringCalculationRequestedAtAtom, Date.now());
-  },
-);

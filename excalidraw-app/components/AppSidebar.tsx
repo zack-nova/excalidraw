@@ -1,5 +1,6 @@
 import { DefaultSidebar, Sidebar, THEME } from "@excalidraw/excalidraw";
 import {
+  gridIcon,
   elementLinkIcon,
   messageCircleIcon,
   presentationIcon,
@@ -8,6 +9,7 @@ import { LinkButton } from "@excalidraw/excalidraw/components/LinkButton";
 import { useUIAppState } from "@excalidraw/excalidraw/context/ui-appState";
 
 import { EngineeringStructureTreePanel } from "./EngineeringStructureTreePanel";
+import { EngineeringVariableCatalogPanel } from "./EngineeringVariableCatalogPanel";
 
 import "./AppSidebar.scss";
 
@@ -28,6 +30,16 @@ export const AppSidebar = () => {
           {elementLinkIcon}
         </Sidebar.TabTrigger>
         <Sidebar.TabTrigger
+          tab="engineering-variables"
+          title="变量"
+          data-testid="engineering-variables-sidebar-trigger"
+          style={{
+            opacity: openSidebar?.tab === "engineering-variables" ? 1 : 0.4,
+          }}
+        >
+          {gridIcon}
+        </Sidebar.TabTrigger>
+        <Sidebar.TabTrigger
           tab="comments"
           title="评论"
           data-testid="comments-sidebar-trigger"
@@ -46,6 +58,9 @@ export const AppSidebar = () => {
       </DefaultSidebar.TabTriggers>
       <Sidebar.Tab tab="engineering-structure" className="app-sidebar-tree-tab">
         <EngineeringStructureTreePanel />
+      </Sidebar.Tab>
+      <Sidebar.Tab tab="engineering-variables" className="app-sidebar-tree-tab">
+        <EngineeringVariableCatalogPanel />
       </Sidebar.Tab>
       <Sidebar.Tab tab="comments">
         <div className="app-sidebar-promo-container">

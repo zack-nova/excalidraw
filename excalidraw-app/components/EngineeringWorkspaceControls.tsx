@@ -9,10 +9,10 @@ import {
 } from "@excalidraw/excalidraw/components/icons";
 
 import { useAtom, useSetAtom } from "../app-jotai";
+import { requestEngineeringCalculationAtom } from "../engineering-domain-state";
 import {
   getNextEngineeringWorkspaceMode,
   engineeringWorkspaceModeAtom,
-  requestEngineeringCalculationAtom,
   type EngineeringWorkspaceMode,
 } from "../engineering-ui-state";
 

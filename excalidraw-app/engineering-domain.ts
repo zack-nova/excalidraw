@@ -189,6 +189,25 @@ export interface SourcePolicyOverride {
   disabledProviderIds?: string[];
 }
 
+export interface ScenarioPointBinding {
+  variableId: string;
+  measurement: string;
+  pointName: string;
+  field: string;
+  providerId?: string;
+  updatedAt?: number;
+}
+
+export interface ScenarioIndicatorFormula {
+  id: string;
+  name?: string;
+  expression: string;
+  outputVariableId: string;
+  scope?: "display" | "calculation" | "both";
+  enabled: boolean;
+  updatedAt?: number;
+}
+
 export interface ScenarioRevisions {
   scenarioVersion: number;
 }
@@ -201,6 +220,8 @@ export interface ScenarioDocument {
   revisions: ScenarioRevisions;
   manualInputs: Record<string, ValueSnapshot>;
   environmentInputs: Record<string, ValueSnapshot>;
+  pointBindings: Record<string, ScenarioPointBinding>;
+  indicatorFormulas: Record<string, ScenarioIndicatorFormula>;
   sourcePolicyOverrides: Record<string, SourcePolicyOverride>;
   updatedAt: number;
   timeContext?: {
@@ -290,6 +311,29 @@ export interface RuntimeProjection {
   diagnostics: DiagnosticIssue[];
 }
 
+export interface CalculationRequestManualInput {
+  variableId: string;
+  providerId?: string;
+  value: EngineeringValue;
+  valueType: VariableValueType;
+}
+
+export interface CalculationRequestPayload {
+  requestId: string;
+  requestedAt: number;
+  projectId: string;
+  scenarioId: string;
+  basedOn: {
+    modelVersion: number;
+    schemaVersion: number;
+    scenarioVersion: number;
+  };
+  scene: SceneBindingState;
+  topology: TopologyState;
+  manualInputs: CalculationRequestManualInput[];
+  sourcePolicyOverrides: ScenarioDocument["sourcePolicyOverrides"];
+}
+
 type CreateProjectDocumentInput = {
   id?: string;
   meta?: Partial<ProjectMeta>;
@@ -303,6 +347,8 @@ type CreateScenarioDocumentInput = {
   revisions?: Partial<ScenarioRevisions>;
   manualInputs?: Record<string, ValueSnapshot>;
   environmentInputs?: Record<string, ValueSnapshot>;
+  pointBindings?: Record<string, ScenarioPointBinding>;
+  indicatorFormulas?: Record<string, ScenarioIndicatorFormula>;
   sourcePolicyOverrides?: Record<string, SourcePolicyOverride>;
   updatedAt?: number;
   timeContext?: ScenarioDocument["timeContext"];
@@ -316,6 +362,12 @@ type BuildRuntimeProjectionInput = {
   scenario: ScenarioDocument;
   calculationRun?: CalculationRun | null;
   liveSnapshots?: Record<string, ValueSnapshot>;
+};
+
+type BuildCalculationRequestPayloadInput = {
+  project: ProjectDocument;
+  scenario: ScenarioDocument;
+  requestedAt?: number;
 };
 
 const INPUT_PROVIDER_PRIORITY: Record<ValueProvider["kind"], number> = {
@@ -600,6 +652,8 @@ export const createScenarioDocument = (
   },
   manualInputs: input.manualInputs ?? {},
   environmentInputs: input.environmentInputs ?? {},
+  pointBindings: input.pointBindings ?? {},
+  indicatorFormulas: input.indicatorFormulas ?? {},
   sourcePolicyOverrides: input.sourcePolicyOverrides ?? {},
   updatedAt: input.updatedAt ?? now(),
   timeContext: input.timeContext,
@@ -918,5 +972,73 @@ export const buildRuntimeProjection = ({
     effectiveValues,
     compiledExpressions,
     diagnostics,
+  };
+};
+
+const resolveManualProviderIdForVariable = (
+  project: ProjectDocument,
+  variableId: string,
+) => {
+  const explicitProviderIds =
+    project.variableCatalog.providerIdsByVariableId[variableId] ?? [];
+  const fallbackProviderIds = Object.values(project.variableCatalog.providersById)
+    .filter((provider) => provider.variableId === variableId)
+    .map((provider) => provider.id);
+  const providerIds =
+    explicitProviderIds.length > 0 ? explicitProviderIds : fallbackProviderIds;
+
+  return providerIds.find((providerId) => {
+    const provider = project.variableCatalog.providersById[providerId];
+    return provider?.kind === "manual";
+  });
+};
+
+export const buildCalculationRequestPayload = ({
+  project,
+  scenario,
+  requestedAt = now(),
+}: BuildCalculationRequestPayloadInput): CalculationRequestPayload => {
+  const manualInputs: CalculationRequestManualInput[] = Object.entries(
+    scenario.manualInputs,
+  )
+    .sort(([leftVariableId], [rightVariableId]) =>
+      leftVariableId.localeCompare(rightVariableId),
+    )
+    .flatMap(([variableId, snapshot]) => {
+      const variable = project.variableCatalog.variablesById[variableId];
+
+      if (!variable) {
+        return [];
+      }
+
+      if (snapshot.source !== "frontend_manual_input") {
+        return [];
+      }
+
+      return [
+        {
+          variableId,
+          providerId:
+            snapshot.providerId || resolveManualProviderIdForVariable(project, variableId),
+          value: snapshot.value,
+          valueType: variable.valueType,
+        },
+      ];
+    });
+
+  return {
+    requestId: `calculation-request:${project.id}:${scenario.id}:${requestedAt}`,
+    requestedAt,
+    projectId: project.id,
+    scenarioId: scenario.id,
+    basedOn: {
+      modelVersion: project.revisions.modelVersion,
+      schemaVersion: project.revisions.schemaVersion,
+      scenarioVersion: scenario.revisions.scenarioVersion,
+    },
+    scene: project.scene,
+    topology: project.topology,
+    manualInputs,
+    sourcePolicyOverrides: scenario.sourcePolicyOverrides,
   };
 };
