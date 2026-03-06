@@ -6,8 +6,6 @@ import {
   getMimeType,
 } from "@excalidraw/excalidraw/data/blob";
 
-import { mockEngineeringComponentLibraryItems } from "./componentLibraryMockItems";
-
 import type {
   BinaryFileData,
   LibraryItem,
@@ -80,6 +78,56 @@ type BuildLibraryItemsOptions = {
 const DEFAULT_COMPONENT_WIDTH = 40;
 const DEFAULT_COMPONENT_HEIGHT = 40;
 const DEFAULT_GROUP = "Ungrouped";
+const DEFAULT_SOURCE_ID = "engineering-backend";
+const DEFAULT_SOURCE_NAME = "工程素材库";
+const BACKEND_LIBRARY_PAGE_SIZE = 200;
+
+type BackendLibraryAnchor = {
+  id?: string | null;
+  uuid?: string | null;
+  nodeId?: string | null;
+  position?: {
+    x: number;
+    y: number;
+  } | null;
+  interfaceType?: string | null;
+  connectionType?: string | null;
+  materialType?: string | null;
+  name?: string | null;
+  nameCn?: string | null;
+  isVisible?: boolean | null;
+};
+
+type BackendLibraryComponentItem = {
+  componentType: string;
+  name?: string | null;
+  nameCn?: string | null;
+  group?: string | null;
+  icon?: string | null;
+  measured?: {
+    width?: number;
+    height?: number;
+  } | null;
+  anchors?: BackendLibraryAnchor[] | null;
+  isEngineeringComponent?: boolean;
+};
+
+type BackendLibraryListResponse = {
+  items?: BackendLibraryComponentItem[];
+  offset?: number;
+  limit?: number;
+  total?: number;
+};
+
+class EngineeringBackendHttpError extends Error {
+  readonly status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = "EngineeringBackendHttpError";
+    this.status = status;
+  }
+}
 
 const getStableHashNumber = (value: string) => {
   let hash = 0;
@@ -90,6 +138,120 @@ const getStableHashNumber = (value: string) => {
   }
 
   return Math.abs(hash) || 1;
+};
+
+const getConfiguredEngineeringBackendBaseUrl = () => {
+  const runtimeBaseUrl = (
+    globalThis as typeof globalThis & {
+      __EXCALIDRAW_ENGINEERING_BACKEND_BASE_URL__?: unknown;
+    }
+  ).__EXCALIDRAW_ENGINEERING_BACKEND_BASE_URL__;
+  if (typeof runtimeBaseUrl === "string") {
+    const runtimeTrimmed = runtimeBaseUrl.trim();
+    if (runtimeTrimmed) {
+      return runtimeTrimmed.replace(/\/+$/, "");
+    }
+  }
+
+  // Avoid real network calls in tests unless explicitly injected at runtime.
+  if (import.meta.env.MODE === "test") {
+    return null;
+  }
+
+  const candidate = import.meta.env.VITE_APP_ENGINEERING_BACKEND_URL;
+  if (typeof candidate !== "string") {
+    return null;
+  }
+  const trimmed = candidate.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  return trimmed.replace(/\/+$/, "");
+};
+
+const requestEngineeringBackendJson = async <T>(
+  baseUrl: string,
+  path: string,
+): Promise<T> => {
+  const response = await fetch(`${baseUrl}${path}`, {
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
+  const responseBody = await response.json();
+
+  if (!response.ok) {
+    throw new EngineeringBackendHttpError(
+      `Engineering backend request failed with ${response.status}`,
+      response.status,
+    );
+  }
+
+  return responseBody as T;
+};
+
+const toBackendAnchor = (anchor: BackendLibraryAnchor): ComponentAnchor => ({
+  id: anchor.id ?? null,
+  uuid: anchor.uuid ?? null,
+  node_id: anchor.nodeId ?? null,
+  position: anchor.position && typeof anchor.position === "object"
+    ? {
+        x: Number(anchor.position.x),
+        y: Number(anchor.position.y),
+      }
+    : { x: 0.5, y: 0.5 },
+  data: {
+    interface_type: anchor.interfaceType || "",
+    is_connected: false,
+    connection_type: anchor.connectionType || "bidirectional",
+    material_type: anchor.materialType || "",
+    is_visible:
+      typeof anchor.isVisible === "boolean" ? anchor.isVisible : true,
+    allow_not_display: false,
+    name: anchor.name || "",
+    name_cn: anchor.nameCn || "",
+    tpis_extra_info: null,
+  },
+});
+
+const toBackendComponentLibraryItem = (
+  item: BackendLibraryComponentItem,
+): ComponentListItem => {
+  const width = Number(item.measured?.width || DEFAULT_COMPONENT_WIDTH);
+  const height = Number(item.measured?.height || DEFAULT_COMPONENT_HEIGHT);
+  const icon = item.icon || "";
+  const anchors = Array.isArray(item.anchors)
+    ? item.anchors.map(toBackendAnchor)
+    : [];
+
+  return {
+    uuid: null,
+    id: null,
+    type: "component",
+    isEngineeringComponent: item.isEngineeringComponent !== false,
+    position: null,
+    measured: {
+      width,
+      height,
+    },
+    style: {
+      width: `${width}px`,
+      height: `${height}px`,
+    },
+    data: {
+      image: icon,
+      component_type: item.componentType,
+      operation_mode: "design_mode",
+      supported_operation_modes: ["design_mode", "interpolation_mode"],
+      name: item.name || item.componentType,
+      name_cn: item.nameCn || item.name || item.componentType,
+      anchors,
+      tpis_extra_info: null,
+    },
+    icon,
+    group: item.group || DEFAULT_GROUP,
+  };
 };
 
 const getComponentIdentityKey = (
@@ -245,10 +407,62 @@ export const buildLibraryItemsFromComponentSources = async (
   return libraryItems;
 };
 
-export const mockComponentLibrarySources: readonly ComponentLibrarySource[] = [
-  {
-    sourceId: "xjtu-library",
-    sourceName: "西交大素材库",
-    items: [...mockEngineeringComponentLibraryItems],
-  },
-];
+export const fetchComponentLibrarySourcesFromBackend = async () => {
+  const baseUrl = getConfiguredEngineeringBackendBaseUrl();
+
+  if (!baseUrl) {
+    return [] as ComponentLibrarySource[];
+  }
+
+  const items: ComponentListItem[] = [];
+  let offset = 0;
+  let total = Number.MAX_SAFE_INTEGER;
+
+  while (offset < total) {
+    const response = await requestEngineeringBackendJson<BackendLibraryListResponse>(
+      baseUrl,
+      `/api/v1/library/components?offset=${offset}&limit=${BACKEND_LIBRARY_PAGE_SIZE}`,
+    );
+
+    const pageItems = Array.isArray(response.items) ? response.items : [];
+    const mappedItems = pageItems
+      .filter(
+        (item): item is BackendLibraryComponentItem =>
+          !!item &&
+          typeof item === "object" &&
+          typeof item.componentType === "string",
+      )
+      .map(toBackendComponentLibraryItem);
+
+    items.push(...mappedItems);
+    total =
+      typeof response.total === "number" && Number.isFinite(response.total)
+        ? response.total
+        : items.length;
+
+    if (mappedItems.length === 0) {
+      break;
+    }
+
+    offset += mappedItems.length;
+  }
+
+  return [
+    {
+      sourceId: DEFAULT_SOURCE_ID,
+      sourceName: DEFAULT_SOURCE_NAME,
+      sourceKind: "public" as const,
+      items,
+    },
+  ];
+};
+
+export const loadEngineeringLibraryItems = async () => {
+  try {
+    const sources = await fetchComponentLibrarySourcesFromBackend();
+    return buildLibraryItemsFromComponentSources(sources);
+  } catch (error) {
+    // Keep app usable even if backend library endpoint is unavailable.
+    return [];
+  }
+};

@@ -1,6 +1,5 @@
-import manifestJson from "./data/componentSpecsMock/manifest.json";
-
 import { atom } from "./app-jotai";
+import manifestJson from "./data/componentSpecsMock/manifest.json";
 
 export type ComponentSpecManifestEntry = {
   componentType: string;
@@ -62,6 +61,7 @@ export type InterfaceSpec = {
 };
 
 type LoadStatus = "loading" | "ready" | "error";
+type LoadState = LoadStatus | "idle";
 
 type ComponentSpecCatalogState = {
   specsByType: Record<string, ComponentSpec>;
@@ -81,6 +81,12 @@ type InterfaceSpecCatalogState = {
   errorsByMaterialType: Record<string, string>;
 };
 
+type ComponentSpecManifestState = {
+  items: ComponentSpecManifestEntry[];
+  status: LoadState;
+  error: string;
+};
+
 type InterfaceSpecLoaderModule = {
   default: {
     material_type?: unknown;
@@ -89,15 +95,15 @@ type InterfaceSpecLoaderModule = {
   };
 };
 
-const componentSpecLoaders = import.meta.glob<{ default: ComponentSpec }>(
-  "./data/componentSpecsMock/specs/*.json",
-);
-const componentCurveLoaders = import.meta.glob<{ default: ComponentCurveData }>(
-  "./data/componentSpecsMock/curves/*.json",
-);
-const interfaceSpecLoaders = import.meta.glob<InterfaceSpecLoaderModule>(
-  "./data/interfaceSpecsMock/*.json",
-);
+class EngineeringBackendHttpError extends Error {
+  readonly status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = "EngineeringBackendHttpError";
+    this.status = status;
+  }
+}
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   !!value && typeof value === "object" && !Array.isArray(value);
@@ -145,100 +151,286 @@ const normalizeEnumOptions = (value: unknown) => {
   return [value];
 };
 
-export const getInterfaceMaterialTypeKey = (materialType: string) =>
-  materialType.trim().toLowerCase();
+const componentSpecLocalLoaders = import.meta.glob<{ default: ComponentSpec }>(
+  "./data/componentSpecsMock/specs/*.json",
+);
+const componentCurveLocalLoaders = import.meta.glob<{
+  default: ComponentCurveData;
+}>("./data/componentSpecsMock/curves/*.json");
+const interfaceSpecLocalLoaders = import.meta.glob<InterfaceSpecLoaderModule>(
+  "./data/interfaceSpecsMock/*.json",
+);
 
-const getFileStemFromPath = (path: string) =>
-  path
-    .split("/")
-    .pop()
-    ?.replace(/\.json$/i, "") || "";
+const readField = (record: Record<string, unknown>, keys: readonly string[]) => {
+  for (const key of keys) {
+    if (key in record) {
+      return record[key];
+    }
+  }
+  return undefined;
+};
 
-const interfaceSpecLoadersByMaterialType = Object.entries(interfaceSpecLoaders).reduce<
-  Record<string, (typeof interfaceSpecLoaders)[string]>
->((result, [path, loader]) => {
-  const materialType = getFileStemFromPath(path);
+const readArrayField = (
+  record: Record<string, unknown>,
+  keys: readonly string[],
+) => {
+  const value = readField(record, keys);
+  return Array.isArray(value) ? value : [];
+};
 
-  if (!materialType) {
-    return result;
+const getConfiguredEngineeringBackendBaseUrl = () => {
+  const runtimeBaseUrl = (
+    globalThis as typeof globalThis & {
+      __EXCALIDRAW_ENGINEERING_BACKEND_BASE_URL__?: unknown;
+    }
+  ).__EXCALIDRAW_ENGINEERING_BACKEND_BASE_URL__;
+  if (typeof runtimeBaseUrl === "string") {
+    const runtimeTrimmed = runtimeBaseUrl.trim();
+    if (runtimeTrimmed) {
+      return runtimeTrimmed.replace(/\/+$/, "");
+    }
   }
 
-  result[getInterfaceMaterialTypeKey(materialType)] = loader;
+  // Avoid real network calls in tests unless explicitly injected at runtime.
+  if (import.meta.env.MODE === "test") {
+    return null;
+  }
 
-  return result;
-}, {});
+  const candidate = import.meta.env.VITE_APP_ENGINEERING_BACKEND_URL;
+  if (typeof candidate !== "string") {
+    return null;
+  }
+  const trimmed = candidate.trim();
+  if (!trimmed) {
+    return null;
+  }
+  return trimmed.replace(/\/+$/, "");
+};
 
-const normalizeInterfaceParameter = (
-  rawParameter: unknown,
+const requestEngineeringBackendJson = async <T>(
+  baseUrl: string,
+  path: string,
+): Promise<T> => {
+  const response = await fetch(`${baseUrl}${path}`, {
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
+  const responseBody = await response.json();
+
+  if (!response.ok) {
+    throw new EngineeringBackendHttpError(
+      `Engineering backend request failed with ${response.status}`,
+      response.status,
+    );
+  }
+
+  return responseBody as T;
+};
+
+const normalizeParameter = (
+  parameter: unknown,
   index: number,
+  scope: string,
 ): ComponentSpecParameter | null => {
-  if (!isRecord(rawParameter)) {
+  if (!isRecord(parameter)) {
     return null;
   }
 
   const parameterId =
-    getNonEmptyString(rawParameter.uuid) ||
-    getNonEmptyString(rawParameter.tpis_key) ||
-    getNonEmptyString(rawParameter.name) ||
-    getNonEmptyString(rawParameter.name_cn) ||
-    `interface-parameter:${index}`;
-
-  const valueType = getNonEmptyString(rawParameter.value_type) || "string";
+    getNonEmptyString(readField(parameter, ["id", "uuid"])) ||
+    getNonEmptyString(readField(parameter, ["tpisKey", "tpis_key"])) ||
+    getNonEmptyString(readField(parameter, ["name", "nameCn", "name_cn"])) ||
+    `${scope}:${index}`;
 
   return {
     id: parameterId,
-    uuid: getNonEmptyString(rawParameter.uuid),
+    uuid: getNonEmptyString(readField(parameter, ["uuid"])),
     key:
-      getNonEmptyString(rawParameter.tpis_key) ||
-      getNonEmptyString(rawParameter.name),
-    name: getNonEmptyString(rawParameter.name),
-    nameCn: getNonEmptyString(rawParameter.name_cn),
-    source: getNonEmptyString(rawParameter.source),
-    valueType,
-    unit: getNonEmptyString(rawParameter.unit),
-    defaultValue: rawParameter.value,
-    tips: getNonEmptyString(rawParameter.tips),
-    enumOptions: normalizeEnumOptions(rawParameter.enum_options),
-    physicalEntityType: getNonEmptyString(rawParameter.physical_entity_type),
-    group: getNonEmptyString(rawParameter.group),
-    required: toBooleanOrNull(rawParameter.require),
-    inputStatus: getNonEmptyString(rawParameter.input_status),
-    allowNotDisplay: toBooleanOrNull(rawParameter.allow_not_display),
-    tpisKey: getNonEmptyString(rawParameter.tpis_key),
-    tpisOperationMode: toStringArrayOrNull(rawParameter.tpis_operation_mode),
-    tpisExtraInfo: rawParameter.tpis_extra_info,
-    hasCurveData: false,
+      getNonEmptyString(readField(parameter, ["key", "tpisKey", "tpis_key"])) ||
+      getNonEmptyString(readField(parameter, ["name"])),
+    name: getNonEmptyString(readField(parameter, ["name"])),
+    nameCn: getNonEmptyString(readField(parameter, ["nameCn", "name_cn"])),
+    source: getNonEmptyString(readField(parameter, ["source"])),
+    valueType:
+      getNonEmptyString(readField(parameter, ["valueType", "value_type"])) || "string",
+    unit: getNonEmptyString(readField(parameter, ["unit"])),
+    defaultValue: readField(parameter, ["defaultValue", "value"]),
+    tips: getNonEmptyString(readField(parameter, ["tips"])),
+    enumOptions: normalizeEnumOptions(
+      readField(parameter, ["enumOptions", "enum_options"]),
+    ),
+    physicalEntityType: getNonEmptyString(
+      readField(parameter, ["physicalEntityType", "physical_entity_type"]),
+    ),
+    group: getNonEmptyString(readField(parameter, ["group"])),
+    required: toBooleanOrNull(readField(parameter, ["required", "require"])),
+    inputStatus: getNonEmptyString(readField(parameter, ["inputStatus", "input_status"])),
+    allowNotDisplay: toBooleanOrNull(
+      readField(parameter, ["allowNotDisplay", "allow_not_display"]),
+    ),
+    tpisKey: getNonEmptyString(readField(parameter, ["tpisKey", "tpis_key"])),
+    tpisOperationMode: toStringArrayOrNull(
+      readField(parameter, ["tpisOperationMode", "tpis_operation_mode"]),
+    ),
+    tpisExtraInfo: readField(parameter, ["tpisExtraInfo", "tpis_extra_info"]),
+    hasCurveData:
+      readField(parameter, ["hasCurveData"]) === true ||
+      readField(parameter, ["curve_data"]) !== null,
   };
 };
 
-const normalizeInterfaceSpec = (
-  module: InterfaceSpecLoaderModule["default"],
-  requestedMaterialType: string,
-): InterfaceSpec => {
-  const materialType =
-    getNonEmptyString(module.material_type) || requestedMaterialType;
-  const parametersRaw = Array.isArray(module.parameters) ? module.parameters : [];
+const normalizeComponentSpec = (
+  payload: unknown,
+  componentType: string,
+): ComponentSpec => {
+  const spec = isRecord(payload) ? payload : {};
+  const data = isRecord(spec.data) ? spec.data : {};
+  const inputParameters = readArrayField(spec, ["inputParameters", "input_parameters"]);
+  const outputParameters = readArrayField(spec, [
+    "outputParameters",
+    "output_parameters",
+  ]);
+  const normalizedComponentType =
+    getNonEmptyString(readField(spec, ["componentType", "component_type"])) ||
+    getNonEmptyString(readField(data, ["component_type"])) ||
+    componentType;
 
   return {
-    materialType,
-    nameCn: getNonEmptyString(module.name_cn),
-    parameters: parametersRaw
-      .map((parameter, index) => normalizeInterfaceParameter(parameter, index))
+    componentType: normalizedComponentType,
+    id: getNonEmptyString(readField(spec, ["id"])),
+    uuid: getNonEmptyString(readField(spec, ["uuid"])),
+    group: getNonEmptyString(readField(spec, ["group"])),
+    icon: getNonEmptyString(readField(spec, ["icon"])),
+    measured: isRecord(readField(spec, ["measured"]))
+      ? (readField(spec, ["measured"]) as ComponentSpec["measured"])
+      : null,
+    operationMode: getNonEmptyString(readField(spec, ["operationMode", "operation_mode"])),
+    data: {
+      ...data,
+      component_type: normalizedComponentType,
+      name:
+        getNonEmptyString(readField(spec, ["name"])) ||
+        getNonEmptyString(readField(data, ["name"])),
+      name_cn:
+        getNonEmptyString(readField(spec, ["nameCn", "name_cn"])) ||
+        getNonEmptyString(readField(data, ["name_cn"])),
+    },
+    inputParameters: inputParameters
+      .map((parameter, index) =>
+        normalizeParameter(parameter, index, `${normalizedComponentType}:input`),
+      )
+      .filter((parameter): parameter is ComponentSpecParameter => !!parameter),
+    outputParameters: outputParameters
+      .map((parameter, index) =>
+        normalizeParameter(parameter, index, `${normalizedComponentType}:output`),
+      )
       .filter((parameter): parameter is ComponentSpecParameter => !!parameter),
   };
 };
 
-const getSpecLoader = (componentType: string) =>
-  componentSpecLoaders[`./data/componentSpecsMock/specs/${componentType}.json`];
+const normalizeComponentCurveData = (
+  payload: unknown,
+  componentType: string,
+): ComponentCurveData => {
+  if (!isRecord(payload)) {
+    return {
+      componentType,
+      curvesByParameterId: {},
+    };
+  }
 
-const getCurveLoader = (componentType: string) =>
-  componentCurveLoaders[`./data/componentSpecsMock/curves/${componentType}.json`];
+  return {
+    componentType:
+      getNonEmptyString(readField(payload, ["componentType", "component_type"])) ||
+      componentType,
+    curvesByParameterId: isRecord(payload.curvesByParameterId)
+      ? (payload.curvesByParameterId as Record<string, unknown>)
+      : {},
+  };
+};
 
-const getInterfaceSpecLoader = (materialType: string) =>
-  interfaceSpecLoadersByMaterialType[getInterfaceMaterialTypeKey(materialType)];
+const normalizeInterfaceSpec = (
+  payload: unknown,
+  requestedMaterialType: string,
+): InterfaceSpec => {
+  const module = isRecord(payload) ? payload : {};
+  const materialType =
+    getNonEmptyString(readField(module, ["materialType", "material_type"])) ||
+    requestedMaterialType;
+  const parametersRaw = readArrayField(module, ["parameters"]);
 
-export const componentSpecManifestAtom = atom<ComponentSpecManifestEntry[]>(
-  manifestJson as ComponentSpecManifestEntry[],
+  return {
+    materialType,
+    nameCn: getNonEmptyString(readField(module, ["nameCn", "name_cn"])),
+    parameters: parametersRaw
+      .map((parameter, index) =>
+        normalizeParameter(parameter, index, `${materialType}:interface`),
+      )
+      .filter((parameter): parameter is ComponentSpecParameter => !!parameter),
+  };
+};
+
+const normalizeComponentManifestEntry = (
+  item: unknown,
+): ComponentSpecManifestEntry | null => {
+  if (!isRecord(item)) {
+    return null;
+  }
+
+  const componentType = getNonEmptyString(item.componentType);
+  if (!componentType) {
+    return null;
+  }
+
+  const inputCount =
+    typeof item.inputCount === "number" && Number.isFinite(item.inputCount)
+      ? item.inputCount
+      : 0;
+  const outputCount =
+    typeof item.outputCount === "number" && Number.isFinite(item.outputCount)
+      ? item.outputCount
+      : 0;
+  const curveParameterCount =
+    typeof item.curveParameterCount === "number" &&
+    Number.isFinite(item.curveParameterCount)
+      ? item.curveParameterCount
+      : 0;
+
+  return {
+    componentType,
+    inputCount,
+    outputCount,
+    curveParameterCount,
+    specPath: `/api/v1/templates/components/${encodeURIComponent(componentType)}`,
+    curvePath: `/api/v1/templates/components/${encodeURIComponent(componentType)}/curves`,
+  };
+};
+
+export const getInterfaceMaterialTypeKey = (materialType: string) =>
+  materialType.trim().toLowerCase();
+
+const getLocalComponentSpecLoader = (componentType: string) =>
+  componentSpecLocalLoaders[`./data/componentSpecsMock/specs/${componentType}.json`];
+
+const getLocalComponentCurveLoader = (componentType: string) =>
+  componentCurveLocalLoaders[
+    `./data/componentSpecsMock/curves/${componentType}.json`
+  ];
+
+const getLocalInterfaceSpecLoader = (materialType: string) =>
+  interfaceSpecLocalLoaders[
+    `./data/interfaceSpecsMock/${materialType}.json`
+  ];
+
+const componentSpecManifestStateAtom = atom<ComponentSpecManifestState>({
+  items: [],
+  status: "idle",
+  error: "",
+});
+
+export const componentSpecManifestAtom = atom((get) =>
+  get(componentSpecManifestStateAtom).items,
 );
 
 export const componentSpecCatalogAtom = atom<ComponentSpecCatalogState>({
@@ -259,6 +451,67 @@ export const interfaceSpecCatalogAtom = atom<InterfaceSpecCatalogState>({
   errorsByMaterialType: {},
 });
 
+export const ensureComponentSpecManifestLoadedAtom = atom(
+  null,
+  async (get, set) => {
+    const state = get(componentSpecManifestStateAtom);
+    if (state.status === "loading" || state.status === "ready") {
+      return;
+    }
+
+    const baseUrl = getConfiguredEngineeringBackendBaseUrl();
+    if (!baseUrl) {
+      if (import.meta.env.MODE === "test") {
+        set(componentSpecManifestStateAtom, {
+          items: (manifestJson as ComponentSpecManifestEntry[]) || [],
+          status: "ready",
+          error: "",
+        });
+        return;
+      }
+      set(componentSpecManifestStateAtom, {
+        items: [],
+        status: "error",
+        error: "VITE_APP_ENGINEERING_BACKEND_URL is not configured",
+      });
+      return;
+    }
+
+    set(componentSpecManifestStateAtom, {
+      ...state,
+      status: "loading",
+      error: "",
+    });
+
+    try {
+      const response = await requestEngineeringBackendJson<{ items?: unknown[] }>(
+        baseUrl,
+        "/api/v1/templates/components?offset=0&limit=500",
+      );
+
+      const items = Array.isArray(response.items)
+        ? response.items
+            .map(normalizeComponentManifestEntry)
+            .filter(
+              (entry): entry is ComponentSpecManifestEntry => entry !== null,
+            )
+        : [];
+
+      set(componentSpecManifestStateAtom, {
+        items,
+        status: "ready",
+        error: "",
+      });
+    } catch (error) {
+      set(componentSpecManifestStateAtom, {
+        items: [],
+        status: "error",
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  },
+);
+
 export const ensureComponentSpecLoadedAtom = atom(
   null,
   async (get, set, componentType: string) => {
@@ -269,9 +522,68 @@ export const ensureComponentSpecLoadedAtom = atom(
       return;
     }
 
-    const loader = getSpecLoader(componentType);
+    const baseUrl = getConfiguredEngineeringBackendBaseUrl();
+    if (!baseUrl) {
+      if (import.meta.env.MODE === "test") {
+        const loader = getLocalComponentSpecLoader(componentType);
+        if (!loader) {
+          set(componentSpecCatalogAtom, {
+            ...state,
+            loadStatusByType: {
+              ...state.loadStatusByType,
+              [componentType]: "error",
+            },
+            errorsByType: {
+              ...state.errorsByType,
+              [componentType]: `Missing local component spec loader for ${componentType}`,
+            },
+          });
+          return;
+        }
 
-    if (!loader) {
+        set(componentSpecCatalogAtom, {
+          ...state,
+          loadStatusByType: {
+            ...state.loadStatusByType,
+            [componentType]: "loading",
+          },
+        });
+
+        try {
+          const module = await loader();
+          const nextState = get(componentSpecCatalogAtom);
+          set(componentSpecCatalogAtom, {
+            specsByType: {
+              ...nextState.specsByType,
+              [componentType]: module.default,
+            },
+            loadStatusByType: {
+              ...nextState.loadStatusByType,
+              [componentType]: "ready",
+            },
+            errorsByType: {
+              ...nextState.errorsByType,
+              [componentType]: "",
+            },
+          });
+        } catch (error) {
+          const nextState = get(componentSpecCatalogAtom);
+          set(componentSpecCatalogAtom, {
+            ...nextState,
+            loadStatusByType: {
+              ...nextState.loadStatusByType,
+              [componentType]: "error",
+            },
+            errorsByType: {
+              ...nextState.errorsByType,
+              [componentType]:
+                error instanceof Error ? error.message : String(error),
+            },
+          });
+        }
+        return;
+      }
+
       set(componentSpecCatalogAtom, {
         ...state,
         loadStatusByType: {
@@ -280,7 +592,7 @@ export const ensureComponentSpecLoadedAtom = atom(
         },
         errorsByType: {
           ...state.errorsByType,
-          [componentType]: `Missing component spec loader for ${componentType}`,
+          [componentType]: "VITE_APP_ENGINEERING_BACKEND_URL is not configured",
         },
       });
       return;
@@ -295,13 +607,17 @@ export const ensureComponentSpecLoadedAtom = atom(
     });
 
     try {
-      const module = await loader();
+      const payload = await requestEngineeringBackendJson<unknown>(
+        baseUrl,
+        `/api/v1/templates/components/${encodeURIComponent(componentType)}`,
+      );
+      const normalizedSpec = normalizeComponentSpec(payload, componentType);
       const nextState = get(componentSpecCatalogAtom);
 
       set(componentSpecCatalogAtom, {
         specsByType: {
           ...nextState.specsByType,
-          [componentType]: module.default,
+          [componentType]: normalizedSpec,
         },
         loadStatusByType: {
           ...nextState.loadStatusByType,
@@ -341,9 +657,68 @@ export const ensureComponentCurveDataLoadedAtom = atom(
       return;
     }
 
-    const loader = getCurveLoader(componentType);
+    const baseUrl = getConfiguredEngineeringBackendBaseUrl();
+    if (!baseUrl) {
+      if (import.meta.env.MODE === "test") {
+        const loader = getLocalComponentCurveLoader(componentType);
+        if (!loader) {
+          set(componentCurveCatalogAtom, {
+            ...state,
+            loadStatusByType: {
+              ...state.loadStatusByType,
+              [componentType]: "error",
+            },
+            errorsByType: {
+              ...state.errorsByType,
+              [componentType]: `Missing local component curve loader for ${componentType}`,
+            },
+          });
+          return;
+        }
 
-    if (!loader) {
+        set(componentCurveCatalogAtom, {
+          ...state,
+          loadStatusByType: {
+            ...state.loadStatusByType,
+            [componentType]: "loading",
+          },
+        });
+
+        try {
+          const module = await loader();
+          const nextState = get(componentCurveCatalogAtom);
+          set(componentCurveCatalogAtom, {
+            curvesByType: {
+              ...nextState.curvesByType,
+              [componentType]: module.default,
+            },
+            loadStatusByType: {
+              ...nextState.loadStatusByType,
+              [componentType]: "ready",
+            },
+            errorsByType: {
+              ...nextState.errorsByType,
+              [componentType]: "",
+            },
+          });
+        } catch (error) {
+          const nextState = get(componentCurveCatalogAtom);
+          set(componentCurveCatalogAtom, {
+            ...nextState,
+            loadStatusByType: {
+              ...nextState.loadStatusByType,
+              [componentType]: "error",
+            },
+            errorsByType: {
+              ...nextState.errorsByType,
+              [componentType]:
+                error instanceof Error ? error.message : String(error),
+            },
+          });
+        }
+        return;
+      }
+
       set(componentCurveCatalogAtom, {
         ...state,
         loadStatusByType: {
@@ -352,7 +727,7 @@ export const ensureComponentCurveDataLoadedAtom = atom(
         },
         errorsByType: {
           ...state.errorsByType,
-          [componentType]: `Missing component curve loader for ${componentType}`,
+          [componentType]: "VITE_APP_ENGINEERING_BACKEND_URL is not configured",
         },
       });
       return;
@@ -367,13 +742,17 @@ export const ensureComponentCurveDataLoadedAtom = atom(
     });
 
     try {
-      const module = await loader();
+      const payload = await requestEngineeringBackendJson<unknown>(
+        baseUrl,
+        `/api/v1/templates/components/${encodeURIComponent(componentType)}/curves`,
+      );
+      const normalizedCurveData = normalizeComponentCurveData(payload, componentType);
       const nextState = get(componentCurveCatalogAtom);
 
       set(componentCurveCatalogAtom, {
         curvesByType: {
           ...nextState.curvesByType,
-          [componentType]: module.default,
+          [componentType]: normalizedCurveData,
         },
         loadStatusByType: {
           ...nextState.loadStatusByType,
@@ -419,9 +798,69 @@ export const ensureInterfaceSpecLoadedAtom = atom(
       return;
     }
 
-    const loader = getInterfaceSpecLoader(materialTypeKey);
+    const baseUrl = getConfiguredEngineeringBackendBaseUrl();
+    if (!baseUrl) {
+      if (import.meta.env.MODE === "test") {
+        const loader = getLocalInterfaceSpecLoader(materialTypeKey);
+        if (!loader) {
+          set(interfaceSpecCatalogAtom, {
+            ...state,
+            loadStatusByMaterialType: {
+              ...state.loadStatusByMaterialType,
+              [materialTypeKey]: "error",
+            },
+            errorsByMaterialType: {
+              ...state.errorsByMaterialType,
+              [materialTypeKey]: `Missing local interface spec loader for ${materialType}`,
+            },
+          });
+          return;
+        }
 
-    if (!loader) {
+        set(interfaceSpecCatalogAtom, {
+          ...state,
+          loadStatusByMaterialType: {
+            ...state.loadStatusByMaterialType,
+            [materialTypeKey]: "loading",
+          },
+        });
+
+        try {
+          const module = await loader();
+          const normalizedSpec = normalizeInterfaceSpec(module.default, materialTypeKey);
+          const nextState = get(interfaceSpecCatalogAtom);
+          set(interfaceSpecCatalogAtom, {
+            specsByMaterialType: {
+              ...nextState.specsByMaterialType,
+              [materialTypeKey]: normalizedSpec,
+            },
+            loadStatusByMaterialType: {
+              ...nextState.loadStatusByMaterialType,
+              [materialTypeKey]: "ready",
+            },
+            errorsByMaterialType: {
+              ...nextState.errorsByMaterialType,
+              [materialTypeKey]: "",
+            },
+          });
+        } catch (error) {
+          const nextState = get(interfaceSpecCatalogAtom);
+          set(interfaceSpecCatalogAtom, {
+            ...nextState,
+            loadStatusByMaterialType: {
+              ...nextState.loadStatusByMaterialType,
+              [materialTypeKey]: "error",
+            },
+            errorsByMaterialType: {
+              ...nextState.errorsByMaterialType,
+              [materialTypeKey]:
+                error instanceof Error ? error.message : String(error),
+            },
+          });
+        }
+        return;
+      }
+
       set(interfaceSpecCatalogAtom, {
         ...state,
         loadStatusByMaterialType: {
@@ -430,7 +869,7 @@ export const ensureInterfaceSpecLoadedAtom = atom(
         },
         errorsByMaterialType: {
           ...state.errorsByMaterialType,
-          [materialTypeKey]: `Missing interface spec loader for ${materialType}`,
+          [materialTypeKey]: "VITE_APP_ENGINEERING_BACKEND_URL is not configured",
         },
       });
       return;
@@ -445,8 +884,11 @@ export const ensureInterfaceSpecLoadedAtom = atom(
     });
 
     try {
-      const module = await loader();
-      const normalizedSpec = normalizeInterfaceSpec(module.default, materialTypeKey);
+      const payload = await requestEngineeringBackendJson<unknown>(
+        baseUrl,
+        `/api/v1/templates/materials/${encodeURIComponent(materialTypeKey)}`,
+      );
+      const normalizedSpec = normalizeInterfaceSpec(payload, materialTypeKey);
       const nextState = get(interfaceSpecCatalogAtom);
 
       set(interfaceSpecCatalogAtom, {

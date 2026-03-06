@@ -1,5 +1,5 @@
 import { createStore } from "jotai";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   createProjectDocument,
   createScenarioDocument,
@@ -96,7 +96,27 @@ const createScenarioFixture = (projectId: string): ScenarioDocument =>
     name: "Store scenario",
   });
 
+const mockJsonResponse = (body: unknown, status = 200) =>
+  Promise.resolve(
+    new Response(JSON.stringify(body), {
+      status,
+      headers: {
+        "Content-Type": "application/json",
+      },
+    }),
+  );
+
+type GlobalWithEngineeringBackend = typeof globalThis & {
+  __EXCALIDRAW_ENGINEERING_BACKEND_BASE_URL__?: string;
+};
+
 describe("engineering domain state", () => {
+  afterEach(() => {
+    delete (globalThis as GlobalWithEngineeringBackend)
+      .__EXCALIDRAW_ENGINEERING_BACKEND_BASE_URL__;
+    vi.restoreAllMocks();
+  });
+
   it("marks the selected calculation run stale when the model version changes through the store", () => {
     const store = createStore();
     const project = createProjectFixture();
@@ -422,6 +442,242 @@ describe("engineering domain state", () => {
       value: 36,
       source: "frontend_computed",
       status: "ok",
+    });
+  });
+
+  it("creates session and requests calculation run from backend when backend URL is configured", async () => {
+    const store = createStore();
+    const project = createProjectFixture();
+    const scenario = createScenarioFixture(project.id);
+    const requestedAt = 1_700_000_000_123;
+    const fetchMock = vi.fn();
+
+    (globalThis as GlobalWithEngineeringBackend).__EXCALIDRAW_ENGINEERING_BACKEND_BASE_URL__ =
+      "http://127.0.0.1:18080";
+    fetchMock.mockResolvedValueOnce(
+      await mockJsonResponse({
+        sessionId: "session:api-1",
+        acceptedModelVersion: project.revisions.modelVersion,
+        acceptedScenarioVersion: scenario.revisions.scenarioVersion,
+      }),
+    );
+    fetchMock.mockResolvedValueOnce(
+      await mockJsonResponse({
+        runId: "run:api-1",
+        scenarioVersion: scenario.revisions.scenarioVersion,
+        status: "success",
+        startedAt: requestedAt,
+        finishedAt: requestedAt + 1000,
+        resultValues: {
+          "var:ambient": {
+            variableId: "var:ambient",
+            value: 22,
+            source: "backend_db_pull",
+            status: "ok",
+            timestamp: requestedAt + 1000,
+          },
+        },
+        diagnostics: [],
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    store.set(engineeringProjectDocumentAtom, project);
+    store.set(engineeringScenarioDocumentAtom, scenario);
+    await store.set(requestEngineeringCalculationAtom, {
+      requestedAt,
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(
+      "http://127.0.0.1:18080/api/v1/sessions",
+    );
+    expect(fetchMock.mock.calls[1]?.[0]).toBe(
+      "http://127.0.0.1:18080/api/v1/runs",
+    );
+    expect(store.get(engineeringSelectedCalculationRunIdAtom)).toBe("run:api-1");
+    expect(store.get(engineeringRunRuntimeAtom)).toMatchObject({
+      activeRunId: "run:api-1",
+      status: "success",
+      errorMessage: null,
+    });
+  });
+
+  it("updates session scenario on version bump before requesting backend run", async () => {
+    const store = createStore();
+    const project = createProjectFixture();
+    const scenario = createScenarioFixture(project.id);
+    const fetchMock = vi.fn();
+
+    (globalThis as GlobalWithEngineeringBackend).__EXCALIDRAW_ENGINEERING_BACKEND_BASE_URL__ =
+      "http://127.0.0.1:18080";
+    fetchMock.mockResolvedValueOnce(
+      await mockJsonResponse({
+        sessionId: "session:api-2",
+        acceptedModelVersion: project.revisions.modelVersion,
+        acceptedScenarioVersion: 1,
+      }),
+    );
+    fetchMock.mockResolvedValueOnce(
+      await mockJsonResponse({
+        runId: "run:api-2-1",
+        scenarioVersion: 1,
+        status: "success",
+        startedAt: 1_700_000_000_200,
+        finishedAt: 1_700_000_000_210,
+        resultValues: {},
+        diagnostics: [],
+      }),
+    );
+    fetchMock.mockResolvedValueOnce(
+      await mockJsonResponse({
+        sessionId: "session:api-2",
+        acceptedScenarioVersion: 2,
+      }),
+    );
+    fetchMock.mockResolvedValueOnce(
+      await mockJsonResponse({
+        runId: "run:api-2-2",
+        scenarioVersion: 2,
+        status: "success",
+        startedAt: 1_700_000_000_220,
+        finishedAt: 1_700_000_000_230,
+        resultValues: {},
+        diagnostics: [],
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    store.set(engineeringProjectDocumentAtom, project);
+    store.set(engineeringScenarioDocumentAtom, scenario);
+
+    await store.set(requestEngineeringCalculationAtom, {
+      requestedAt: 1_700_000_000_200,
+    });
+    store.set(applyEngineeringScenarioMutationAtom, {
+      updater: (current) => ({
+        ...current,
+        manualInputs: {
+          ...current.manualInputs,
+          "var:ambient": createValueSnapshot({
+            variableId: "var:ambient",
+            value: 33,
+            source: "frontend_manual_input",
+            status: "ok",
+          }),
+        },
+      }),
+    });
+    await store.set(requestEngineeringCalculationAtom, {
+      requestedAt: 1_700_000_000_220,
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+    expect(fetchMock.mock.calls[2]?.[0]).toBe(
+      "http://127.0.0.1:18080/api/v1/sessions/session:api-2/scenario",
+    );
+    const secondRunPayload = JSON.parse(
+      String(fetchMock.mock.calls[3]?.[1]?.body || "{}"),
+    );
+    expect(secondRunPayload).toMatchObject({
+      sessionId: "session:api-2",
+      scenarioVersion: 2,
+      triggerMode: "manual",
+    });
+  });
+
+  it("refreshes live snapshots via backend endpoints and periodic tick uses periodic trigger mode", async () => {
+    const store = createStore();
+    const project = createProjectFixture();
+    const scenario = createScenarioFixture(project.id);
+    const fetchMock = vi.fn();
+
+    (globalThis as GlobalWithEngineeringBackend).__EXCALIDRAW_ENGINEERING_BACKEND_BASE_URL__ =
+      "http://127.0.0.1:18080";
+    fetchMock.mockResolvedValueOnce(
+      await mockJsonResponse({
+        sessionId: "session:api-3",
+        acceptedModelVersion: project.revisions.modelVersion,
+        acceptedScenarioVersion: scenario.revisions.scenarioVersion,
+      }),
+    );
+    fetchMock.mockResolvedValueOnce(
+      await mockJsonResponse({
+        sessionId: "session:api-3",
+        scenarioVersion: 1,
+        refreshedAt: 1_700_000_000_300,
+        updatedVariableIds: ["var:ambient"],
+      }),
+    );
+    fetchMock.mockResolvedValueOnce(
+      await mockJsonResponse({
+        sessionId: "session:api-3",
+        scenarioVersion: 1,
+        generatedAt: 1_700_000_000_301,
+        rows: [
+          {
+            id: "var:ambient",
+            value: 18.6,
+            source: "backend_db_pull",
+            status: "ok",
+            provider_id: "provider:ambient:sensor",
+            timestamp: 1_700_000_000_301,
+          },
+          {
+            id: "var:load",
+            value: 9.8,
+            source: "frontend_manual_input",
+            status: "ok",
+            timestamp: 1_700_000_000_301,
+          },
+        ],
+      }),
+    );
+    fetchMock.mockResolvedValueOnce(
+      await mockJsonResponse({
+        runId: "run:api-3-periodic",
+        scenarioVersion: 1,
+        status: "success",
+        startedAt: 1_700_000_000_302,
+        finishedAt: 1_700_000_000_310,
+        resultValues: {},
+        diagnostics: [],
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    store.set(engineeringProjectDocumentAtom, project);
+    store.set(engineeringScenarioDocumentAtom, scenario);
+    store.set(upsertEngineeringPointBindingAtom, {
+      variableId: "var:ambient",
+      measurement: "ambient.temperature",
+      pointName: "sensor.ambient.t",
+      field: "value",
+    });
+
+    await store.set(refreshEngineeringLiveSnapshotsAtom);
+    const snapshot = store.get(engineeringLiveSnapshotsAtom)["var:ambient"];
+    expect(snapshot).toMatchObject({
+      variableId: "var:ambient",
+      value: 18.6,
+      source: "backend_db_pull",
+      status: "ok",
+      providerId: "provider:ambient:sensor",
+    });
+    expect(store.get(engineeringLiveSnapshotsAtom)["var:load"]).toBeUndefined();
+
+    await store.set(runEngineeringPeriodicCalculationTickAtom);
+    const periodicRunCall = fetchMock.mock.calls.find(
+      (call) => call[0] === "http://127.0.0.1:18080/api/v1/runs",
+    );
+    const periodicRunPayload = JSON.parse(
+      String(periodicRunCall?.[1]?.body || "{}"),
+    );
+    expect(periodicRunPayload).toMatchObject({
+      sessionId: "session:api-3",
+      scenarioVersion: store.get(engineeringScenarioDocumentAtom).revisions
+        .scenarioVersion,
+      triggerMode: "periodic",
     });
   });
 });

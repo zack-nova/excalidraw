@@ -10,6 +10,7 @@ import {
   createValueSnapshot,
   createProjectDocument,
   createScenarioDocument,
+  type DiagnosticIssue,
   type EngineeringValue,
   isCalculationRunStale,
   type CalculationRun,
@@ -17,6 +18,7 @@ import {
   type RuntimeProjection,
   type ScenarioDocument,
   type ValueSnapshot,
+  type ValueSnapshotStatus,
 } from "./engineering-domain";
 
 export type EngineeringProjectMutationScope =
@@ -69,6 +71,18 @@ export const engineeringRunRuntimeAtom = atom<EngineeringRunRuntimeState>(
   createIdleRunRuntimeState(),
 );
 
+export type EngineeringBackendSessionState = {
+  baseUrl: string;
+  sessionId: string;
+  projectId: string;
+  scenarioId: string;
+  acceptedModelVersion: number;
+  acceptedScenarioVersion: number;
+};
+
+export const engineeringBackendSessionAtom =
+  atom<EngineeringBackendSessionState | null>(null);
+
 const toRunRuntimeStatus = (status: CalculationRun["status"]): EngineeringRunRuntimeStatus =>
   status;
 const now = () => Date.now();
@@ -76,6 +90,249 @@ let nextMockRunId = 1;
 
 const SAFE_FORMULA_PATTERN = /^[\d\s+\-*/%.(),"'A-Za-z:_]+$/;
 const FORMULA_REF_PATTERN = /ref\(\s*["']([^"']+)["']\s*\)/g;
+const VALUE_SNAPSHOT_STATUSES: readonly ValueSnapshotStatus[] = [
+  "ok",
+  "missing",
+  "stale",
+  "error",
+  "cyclic",
+];
+const VALUE_SNAPSHOT_SOURCES: readonly ValueSnapshot["source"][] = [
+  "frontend_manual_input",
+  "frontend_computed",
+  "backend_calculation",
+  "backend_db_pull",
+];
+const RECOVERABLE_BACKEND_ERROR_CODES = new Set([
+  "scenario_version_mismatch",
+  "session_not_found",
+]);
+
+type EngineeringBackendErrorDetail = {
+  code?: string;
+  message?: string;
+};
+
+type EngineeringBackendLiveRowsResponse = {
+  rows?: unknown;
+};
+
+type EngineeringBackendRunResponse = {
+  runId: string;
+  scenarioVersion?: number;
+  status?: CalculationRun["status"];
+  startedAt?: number;
+  finishedAt?: number;
+  resultValues?: unknown;
+  diagnostics?: unknown;
+};
+
+class EngineeringBackendHttpError extends Error {
+  status: number;
+  detail?: EngineeringBackendErrorDetail;
+
+  constructor(
+    message: string,
+    status: number,
+    detail?: EngineeringBackendErrorDetail,
+  ) {
+    super(message);
+    this.name = "EngineeringBackendHttpError";
+    this.status = status;
+    this.detail = detail;
+  }
+}
+
+const getConfiguredEngineeringBackendBaseUrl = () => {
+  const runtimeBaseUrl = (
+    globalThis as typeof globalThis & {
+      __EXCALIDRAW_ENGINEERING_BACKEND_BASE_URL__?: unknown;
+    }
+  ).__EXCALIDRAW_ENGINEERING_BACKEND_BASE_URL__;
+  if (typeof runtimeBaseUrl === "string") {
+    const runtimeTrimmed = runtimeBaseUrl.trim();
+    if (runtimeTrimmed) {
+      return runtimeTrimmed.replace(/\/+$/, "");
+    }
+  }
+
+  // Avoid real network calls in tests unless explicitly injected at runtime.
+  if (import.meta.env.MODE === "test") {
+    return null;
+  }
+
+  const candidate = import.meta.env.VITE_APP_ENGINEERING_BACKEND_URL;
+  if (typeof candidate !== "string") {
+    return null;
+  }
+  const trimmed = candidate.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  return trimmed.replace(/\/+$/, "");
+};
+
+const toValueSnapshotStatus = (
+  value: unknown,
+  fallback: ValueSnapshotStatus = "missing",
+): ValueSnapshotStatus =>
+  VALUE_SNAPSHOT_STATUSES.includes(value as ValueSnapshotStatus)
+    ? (value as ValueSnapshotStatus)
+    : fallback;
+
+const toValueSnapshotSource = (
+  value: unknown,
+  fallback: ValueSnapshot["source"],
+): ValueSnapshot["source"] =>
+  VALUE_SNAPSHOT_SOURCES.includes(value as ValueSnapshot["source"])
+    ? (value as ValueSnapshot["source"])
+    : fallback;
+
+const requestEngineeringBackendJson = async <T>(
+  baseUrl: string,
+  path: string,
+  init?: RequestInit,
+): Promise<T> => {
+  const response = await fetch(`${baseUrl}${path}`, {
+    ...init,
+    headers: {
+      "Content-Type": "application/json",
+      ...(init?.headers || {}),
+    },
+  });
+  let responseBody: unknown = null;
+
+  try {
+    responseBody = await response.json();
+  } catch {
+    responseBody = null;
+  }
+
+  if (!response.ok) {
+    const detail =
+      responseBody &&
+      typeof responseBody === "object" &&
+      "detail" in responseBody &&
+      responseBody.detail &&
+      typeof responseBody.detail === "object"
+        ? (responseBody.detail as EngineeringBackendErrorDetail)
+        : undefined;
+
+    throw new EngineeringBackendHttpError(
+      detail?.message || `Engineering backend request failed with ${response.status}`,
+      response.status,
+      detail,
+    );
+  }
+
+  return (responseBody ?? {}) as T;
+};
+
+const isRecoverableEngineeringBackendError = (error: unknown) =>
+  error instanceof EngineeringBackendHttpError &&
+  !!error.detail?.code &&
+  RECOVERABLE_BACKEND_ERROR_CODES.has(error.detail.code);
+
+const toRunDiagnostics = (diagnostics: unknown): DiagnosticIssue[] => {
+  if (!Array.isArray(diagnostics)) {
+    return [];
+  }
+
+  return diagnostics.filter((diagnostic): diagnostic is DiagnosticIssue => {
+    if (!diagnostic || typeof diagnostic !== "object") {
+      return false;
+    }
+
+    const level = (diagnostic as { level?: unknown }).level;
+    const message = (diagnostic as { message?: unknown }).message;
+
+    return (
+      (level === "info" || level === "warning" || level === "error") &&
+      typeof message === "string"
+    );
+  });
+};
+
+const toRunResultValues = (
+  resultValues: unknown,
+  runId: string,
+): CalculationRun["resultValues"] => {
+  if (!resultValues || typeof resultValues !== "object") {
+    return {};
+  }
+
+  const nextResultValues: CalculationRun["resultValues"] = {};
+
+  Object.entries(resultValues as Record<string, unknown>).forEach(
+    ([variableId, snapshotValue]) => {
+      if (!snapshotValue || typeof snapshotValue !== "object") {
+        return;
+      }
+      const snapshot = snapshotValue as Record<string, unknown>;
+      nextResultValues[variableId] = createValueSnapshot({
+        variableId,
+        value: (snapshot.value as EngineeringValue | undefined) ?? null,
+        source: toValueSnapshotSource(
+          snapshot.source,
+          "backend_calculation",
+        ),
+        status: toValueSnapshotStatus(snapshot.status, "missing"),
+        providerId:
+          typeof snapshot.providerId === "string"
+            ? snapshot.providerId
+            : undefined,
+        runId:
+          typeof snapshot.runId === "string" && snapshot.runId.length > 0
+            ? snapshot.runId
+            : runId,
+        detail:
+          typeof snapshot.detail === "string" ? snapshot.detail : undefined,
+        timestamp:
+          typeof snapshot.timestamp === "number" ? snapshot.timestamp : undefined,
+      });
+    },
+  );
+
+  return nextResultValues;
+};
+
+const toLiveSnapshotsFromRows = (
+  rowsResponse: EngineeringBackendLiveRowsResponse,
+): Record<string, ValueSnapshot> => {
+  if (!Array.isArray(rowsResponse.rows)) {
+    return {};
+  }
+
+  const snapshots: Record<string, ValueSnapshot> = {};
+  rowsResponse.rows.forEach((rowValue) => {
+    if (!rowValue || typeof rowValue !== "object") {
+      return;
+    }
+    const row = rowValue as Record<string, unknown>;
+    const variableId = row.id;
+
+    if (typeof variableId !== "string" || variableId.length === 0) {
+      return;
+    }
+
+    if (row.source !== "backend_db_pull") {
+      return;
+    }
+
+    snapshots[variableId] = createValueSnapshot({
+      variableId,
+      value: (row.value as EngineeringValue | undefined) ?? null,
+      source: "backend_db_pull",
+      status: toValueSnapshotStatus(row.status, "missing"),
+      providerId:
+        typeof row.provider_id === "string" ? row.provider_id : undefined,
+      timestamp: typeof row.timestamp === "number" ? row.timestamp : undefined,
+    });
+  });
+
+  return snapshots;
+};
 
 const evaluateExpression = (
   expression: string,
@@ -163,6 +420,157 @@ const toMockLiveValue = (
   return Number(((seed % 5000) / 100).toFixed(2));
 };
 
+type EngineeringBackendCreateSessionResponse = {
+  sessionId: string;
+  acceptedModelVersion?: number;
+  acceptedScenarioVersion?: number;
+};
+
+type EngineeringBackendUpdateScenarioResponse = {
+  acceptedScenarioVersion?: number;
+};
+
+const createEngineeringBackendSession = async (
+  baseUrl: string,
+  project: ProjectDocument,
+  scenario: ScenarioDocument,
+) => {
+  const response = await requestEngineeringBackendJson<EngineeringBackendCreateSessionResponse>(
+    baseUrl,
+    "/api/v1/sessions",
+    {
+      method: "POST",
+      body: JSON.stringify({
+        project,
+        scenario,
+      }),
+    },
+  );
+
+  if (typeof response.sessionId !== "string" || response.sessionId.length === 0) {
+    throw new Error("Engineering backend returned an invalid sessionId");
+  }
+
+  return {
+    baseUrl,
+    sessionId: response.sessionId,
+    projectId: project.id,
+    scenarioId: scenario.id,
+    acceptedModelVersion:
+      typeof response.acceptedModelVersion === "number"
+        ? response.acceptedModelVersion
+        : project.revisions.modelVersion,
+    acceptedScenarioVersion:
+      typeof response.acceptedScenarioVersion === "number"
+        ? response.acceptedScenarioVersion
+        : scenario.revisions.scenarioVersion,
+  } satisfies EngineeringBackendSessionState;
+};
+
+const ensureEngineeringBackendSession = async (payload: {
+  baseUrl: string;
+  project: ProjectDocument;
+  scenario: ScenarioDocument;
+  currentSession: EngineeringBackendSessionState | null;
+  onSessionChange: (nextSession: EngineeringBackendSessionState | null) => void;
+}) => {
+  const { baseUrl, project, scenario, currentSession, onSessionChange } = payload;
+  const shouldCreateSession =
+    !currentSession ||
+    currentSession.baseUrl !== baseUrl ||
+    currentSession.projectId !== project.id ||
+    currentSession.scenarioId !== scenario.id ||
+    currentSession.acceptedModelVersion !== project.revisions.modelVersion;
+
+  if (shouldCreateSession) {
+    const createdSession = await createEngineeringBackendSession(
+      baseUrl,
+      project,
+      scenario,
+    );
+    onSessionChange(createdSession);
+    return createdSession;
+  }
+
+  const nextScenarioVersion = scenario.revisions.scenarioVersion;
+  if (currentSession.acceptedScenarioVersion === nextScenarioVersion) {
+    return currentSession;
+  }
+
+  try {
+    const response =
+      await requestEngineeringBackendJson<EngineeringBackendUpdateScenarioResponse>(
+        baseUrl,
+        `/api/v1/sessions/${currentSession.sessionId}/scenario`,
+        {
+          method: "PUT",
+          body: JSON.stringify({
+            scenario,
+          }),
+        },
+      );
+    const updatedSession: EngineeringBackendSessionState = {
+      ...currentSession,
+      acceptedScenarioVersion:
+        typeof response.acceptedScenarioVersion === "number"
+          ? response.acceptedScenarioVersion
+          : nextScenarioVersion,
+      scenarioId: scenario.id,
+    };
+    onSessionChange(updatedSession);
+    return updatedSession;
+  } catch (error) {
+    if (!isRecoverableEngineeringBackendError(error)) {
+      throw error;
+    }
+
+    const createdSession = await createEngineeringBackendSession(
+      baseUrl,
+      project,
+      scenario,
+    );
+    onSessionChange(createdSession);
+    return createdSession;
+  }
+};
+
+const withEngineeringBackendSessionRetry = async <T>(payload: {
+  baseUrl: string;
+  project: ProjectDocument;
+  scenario: ScenarioDocument;
+  currentSession: EngineeringBackendSessionState | null;
+  onSessionChange: (nextSession: EngineeringBackendSessionState | null) => void;
+  execute: (session: EngineeringBackendSessionState) => Promise<T>;
+}) => {
+  const { baseUrl, project, scenario, currentSession, onSessionChange, execute } =
+    payload;
+  let session = await ensureEngineeringBackendSession({
+    baseUrl,
+    project,
+    scenario,
+    currentSession,
+    onSessionChange,
+  });
+
+  try {
+    return await execute(session);
+  } catch (error) {
+    if (!isRecoverableEngineeringBackendError(error)) {
+      throw error;
+    }
+
+    onSessionChange(null);
+    session = await ensureEngineeringBackendSession({
+      baseUrl,
+      project,
+      scenario,
+      currentSession: null,
+      onSessionChange,
+    });
+    return execute(session);
+  }
+};
+
 export const applyEngineeringProjectMutationAtom = atom(
   null,
   (
@@ -243,36 +651,78 @@ export const upsertEngineeringPointBindingAtom = atom(
 
 export const refreshEngineeringLiveSnapshotsAtom = atom(
   null,
-  (get, set) => {
+  async (get, set) => {
     const project = get(engineeringProjectDocumentAtom);
     const scenario = get(engineeringScenarioDocumentAtom);
-    const currentLiveSnapshots = get(engineeringLiveSnapshotsAtom);
-    const nextLiveSnapshots = {
-      ...currentLiveSnapshots,
-    };
+    const backendBaseUrl = getConfiguredEngineeringBackendBaseUrl();
 
-    Object.values(scenario.pointBindings).forEach((binding) => {
-      const previousSnapshot = currentLiveSnapshots[binding.variableId];
-      const providerId =
-        binding.providerId ||
-        findSensorProviderIdForVariable(project, binding.variableId);
+    if (!backendBaseUrl) {
+      const currentLiveSnapshots = get(engineeringLiveSnapshotsAtom);
+      const nextLiveSnapshots = {
+        ...currentLiveSnapshots,
+      };
 
-      nextLiveSnapshots[binding.variableId] = createValueSnapshot({
-        variableId: binding.variableId,
-        value: toMockLiveValue(
-          binding.variableId,
-          binding.measurement,
-          binding.pointName,
-          binding.field,
-          previousSnapshot?.value,
-        ),
-        source: "backend_db_pull",
-        status: "ok",
-        providerId,
+      Object.values(scenario.pointBindings).forEach((binding) => {
+        const previousSnapshot = currentLiveSnapshots[binding.variableId];
+        const providerId =
+          binding.providerId ||
+          findSensorProviderIdForVariable(project, binding.variableId);
+
+        nextLiveSnapshots[binding.variableId] = createValueSnapshot({
+          variableId: binding.variableId,
+          value: toMockLiveValue(
+            binding.variableId,
+            binding.measurement,
+            binding.pointName,
+            binding.field,
+            previousSnapshot?.value,
+          ),
+          source: "backend_db_pull",
+          status: "ok",
+          providerId,
+        });
       });
-    });
 
-    set(engineeringLiveSnapshotsAtom, nextLiveSnapshots);
+      set(engineeringLiveSnapshotsAtom, nextLiveSnapshots);
+      return;
+    }
+
+    await withEngineeringBackendSessionRetry({
+      baseUrl: backendBaseUrl,
+      project,
+      scenario,
+      currentSession: get(engineeringBackendSessionAtom),
+      onSessionChange: (nextSession) => {
+        set(engineeringBackendSessionAtom, nextSession);
+      },
+      execute: async (session) => {
+        await requestEngineeringBackendJson(
+          backendBaseUrl,
+          "/api/v1/live/refresh",
+          {
+            method: "POST",
+            body: JSON.stringify({
+              sessionId: session.sessionId,
+              scenarioVersion: scenario.revisions.scenarioVersion,
+            }),
+          },
+        );
+
+        const query = new URLSearchParams({
+          sessionId: session.sessionId,
+          scenarioVersion: String(scenario.revisions.scenarioVersion),
+        });
+        const rowsResponse =
+          await requestEngineeringBackendJson<EngineeringBackendLiveRowsResponse>(
+            backendBaseUrl,
+            `/api/v1/live/rows?${query.toString()}`,
+          );
+        set(
+          engineeringLiveSnapshotsAtom,
+          toLiveSnapshotsFromRows(rowsResponse),
+        );
+      },
+    });
   },
 );
 
@@ -426,13 +876,16 @@ export const requestEngineeringCalculationAtom = atom(
     set,
     payload?: {
       requestedAt?: number;
+      triggerMode?: "manual" | "periodic";
     },
   ) => {
+    const project = get(engineeringProjectDocumentAtom);
     const scenario = get(engineeringScenarioDocumentAtom);
     const liveSnapshots = get(engineeringLiveSnapshotsAtom);
     const indicatorFormulaSnapshots = get(engineeringIndicatorFormulaSnapshotsAtom);
+    const triggerMode = payload?.triggerMode ?? "manual";
     const requestPayload = buildCalculationRequestPayload({
-      project: get(engineeringProjectDocumentAtom),
+      project,
       scenario,
       requestedAt: payload?.requestedAt,
     });
@@ -445,45 +898,122 @@ export const requestEngineeringCalculationAtom = atom(
       requestedAt: requestPayload.requestedAt,
       errorMessage: null,
     });
-    const runId = `run:mock:${nextMockRunId++}`;
-    const resultValues: CalculationRun["resultValues"] = {};
-    const appendResultSnapshots = (snapshots: Record<string, ValueSnapshot>) => {
-      Object.entries(snapshots).forEach(([variableId, snapshot]) => {
-        resultValues[variableId] = createValueSnapshot({
-          ...snapshot,
-          variableId,
-          runId,
+    try {
+      const backendBaseUrl = getConfiguredEngineeringBackendBaseUrl();
+
+      if (backendBaseUrl) {
+        const runResponse = await withEngineeringBackendSessionRetry({
+          baseUrl: backendBaseUrl,
+          project,
+          scenario,
+          currentSession: get(engineeringBackendSessionAtom),
+          onSessionChange: (nextSession) => {
+            set(engineeringBackendSessionAtom, nextSession);
+          },
+          execute: async (session) =>
+            requestEngineeringBackendJson<EngineeringBackendRunResponse>(
+              backendBaseUrl,
+              "/api/v1/runs",
+              {
+                method: "POST",
+                body: JSON.stringify({
+                  sessionId: session.sessionId,
+                  scenarioVersion: scenario.revisions.scenarioVersion,
+                  triggerMode,
+                }),
+              },
+            ),
         });
-      });
-    };
 
-    appendResultSnapshots(liveSnapshots);
-    appendResultSnapshots(scenario.manualInputs);
-    appendResultSnapshots(indicatorFormulaSnapshots);
+        const runStatus =
+          runResponse.status === "queued" ||
+          runResponse.status === "running" ||
+          runResponse.status === "success" ||
+          runResponse.status === "failed" ||
+          runResponse.status === "partial"
+            ? runResponse.status
+            : "failed";
+        const run: CalculationRun = {
+          id: runResponse.runId,
+          projectId: requestPayload.projectId,
+          scenarioId: requestPayload.scenarioId,
+          basedOn: {
+            modelVersion: requestPayload.basedOn.modelVersion,
+            scenarioVersion:
+              typeof runResponse.scenarioVersion === "number"
+                ? runResponse.scenarioVersion
+                : requestPayload.basedOn.scenarioVersion,
+          },
+          status: runStatus,
+          startedAt:
+            typeof runResponse.startedAt === "number"
+              ? runResponse.startedAt
+              : requestPayload.requestedAt,
+          finishedAt:
+            typeof runResponse.finishedAt === "number"
+              ? runResponse.finishedAt
+              : now(),
+          resultValues: toRunResultValues(runResponse.resultValues, runResponse.runId),
+          diagnostics: toRunDiagnostics(runResponse.diagnostics),
+        };
 
-    const run: CalculationRun = {
-      id: runId,
-      projectId: requestPayload.projectId,
-      scenarioId: requestPayload.scenarioId,
-      basedOn: {
-        modelVersion: requestPayload.basedOn.modelVersion,
-        scenarioVersion: requestPayload.basedOn.scenarioVersion,
-      },
-      status: "success",
-      startedAt: requestPayload.requestedAt,
-      finishedAt: now(),
-      resultValues,
-      diagnostics: [],
-    };
+        set(upsertEngineeringCalculationRunAtom, run);
+        set(engineeringSelectedCalculationRunIdAtom, run.id);
+        set(engineeringRunRuntimeAtom, (current) => ({
+          ...current,
+          activeRunId: run.id,
+          status: toRunRuntimeStatus(run.status),
+          errorMessage: null,
+        }));
+        return;
+      }
 
-    set(upsertEngineeringCalculationRunAtom, run);
-    set(engineeringSelectedCalculationRunIdAtom, run.id);
-    set(engineeringRunRuntimeAtom, (current) => ({
-      ...current,
-      activeRunId: run.id,
-      status: toRunRuntimeStatus(run.status),
-      errorMessage: null,
-    }));
+      const runId = `run:mock:${nextMockRunId++}`;
+      const resultValues: CalculationRun["resultValues"] = {};
+      const appendResultSnapshots = (snapshots: Record<string, ValueSnapshot>) => {
+        Object.entries(snapshots).forEach(([variableId, snapshot]) => {
+          resultValues[variableId] = createValueSnapshot({
+            ...snapshot,
+            variableId,
+            runId,
+          });
+        });
+      };
+
+      appendResultSnapshots(liveSnapshots);
+      appendResultSnapshots(scenario.manualInputs);
+      appendResultSnapshots(indicatorFormulaSnapshots);
+
+      const run: CalculationRun = {
+        id: runId,
+        projectId: requestPayload.projectId,
+        scenarioId: requestPayload.scenarioId,
+        basedOn: {
+          modelVersion: requestPayload.basedOn.modelVersion,
+          scenarioVersion: requestPayload.basedOn.scenarioVersion,
+        },
+        status: "success",
+        startedAt: requestPayload.requestedAt,
+        finishedAt: now(),
+        resultValues,
+        diagnostics: [],
+      };
+
+      set(upsertEngineeringCalculationRunAtom, run);
+      set(engineeringSelectedCalculationRunIdAtom, run.id);
+      set(engineeringRunRuntimeAtom, (current) => ({
+        ...current,
+        activeRunId: run.id,
+        status: toRunRuntimeStatus(run.status),
+        errorMessage: null,
+      }));
+    } catch (error) {
+      set(engineeringRunRuntimeAtom, (current) => ({
+        ...current,
+        status: "idle",
+        errorMessage: error instanceof Error ? error.message : "Calculation failed",
+      }));
+    }
   },
 );
 
@@ -492,6 +1022,7 @@ export const runEngineeringPeriodicCalculationTickAtom = atom(
   async (_get, set) => {
     await set(requestEngineeringCalculationAtom, {
       requestedAt: now(),
+      triggerMode: "periodic",
     });
   },
 );

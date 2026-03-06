@@ -1,13 +1,13 @@
 import { MIME_TYPES } from "@excalidraw/common";
 
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { getBindableElementAnchorPoints } from "@excalidraw/element";
 import type { ExcalidrawBindableElement } from "@excalidraw/element/types";
 
 import {
   buildLibraryItemsFromComponentSources,
-  mockComponentLibrarySources,
+  fetchComponentLibrarySourcesFromBackend,
 } from "./componentLibrary";
 import type { ComponentLibrarySource } from "./componentLibrary";
 
@@ -18,32 +18,75 @@ const PNG_BYTES = Uint8Array.from([
   73, 69, 78, 68, 174, 66, 96, 130,
 ]);
 
-describe("buildLibraryItemsFromComponentSources()", () => {
-  it("includes all backend component mocks", () => {
-    const source = mockComponentLibrarySources[0];
+type GlobalWithEngineeringBackend = typeof globalThis & {
+  __EXCALIDRAW_ENGINEERING_BACKEND_BASE_URL__?: string;
+};
 
-    expect(source?.sourceName).toBe("西交大素材库");
-    expect(source?.items).toHaveLength(63);
-    expect(
-      source?.items.some(
-        (component) => component.data.component_type === "CoalSource",
-      ),
-    ).toBe(true);
-    expect(
-      source?.items.some(
-        (component) => component.data.component_type === "WaterValve",
-      ),
-    ).toBe(true);
-    expect(
-      source?.items.some(
-        (component) => component.data.component_type === "GasTurbin",
-      ),
-    ).toBe(true);
-    expect(
-      source?.items.every(
-        (component) => component.isEngineeringComponent === true,
-      ),
-    ).toBe(true);
+const mockJsonResponse = (body: unknown, status = 200) =>
+  Promise.resolve(
+    new Response(JSON.stringify(body), {
+      status,
+      headers: {
+        "Content-Type": "application/json",
+      },
+    }),
+  );
+
+describe("buildLibraryItemsFromComponentSources()", () => {
+  afterEach(() => {
+    delete (globalThis as GlobalWithEngineeringBackend)
+      .__EXCALIDRAW_ENGINEERING_BACKEND_BASE_URL__;
+    vi.restoreAllMocks();
+  });
+
+  it("fetches component library sources from backend endpoint", async () => {
+    const fetchMock = vi.fn();
+    (globalThis as GlobalWithEngineeringBackend).__EXCALIDRAW_ENGINEERING_BACKEND_BASE_URL__ =
+      "http://127.0.0.1:8000";
+    fetchMock.mockResolvedValueOnce(
+      await mockJsonResponse({
+        items: [
+          {
+            componentType: "CoalSource",
+            name: "CoalSource",
+            nameCn: "煤/燃料",
+            group: "燃料设备",
+            icon: "/PNG/CoalSource.png",
+            measured: { width: 40, height: 40 },
+            anchors: [],
+            isEngineeringComponent: true,
+          },
+        ],
+        offset: 0,
+        limit: 200,
+        total: 1,
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const sources = await fetchComponentLibrarySourcesFromBackend();
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://127.0.0.1:8000/api/v1/library/components?offset=0&limit=200",
+      expect.any(Object),
+    );
+    expect(sources).toHaveLength(1);
+    expect(sources[0]).toEqual(
+      expect.objectContaining({
+        sourceId: "engineering-backend",
+        sourceName: "工程素材库",
+      }),
+    );
+    expect(sources[0].items[0]).toEqual(
+      expect.objectContaining({
+        isEngineeringComponent: true,
+        group: "燃料设备",
+        data: expect.objectContaining({
+          component_type: "CoalSource",
+          name_cn: "煤/燃料",
+        }),
+      }),
+    );
   });
 
   it("maps component source data into grouped image library items", async () => {

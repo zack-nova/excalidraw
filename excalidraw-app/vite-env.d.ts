@@ -7,6 +7,8 @@ interface ImportMetaEnv {
 
   VITE_APP_BACKEND_V2_GET_URL: string;
   VITE_APP_BACKEND_V2_POST_URL: string;
+  VITE_APP_ENGINEERING_BACKEND_URL: string;
+  VITE_APP_ENGINEERING_BACKEND_BASE_URL: string;
 
   // collaboration WebSocket server (https: string
   VITE_APP_WS_SERVER_URL: string;

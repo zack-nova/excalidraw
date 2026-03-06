@@ -125,8 +125,7 @@ import {
   subscribeEngineeringData,
 } from "./data/engineeringData";
 import {
-  buildLibraryItemsFromComponentSources,
-  mockComponentLibrarySources,
+  loadEngineeringLibraryItems,
 } from "./data/componentLibrary";
 
 import { updateStaleImageStatuses } from "./data/FileManager";
@@ -252,9 +251,7 @@ const initializeScene = async (opts: {
     | { isExternalScene: false; id?: null; key?: null }
   )
 > => {
-  const mockLibraryItemsPromise = buildLibraryItemsFromComponentSources(
-    mockComponentLibrarySources,
-  );
+  const libraryItemsPromise = loadEngineeringLibraryItems();
 
   const searchParams = new URLSearchParams(window.location.search);
   const id = searchParams.get("id");
@@ -348,7 +345,7 @@ const initializeScene = async (opts: {
         return {
           scene: {
             ...data,
-            libraryItems: mockLibraryItemsPromise,
+            libraryItems: libraryItemsPromise,
           },
           isExternalScene,
         };
@@ -359,7 +356,7 @@ const initializeScene = async (opts: {
           appState: {
             errorMessage: t("alerts.invalidSceneUrl"),
           },
-          libraryItems: mockLibraryItemsPromise,
+          libraryItems: libraryItemsPromise,
         },
         isExternalScene,
       };
@@ -377,7 +374,7 @@ const initializeScene = async (opts: {
       // elements and appState with existing state
       scene: {
         ...scene,
-        libraryItems: mockLibraryItemsPromise,
+        libraryItems: libraryItemsPromise,
         appState: {
           ...restoreAppState(
             {
@@ -405,7 +402,7 @@ const initializeScene = async (opts: {
       ? {
           scene: {
             ...scene,
-            libraryItems: mockLibraryItemsPromise,
+            libraryItems: libraryItemsPromise,
           },
           isExternalScene,
           id: jsonBackendMatch[1],
@@ -414,7 +411,7 @@ const initializeScene = async (opts: {
       : {
           scene: {
             ...scene,
-            libraryItems: mockLibraryItemsPromise,
+            libraryItems: libraryItemsPromise,
           },
           isExternalScene: false,
         };
