@@ -2,7 +2,7 @@ import React from "react";
 
 import { KEYS } from "@excalidraw/common";
 
-import { Excalidraw } from "../../index";
+import { Excalidraw, MainMenu } from "../../index";
 import { Keyboard } from "../../tests/helpers/ui";
 import {
   render,
@@ -36,6 +36,31 @@ describe("Test <DropdownMenu/>", () => {
         "data-align",
         "end",
       );
+    });
+  });
+
+  it("opens the preferences submenu to the left when main menu is on the right", async () => {
+    const { container } = await render(
+      <Excalidraw>
+        <MainMenu>
+          <MainMenu.DefaultItems.Preferences />
+        </MainMenu>
+      </Excalidraw>,
+    );
+
+    fireEvent.click(getByTestId(container, "main-menu-trigger"));
+    const preferencesTrigger = container.querySelector(
+      ".dropdown-menu__submenu-trigger",
+    );
+    if (!preferencesTrigger) {
+      throw new Error("Preferences submenu trigger was not found");
+    }
+    fireEvent.click(preferencesTrigger);
+
+    await waitFor(() => {
+      expect(
+        container.querySelector(".excalidraw-main-menu-preferences-submenu"),
+      ).toHaveAttribute("data-side", "left");
     });
   });
 });

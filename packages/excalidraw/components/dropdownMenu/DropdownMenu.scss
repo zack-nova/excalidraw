@@ -9,6 +9,11 @@
       margin-bottom: 0.5rem;
     }
 
+    &.main-menu,
+    &.excalidraw-main-menu-preferences-submenu {
+      direction: ltr;
+    }
+
     &__submenu-trigger {
       &[aria-expanded="true"] {
         .dropdown-menu-item {

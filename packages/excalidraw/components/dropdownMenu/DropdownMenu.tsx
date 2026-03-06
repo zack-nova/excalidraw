@@ -23,9 +23,11 @@ import "./DropdownMenu.scss";
 const DropdownMenu = ({
   children,
   open,
+  dir = "ltr",
 }: {
   children?: React.ReactNode;
   open: boolean;
+  dir?: "ltr" | "rtl";
 }) => {
   const MenuTriggerComp = getMenuTriggerComponent(children);
   const MenuContentComp = getMenuContentComponent(children);
@@ -40,7 +42,7 @@ const DropdownMenu = ({
       : MenuContentComp;
 
   return (
-    <DropdownMenuPrimitive.Root open={open} modal={false}>
+    <DropdownMenuPrimitive.Root open={open} modal={false} dir={dir}>
       <div
         className={CLASSES.DROPDOWN_MENU_EVENT_WRAPPER}
         style={{
