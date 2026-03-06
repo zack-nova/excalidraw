@@ -61,6 +61,11 @@
   color: inherit;
 }
 
+.engineering-structure-tree__item--anchor {
+  padding-left: 1.5rem;
+  font-size: 0.875rem;
+}
+
 .engineering-structure-tree__item:hover {
   background: var(--button-gray-1);
 }

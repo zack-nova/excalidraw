@@ -794,7 +794,7 @@ export const ensureInterfaceSpecLoadedAtom = atom(
     const state = get(interfaceSpecCatalogAtom);
     const status = state.loadStatusByMaterialType[materialTypeKey];
 
-    if (status === "ready" || status === "loading") {
+    if (status === "ready" || status === "loading" || status === "error") {
       return;
     }
 

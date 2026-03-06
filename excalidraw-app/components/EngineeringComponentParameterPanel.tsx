@@ -1,9 +1,9 @@
-import { getSelectedElements } from "@excalidraw/element";
+import { getSelectedElements, isArrowElement } from "@excalidraw/element";
 import {
   useExcalidrawAppState,
   useExcalidrawElements,
 } from "@excalidraw/excalidraw/components/App";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { useAtomValue, useSetAtom } from "../app-jotai";
 import {
@@ -55,12 +55,17 @@ type SelectedComponentAnchor = {
   id: string;
   name: string;
   materialType: string | null;
+  position: {
+    x: number;
+    y: number;
+  } | null;
 };
 
 type SelectedComponentContext = {
   elementId: string;
   componentType: string;
   anchors: SelectedComponentAnchor[];
+  focusedAnchorIndex: number | null;
 };
 
 type IndexedParameter = {
@@ -94,28 +99,54 @@ const getAnchorFromRecord = (
       anchorId,
     ) || `Anchor ${index + 1}`;
   const materialType = getFirstNonEmptyString(anchorData.material_type);
+  const anchorPosition =
+    isRecord(anchorValue.position) &&
+    typeof anchorValue.position.x === "number" &&
+    typeof anchorValue.position.y === "number"
+      ? {
+          x: anchorValue.position.x,
+          y: anchorValue.position.y,
+        }
+      : null;
 
   return {
     id: anchorId,
     name: anchorName,
     materialType,
+    position: anchorPosition,
   };
 };
 
-const getSelectedComponentContext = (
-  elements: readonly ReturnType<typeof useExcalidrawElements>[number][],
-  appState: ReturnType<typeof useExcalidrawAppState>,
-): SelectedComponentContext | null => {
-  const selectedElements = getSelectedElements(elements, appState, {
-    includeBoundTextElement: false,
-    includeElementsInFrames: false,
+const getClosestAnchorIndexForFixedPoint = (
+  anchors: SelectedComponentAnchor[],
+  fixedPoint: readonly [number, number],
+) => {
+  let closestIndex: number | null = null;
+  let closestDistanceSq = Infinity;
+
+  anchors.forEach((anchor, index) => {
+    if (!anchor.position) {
+      return;
+    }
+
+    const dx = anchor.position.x - fixedPoint[0];
+    const dy = anchor.position.y - fixedPoint[1];
+    const distanceSq = dx * dx + dy * dy;
+
+    if (distanceSq < closestDistanceSq) {
+      closestDistanceSq = distanceSq;
+      closestIndex = index;
+    }
   });
 
-  if (selectedElements.length !== 1) {
-    return null;
-  }
+  return closestIndex;
+};
 
-  const component = selectedElements[0].customData?.component;
+const getSelectedComponentContextFromElement = (
+  element: ReturnType<typeof useExcalidrawElements>[number],
+  focusedAnchorIndex: number | null,
+): SelectedComponentContext | null => {
+  const component = element.customData?.component;
 
   if (!isRecord(component)) {
     return null;
@@ -139,11 +170,122 @@ const getSelectedComponentContext = (
         .filter((anchor): anchor is SelectedComponentAnchor => !!anchor)
     : [];
 
+  const normalizedFocusedAnchorIndex =
+    typeof focusedAnchorIndex === "number" &&
+    focusedAnchorIndex >= 0 &&
+    focusedAnchorIndex < anchors.length
+      ? focusedAnchorIndex
+      : null;
+
   return {
-    elementId: selectedElements[0].id,
+    elementId: element.id,
     componentType,
     anchors,
+    focusedAnchorIndex: normalizedFocusedAnchorIndex,
   };
+};
+
+const getSelectedComponentContextFromArrowEndpoint = (
+  selectedElement: ReturnType<typeof useExcalidrawElements>[number],
+  elements: readonly ReturnType<typeof useExcalidrawElements>[number][],
+  appState: ReturnType<typeof useExcalidrawAppState>,
+): SelectedComponentContext | null => {
+  if (!isArrowElement(selectedElement)) {
+    return null;
+  }
+
+  const selectedPointsIndices = appState.selectedLinearElement?.selectedPointsIndices;
+  if (!selectedPointsIndices || selectedPointsIndices.length === 0) {
+    return null;
+  }
+
+  const endpointBindings: Array<{
+    elementId: string;
+    fixedPoint: readonly [number, number];
+  }> = [];
+
+  if (
+    selectedPointsIndices.includes(0) &&
+    selectedElement.startBinding &&
+    Array.isArray(selectedElement.startBinding.fixedPoint)
+  ) {
+    endpointBindings.push({
+      elementId: selectedElement.startBinding.elementId,
+      fixedPoint: selectedElement.startBinding.fixedPoint as readonly [number, number],
+    });
+  }
+
+  const lastPointIndex = selectedElement.points.length - 1;
+  if (
+    selectedPointsIndices.includes(lastPointIndex) &&
+    selectedElement.endBinding &&
+    Array.isArray(selectedElement.endBinding.fixedPoint)
+  ) {
+    endpointBindings.push({
+      elementId: selectedElement.endBinding.elementId,
+      fixedPoint: selectedElement.endBinding.fixedPoint as readonly [number, number],
+    });
+  }
+
+  for (const endpointBinding of endpointBindings) {
+    const boundElement = elements.find(
+      (element) => element.id === endpointBinding.elementId,
+    );
+    if (!boundElement) {
+      continue;
+    }
+
+    const boundContext = getSelectedComponentContextFromElement(boundElement, null);
+    if (!boundContext || boundContext.anchors.length === 0) {
+      continue;
+    }
+
+    const focusedAnchorIndex = getClosestAnchorIndexForFixedPoint(
+      boundContext.anchors,
+      endpointBinding.fixedPoint,
+    );
+
+    if (focusedAnchorIndex === null) {
+      continue;
+    }
+
+    return {
+      ...boundContext,
+      focusedAnchorIndex,
+    };
+  }
+
+  return null;
+};
+
+const getSelectedComponentContext = (
+  elements: readonly ReturnType<typeof useExcalidrawElements>[number][],
+  appState: ReturnType<typeof useExcalidrawAppState>,
+): SelectedComponentContext | null => {
+  const selectedElements = getSelectedElements(elements, appState, {
+    includeBoundTextElement: false,
+    includeElementsInFrames: false,
+  });
+
+  if (selectedElements.length !== 1) {
+    return null;
+  }
+
+  const selectedElement = selectedElements[0];
+  const directContext = getSelectedComponentContextFromElement(
+    selectedElement,
+    appState.selectedAnchorPointIndex,
+  );
+
+  if (directContext) {
+    return directContext;
+  }
+
+  return getSelectedComponentContextFromArrowEndpoint(
+    selectedElement,
+    elements,
+    appState,
+  );
 };
 
 const DEFAULT_PARAMETER_GROUP_NAME = "未分组";
@@ -751,6 +893,29 @@ export const EngineeringComponentParameterPanel = ({
     selectedComponentElementId,
   );
   const selectedComponentAnchors = selectedComponent?.anchors || [];
+  const focusedAnchorIndex = selectedComponent?.focusedAnchorIndex ?? null;
+  const anchorMaterialTypeKeys = useMemo(() => {
+    if (section !== "anchors") {
+      return [] as string[];
+    }
+
+    const materialTypeKeys = new Set<string>();
+
+    selectedComponentAnchors.forEach((anchor) => {
+      if (!anchor.materialType) {
+        return;
+      }
+      materialTypeKeys.add(getInterfaceMaterialTypeKey(anchor.materialType));
+    });
+
+    return Array.from(materialTypeKeys).filter(Boolean).sort();
+  }, [section, selectedComponentAnchors]);
+  const focusedAnchorId =
+    focusedAnchorIndex !== null &&
+    focusedAnchorIndex >= 0 &&
+    focusedAnchorIndex < selectedComponentAnchors.length
+      ? selectedComponentAnchors[focusedAnchorIndex]?.id || null
+      : null;
   const status = componentType
     ? specCatalog.loadStatusByType[componentType]
     : undefined;
@@ -785,26 +950,22 @@ export const EngineeringComponentParameterPanel = ({
   }, [componentType, ensureComponentSpecLoaded]);
 
   useEffect(() => {
-    if (section !== "anchors") {
+    if (section !== "anchors" || anchorMaterialTypeKeys.length === 0) {
       return;
     }
 
-    const materialTypeKeys = new Set<string>();
-
-    selectedComponentAnchors.forEach((anchor) => {
-      if (!anchor.materialType) {
-        return;
-      }
-      materialTypeKeys.add(getInterfaceMaterialTypeKey(anchor.materialType));
-    });
-
-    materialTypeKeys.forEach((materialTypeKey) => {
-      if (!materialTypeKey) {
+    anchorMaterialTypeKeys.forEach((materialTypeKey) => {
+      if (interfaceCatalog.loadStatusByMaterialType[materialTypeKey]) {
         return;
       }
       void ensureInterfaceSpecLoaded(materialTypeKey);
     });
-  }, [ensureInterfaceSpecLoaded, section, selectedComponentAnchors]);
+  }, [
+    anchorMaterialTypeKeys,
+    ensureInterfaceSpecLoaded,
+    interfaceCatalog.loadStatusByMaterialType,
+    section,
+  ]);
 
   useEffect(() => {
     if (!componentType || status !== "ready" || !componentSpec) {
@@ -862,6 +1023,12 @@ export const EngineeringComponentParameterPanel = ({
       });
       return sections;
     }, []);
+  const visibleAnchorOutputSections =
+    section === "anchors" && focusedAnchorId
+      ? anchorOutputSections.filter(
+          (anchorSection) => anchorSection.anchorId === focusedAnchorId,
+        )
+      : anchorOutputSections;
 
   let curveSummary: string | null = null;
   if (componentType && curveTarget) {
@@ -1002,7 +1169,7 @@ export const EngineeringComponentParameterPanel = ({
       ) : section === "output" ? (
         <OutputParameterRows parameters={componentSpec.outputParameters} />
       ) : (
-        <AnchorParameterRows anchorSections={anchorOutputSections} />
+        <AnchorParameterRows anchorSections={visibleAnchorOutputSections} />
       )}
       {section === "input" && bindingTarget ? (
         <div className="selected-shape-actions-card engineering-parameter-panel__drawer">

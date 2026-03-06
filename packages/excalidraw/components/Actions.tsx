@@ -250,6 +250,154 @@ const getComponentAnchors = (
   return anchors.filter(isRecord) as ComponentAnchorMetadata[];
 };
 
+const getClosestAnchorIndexForFixedPoint = (
+  anchors: ComponentAnchorMetadata[],
+  fixedPoint: readonly [number, number],
+) => {
+  let closestIndex: number | null = null;
+  let closestDistanceSq = Infinity;
+
+  anchors.forEach((anchor, index) => {
+    const x = anchor.position?.x;
+    const y = anchor.position?.y;
+
+    if (typeof x !== "number" || typeof y !== "number") {
+      return;
+    }
+
+    const dx = x - fixedPoint[0];
+    const dy = y - fixedPoint[1];
+    const distanceSq = dx * dx + dy * dy;
+
+    if (distanceSq < closestDistanceSq) {
+      closestDistanceSq = distanceSq;
+      closestIndex = index;
+    }
+  });
+
+  return closestIndex;
+};
+
+const getAnchorFocusFromArrowEndpointSelection = ({
+  targetElements,
+  appState,
+  elementsMap,
+}: {
+  targetElements: ExcalidrawElement[];
+  appState: UIAppState;
+  elementsMap: NonDeletedElementsMap | NonDeletedSceneElementsMap;
+}) => {
+  if (targetElements.length !== 1 || !isArrowElement(targetElements[0])) {
+    return null;
+  }
+
+  const arrow = targetElements[0];
+  const selectedPointsIndices = appState.selectedLinearElement?.selectedPointsIndices;
+
+  if (!selectedPointsIndices || selectedPointsIndices.length === 0) {
+    return null;
+  }
+
+  const endpointBindings: Array<{
+    elementId: string;
+    fixedPoint: readonly [number, number];
+  }> = [];
+
+  if (
+    selectedPointsIndices.includes(0) &&
+    arrow.startBinding &&
+    Array.isArray(arrow.startBinding.fixedPoint)
+  ) {
+    endpointBindings.push({
+      elementId: arrow.startBinding.elementId,
+      fixedPoint: arrow.startBinding.fixedPoint as readonly [number, number],
+    });
+  }
+
+  const lastPointIndex = arrow.points.length - 1;
+  if (
+    selectedPointsIndices.includes(lastPointIndex) &&
+    arrow.endBinding &&
+    Array.isArray(arrow.endBinding.fixedPoint)
+  ) {
+    endpointBindings.push({
+      elementId: arrow.endBinding.elementId,
+      fixedPoint: arrow.endBinding.fixedPoint as readonly [number, number],
+    });
+  }
+
+  for (const endpointBinding of endpointBindings) {
+    const boundElement = elementsMap.get(endpointBinding.elementId);
+    if (!boundElement || boundElement.isDeleted) {
+      continue;
+    }
+
+    const component = boundElement.customData?.component;
+    if (!isRecord(component)) {
+      continue;
+    }
+
+    const componentData = isRecord(component.data) ? component.data : null;
+    const anchorsRaw = componentData?.anchors;
+    if (!Array.isArray(anchorsRaw)) {
+      continue;
+    }
+
+    const anchors = anchorsRaw.filter(isRecord) as ComponentAnchorMetadata[];
+    if (anchors.length === 0) {
+      continue;
+    }
+
+    const anchorIndex = getClosestAnchorIndexForFixedPoint(
+      anchors,
+      endpointBinding.fixedPoint,
+    );
+    if (anchorIndex === null) {
+      continue;
+    }
+
+    return {
+      elementId: boundElement.id,
+      anchorIndex,
+    };
+  }
+
+  return null;
+};
+
+const getAnchorFocusSelection = ({
+  targetElements,
+  appState,
+  elementsMap,
+  componentAnchors,
+}: {
+  targetElements: ExcalidrawElement[];
+  appState: UIAppState;
+  elementsMap: NonDeletedElementsMap | NonDeletedSceneElementsMap;
+  componentAnchors: ComponentAnchorMetadata[];
+}) => {
+  const selectedElementWithComponent =
+    getSelectedElementWithComponent(targetElements);
+
+  if (
+    selectedElementWithComponent &&
+    typeof appState.selectedAnchorPointIndex === "number" &&
+    appState.selectedAnchorPointIndex >= 0 &&
+    appState.selectedAnchorPointIndex < componentAnchors.length
+  ) {
+    return {
+      elementId: selectedElementWithComponent.element.id,
+      anchorIndex: appState.selectedAnchorPointIndex,
+    };
+  }
+
+  return getAnchorFocusFromArrowEndpointSelection({
+    targetElements,
+    appState,
+    elementsMap,
+  });
+};
+
 const getAnchorConnectionType = (anchor: ComponentAnchorMetadata) =>
   getFirstNonEmptyString(anchor.data?.connection_type)?.toLowerCase() || null;
 
@@ -661,12 +809,18 @@ export const SelectedShapeActions = ({
     useState<PropertiesSectionTab>(
       layout === "data-tabs" ? lastSelectedShapeActionsDataTab : "properties",
     );
-  const renderedInputPanel = renderPanel?.("input", appState);
-  const renderedOutputPanel = renderPanel?.("output", appState);
-  const renderedAnchorsPanel = renderPanel?.("anchors", appState);
-  const renderedDataPanel = renderPanel?.("data", appState);
-  const renderedPlaceholderPanel = renderPanel?.("placeholder", appState);
-  const renderedPropertiesPanel = renderPanel?.("properties", appState);
+  const getRenderedPanel = (panel: PropertiesSectionTab) =>
+    activeTab === panel ? renderPanel?.(panel, appState) : null;
+  const anchorFocusSelection = getAnchorFocusSelection({
+    targetElements,
+    appState,
+    elementsMap,
+    componentAnchors,
+  });
+  const anchorFocusKey = anchorFocusSelection
+    ? `${anchorFocusSelection.elementId}:${anchorFocusSelection.anchorIndex}`
+    : null;
+  const lastAutoAnchorsTabFocusKeyRef = useRef<string | null>(null);
   const tabs: Array<{
     value: PropertiesSectionTab;
     label: string;
@@ -708,6 +862,26 @@ export const SelectedShapeActions = ({
     }
     setActiveTab("properties");
   }, [layout, tabsResetKey]);
+
+  useEffect(() => {
+    if (layout !== "data-tabs") {
+      lastAutoAnchorsTabFocusKeyRef.current = null;
+      return;
+    }
+
+    if (!anchorFocusKey) {
+      lastAutoAnchorsTabFocusKeyRef.current = null;
+      return;
+    }
+
+    if (lastAutoAnchorsTabFocusKeyRef.current === anchorFocusKey) {
+      return;
+    }
+
+    lastAutoAnchorsTabFocusKeyRef.current = anchorFocusKey;
+    setActiveTab("anchors");
+    lastSelectedShapeActionsDataTab = "anchors";
+  }, [anchorFocusKey, layout]);
 
   if (layout === "properties-only") {
     return (
@@ -760,7 +934,7 @@ export const SelectedShapeActions = ({
         role="tabpanel"
         tabIndex={0}
       >
-        {renderedInputPanel ?? (
+        {getRenderedPanel("input") ?? (
           <ShapeActionsInspectorPanel
             emptyMessage={t("labels.propertiesTabs.emptyInput")}
             items={inputItems}
@@ -776,7 +950,7 @@ export const SelectedShapeActions = ({
         role="tabpanel"
         tabIndex={0}
       >
-        {renderedOutputPanel ?? (
+        {getRenderedPanel("output") ?? (
           <ShapeActionsInspectorPanel
             emptyMessage={t("labels.propertiesTabs.emptyOutput")}
             items={outputItems}
@@ -792,7 +966,7 @@ export const SelectedShapeActions = ({
         role="tabpanel"
         tabIndex={0}
       >
-        {renderedAnchorsPanel ?? (
+        {getRenderedPanel("anchors") ?? (
           <ShapeActionsInspectorPanel
             emptyMessage={t("labels.propertiesTabs.emptyAnchors")}
             items={anchorItems}
@@ -808,7 +982,7 @@ export const SelectedShapeActions = ({
         role="tabpanel"
         tabIndex={0}
       >
-        {renderedDataPanel ?? (
+        {getRenderedPanel("data") ?? (
           <ShapeActionsDataPanel
             componentName={componentName}
             dataEntries={dataEntries}
@@ -825,7 +999,7 @@ export const SelectedShapeActions = ({
         role="tabpanel"
         tabIndex={0}
       >
-        {renderedPlaceholderPanel ?? (
+        {getRenderedPanel("placeholder") ?? (
           <div className="selected-shape-actions-data-card">
             <div className="selected-shape-actions-placeholder">
               {t("labels.propertiesTabs.emptyPlaceholder")}
@@ -842,7 +1016,7 @@ export const SelectedShapeActions = ({
         role="tabpanel"
         tabIndex={0}
       >
-        {renderedPropertiesPanel ?? (
+        {getRenderedPanel("properties") ?? (
           <SelectedShapeActionsPropertiesPanel
             app={app}
             appState={appState}

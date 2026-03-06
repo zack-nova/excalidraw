@@ -5,6 +5,7 @@ import {
   useExcalidrawElements,
   useExcalidrawSetAppState,
 } from "@excalidraw/excalidraw/components/App";
+import type { ReactElement } from "react";
 
 import { useAtomValue } from "../app-jotai";
 import type { ProjectDocument, RuntimeProjection } from "../engineering-domain";
@@ -14,10 +15,21 @@ import {
   engineeringProjectDocumentAtom,
   engineeringRuntimeProjectionAtom,
 } from "../engineering-domain-state";
+import { engineeringWorkspaceModeAtom } from "../engineering-ui-state";
 
 import "./EngineeringStructureTreePanel.scss";
 
 type StructureTreeItem = EngineeringStructureTree["components"][number];
+type StructureTreeAnchorItem = {
+  entityId: string;
+  label: string;
+  detail?: string;
+  anchorIndex: number;
+  elementIds: string[];
+};
+type ComponentStructureTreeItem = StructureTreeItem & {
+  anchors: StructureTreeAnchorItem[];
+};
 
 const normalizeLookupKey = (value: string) => value.trim().toLowerCase();
 const COMPONENT_NAME_LOOKUP_KEY = "name";
@@ -91,12 +103,14 @@ const StructureTreeSection = ({
   testId,
   onSelect,
   selectedElementIds,
+  renderChildren,
 }: {
   title: string;
   items: StructureTreeItem[];
   testId: string;
   onSelect: (item: StructureTreeItem) => void;
   selectedElementIds: Readonly<Record<string, true>>;
+  renderChildren?: (item: StructureTreeItem, isSelected: boolean) => ReactElement | null;
 }) => (
   <section className="engineering-structure-tree__section">
     <h4 className="engineering-structure-tree__section-title">
@@ -127,6 +141,7 @@ const StructureTreeSection = ({
                   </span>
                 ) : null}
               </button>
+              {renderChildren ? renderChildren(item, isSelected) : null}
             </li>
           );
         })
@@ -145,18 +160,39 @@ export const EngineeringStructureTreePanel = () => {
   const structureTree = useAtomValue(engineeringStructureTreeAtom);
   const project = useAtomValue(engineeringProjectDocumentAtom);
   const runtimeProjection = useAtomValue(engineeringRuntimeProjectionAtom);
+  const workspaceMode = useAtomValue(engineeringWorkspaceModeAtom);
   const componentNameVariableIdByComponentId =
     buildComponentNameVariableIdByComponentId(structureTree, project);
-  const components = structureTree.components.map((component) => ({
-    ...component,
-    label: toResolvedComponentLabel({
-      componentId: component.entityId,
-      fallbackLabel: component.label,
-      project,
-      runtimeProjection,
-      componentNameVariableIdByComponentId,
-    }),
-  }));
+  const components: ComponentStructureTreeItem[] = structureTree.components.map(
+    (component) => {
+      const topologyComponent = project.topology.componentsById[component.entityId];
+      const anchors: StructureTreeAnchorItem[] = (
+        topologyComponent?.anchorIds || []
+      ).map((anchorId, anchorIndex) => {
+        const anchorEntity = project.topology.anchorsById[anchorId];
+
+        return {
+          entityId: anchorId,
+          label: anchorEntity?.name || anchorEntity?.key || anchorId,
+          detail: anchorEntity?.medium || anchorEntity?.direction,
+          anchorIndex,
+          elementIds: component.elementIds,
+        };
+      });
+
+      return {
+        ...component,
+        label: toResolvedComponentLabel({
+          componentId: component.entityId,
+          fallbackLabel: component.label,
+          project,
+          runtimeProjection,
+          componentNameVariableIdByComponentId,
+        }),
+        anchors,
+      };
+    },
+  );
   const pipes = structureTree.pipes.map((pipe) => {
     const topologyPipe = project.topology.pipesById[pipe.entityId];
     if (!topologyPipe) {
@@ -196,33 +232,93 @@ export const EngineeringStructureTreePanel = () => {
     };
   });
 
-  const handleSelect = (item: StructureTreeItem) => {
-    const selectedElements = item.elementIds
+  const getSelectedElementsForTreeItem = (item: StructureTreeItem) =>
+    item.elementIds
       .map((elementId) => elements.find((element) => element.id === elementId))
       .filter((element): element is (typeof elements)[number] => !!element);
+
+  const handleSelect = (item: StructureTreeItem, anchorIndex: number | null) => {
+    const selectedElements = getSelectedElementsForTreeItem(item);
 
     if (selectedElements.length === 0) {
       return;
     }
 
-    setAppState(
-      selectGroupsForSelectedElements(
-        {
-          editingGroupId: appState.editingGroupId,
-          selectedElementIds: selectedElements.reduce(
-            (acc, element) => {
-              acc[element.id] = true;
-              return acc;
-            },
-            {} as Record<string, true>,
-          ),
-        },
-        elements,
-        appState,
-        app,
-      ),
+    const nextSelectionState = selectGroupsForSelectedElements(
+      {
+        editingGroupId: appState.editingGroupId,
+        selectedElementIds: selectedElements.reduce(
+          (acc, element) => {
+            acc[element.id] = true;
+            return acc;
+          },
+          {} as Record<string, true>,
+        ),
+      },
+      elements,
+      appState,
+      app,
     );
+
+    setAppState({
+      ...nextSelectionState,
+      selectedAnchorPointIndex:
+        workspaceMode === "data" && typeof anchorIndex === "number"
+          ? anchorIndex
+          : null,
+      draggedAnchorPointIndex: null,
+    });
     app.scrollToContent(selectedElements, { animate: true });
+  };
+
+  const handleSelectNode = (item: StructureTreeItem) => {
+    handleSelect(item, null);
+  };
+
+  const handleSelectAnchorNode = (
+    component: ComponentStructureTreeItem,
+    anchor: StructureTreeAnchorItem,
+  ) => {
+    handleSelect(component, anchor.anchorIndex);
+  };
+
+  const renderComponentAnchors = (
+    item: StructureTreeItem,
+    isComponentSelected: boolean,
+  ) => {
+    const componentItem = item as ComponentStructureTreeItem;
+    if (!componentItem.anchors.length) {
+      return null;
+    }
+
+    return (
+      <ol className="engineering-structure-tree__list">
+        {componentItem.anchors.map((anchor) => {
+          const isSelected =
+            isComponentSelected && appState.selectedAnchorPointIndex === anchor.anchorIndex;
+
+          return (
+            <li key={anchor.entityId}>
+              <button
+                type="button"
+                className="engineering-structure-tree__item engineering-structure-tree__item--anchor"
+                data-selected={isSelected ? "true" : "false"}
+                data-testid={`engineering-structure-node-${anchor.entityId}`}
+                onClick={() => handleSelectAnchorNode(componentItem, anchor)}
+              >
+                <span>{anchor.label}</span>
+                {anchor.detail ? (
+                  <span className="engineering-structure-tree__detail">
+                    {" "}
+                    {anchor.detail}
+                  </span>
+                ) : null}
+              </button>
+            </li>
+          );
+        })}
+      </ol>
+    );
   };
 
   return (
@@ -240,14 +336,15 @@ export const EngineeringStructureTreePanel = () => {
         title="组件"
         items={components}
         testId="engineering-structure-components"
-        onSelect={handleSelect}
+        onSelect={handleSelectNode}
         selectedElementIds={appState.selectedElementIds}
+        renderChildren={renderComponentAnchors}
       />
       <StructureTreeSection
         title="管段"
         items={pipes}
         testId="engineering-structure-pipes"
-        onSelect={handleSelect}
+        onSelect={handleSelectNode}
         selectedElementIds={appState.selectedElementIds}
       />
     </div>
