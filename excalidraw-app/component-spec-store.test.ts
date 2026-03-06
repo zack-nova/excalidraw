@@ -234,4 +234,36 @@ describe("component spec store", () => {
       expect.any(Object),
     );
   });
+
+  it("loads minimal local mocks in test mode when backend url is not configured", async () => {
+    const store = createStore();
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    await store.set(ensureComponentSpecManifestLoadedAtom);
+    await store.set(ensureComponentSpecLoadedAtom, "Boiler");
+    await store.set(ensureComponentCurveDataLoadedAtom, "Boiler");
+    await store.set(ensureInterfaceSpecLoadedAtom, "water");
+
+    const manifest = store.get(componentSpecManifestAtom);
+    const specState = store.get(componentSpecCatalogAtom);
+    const curveState = store.get(componentCurveCatalogAtom);
+    const interfaceState = store.get(interfaceSpecCatalogAtom);
+    const waterKey = getInterfaceMaterialTypeKey("water");
+
+    expect(manifest).toContainEqual(
+      expect.objectContaining({
+        componentType: "Boiler",
+      }),
+    );
+    expect(specState.loadStatusByType.Boiler).toBe("ready");
+    expect(specState.specsByType.Boiler.componentType).toBe("Boiler");
+    expect(curveState.loadStatusByType.Boiler).toBe("ready");
+    expect(
+      Object.keys(curveState.curvesByType.Boiler.curvesByParameterId).length,
+    ).toBeGreaterThan(0);
+    expect(interfaceState.loadStatusByMaterialType[waterKey]).toBe("ready");
+    expect(interfaceState.specsByMaterialType[waterKey].materialType).toBe("water");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
 });

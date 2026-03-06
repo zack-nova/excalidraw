@@ -315,15 +315,36 @@ const buildSearchKeywords = (
     ]),
   ].filter((value): value is string => !!value);
 
+const ABSOLUTE_URL_PATTERN = /^[a-zA-Z][a-zA-Z\d+\-.]*:|^\/\//;
+
+const resolveComponentLibraryAssetUrl = (assetPath: string) => {
+  const trimmedAssetPath = assetPath.trim();
+  if (!trimmedAssetPath) {
+    return trimmedAssetPath;
+  }
+  if (ABSOLUTE_URL_PATTERN.test(trimmedAssetPath)) {
+    return trimmedAssetPath;
+  }
+
+  const baseUrl = getConfiguredEngineeringBackendBaseUrl();
+  if (baseUrl && trimmedAssetPath.startsWith("/PNG/")) {
+    return `${baseUrl}${trimmedAssetPath}`;
+  }
+
+  return trimmedAssetPath;
+};
+
 const loadComponentLibraryAsset = async (assetPath: string) => {
-  const response = await fetch(assetPath);
+  const resolvedAssetUrl = resolveComponentLibraryAssetUrl(assetPath);
+  const response = await fetch(resolvedAssetUrl);
 
   if (!response.ok) {
-    throw new Error(`Failed to fetch component asset: ${assetPath}`);
+    throw new Error(`Failed to fetch component asset: ${resolvedAssetUrl}`);
   }
 
   const blob = await response.blob();
-  const filename = assetPath.split("/").at(-1) || "component.png";
+  const sanitizedAssetUrl = resolvedAssetUrl.split("?")[0].split("#")[0];
+  const filename = sanitizedAssetUrl.split("/").at(-1) || "component.png";
 
   return new File([blob], filename, {
     type: blob.type || getMimeType(assetPath) || MIME_TYPES.binary,

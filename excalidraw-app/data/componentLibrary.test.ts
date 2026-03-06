@@ -89,6 +89,59 @@ describe("buildLibraryItemsFromComponentSources()", () => {
     );
   });
 
+  it("loads /PNG assets from backend base url when configured", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(
+        new Response(PNG_BYTES, {
+          status: 200,
+          headers: {
+            "Content-Type": "image/png",
+          },
+        }),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+    (globalThis as GlobalWithEngineeringBackend).__EXCALIDRAW_ENGINEERING_BACKEND_BASE_URL__ =
+      "http://127.0.0.1:8000";
+
+    const sources: ComponentLibrarySource[] = [
+      {
+        sourceId: "engineering-backend",
+        sourceName: "工程素材库",
+        sourceKind: "public",
+        items: [
+          {
+            uuid: null,
+            id: null,
+            type: "component",
+            position: null,
+            measured: { width: 40, height: 40 },
+            style: { width: "40px", height: "40px" },
+            data: {
+              image: "/PNG/CoalSource.png",
+              component_type: "CoalSource",
+              operation_mode: "design_mode",
+              supported_operation_modes: ["design_mode"],
+              name: "CoalSource",
+              name_cn: "煤/燃料",
+              anchors: [],
+              tpis_extra_info: null,
+            },
+            icon: "/PNG/CoalSource.png",
+            group: "燃料设备",
+          },
+        ],
+      },
+    ];
+
+    const libraryItems = await buildLibraryItemsFromComponentSources(sources);
+
+    expect(libraryItems).toHaveLength(1);
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://127.0.0.1:8000/PNG/CoalSource.png",
+    );
+  });
+
   it("maps component source data into grouped image library items", async () => {
     const sources: ComponentLibrarySource[] = [
       {
