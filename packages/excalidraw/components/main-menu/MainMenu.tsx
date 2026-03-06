@@ -34,7 +34,10 @@ const MainMenu = Object.assign(
 
       return (
         <MainMenuTunnel.In>
-          <DropdownMenu open={appState.openMenu === "canvas"}>
+          <DropdownMenu
+            open={appState.openMenu === "canvas"}
+            dir={editorInterface.formFactor === "phone" ? "ltr" : "rtl"}
+          >
             <DropdownMenu.Trigger
               onToggle={() => {
                 setAppState({

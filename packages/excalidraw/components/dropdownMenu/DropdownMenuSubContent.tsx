@@ -25,18 +25,25 @@ const DropdownMenuSubContent = ({
   }).trim();
 
   const callbacksRef = useCallback((node: HTMLDivElement | null) => {
-    if (node) {
-      const parentContainer = node.closest(".dropdown-menu-container");
-      const parentRect = parentContainer?.getBoundingClientRect();
-      if (parentRect) {
-        const menuWidth = node.getBoundingClientRect().width;
+    if (!node) {
+      return;
+    }
 
-        const viewportWidth = window.innerWidth;
-        const spaceRemaining = viewportWidth - parentRect.right;
-        if (spaceRemaining < menuWidth + 20) {
-          setSideOffset(spaceRemaining - menuWidth + BASE_ALIGN_OFFSET);
-          setAlignOffset(BASE_ALIGN_OFFSET + 8);
-        }
+    // For right-opening submenus near viewport edge, nudge content left.
+    // Left-opening submenu direction is handled natively by Radix via menu dir.
+    if (node.dataset.side !== "right") {
+      return;
+    }
+
+    const parentContainer = node.closest(".dropdown-menu-container");
+    const parentRect = parentContainer?.getBoundingClientRect();
+    if (parentRect) {
+      const menuWidth = node.getBoundingClientRect().width;
+      const viewportWidth = window.innerWidth;
+      const spaceRemaining = viewportWidth - parentRect.right;
+      if (spaceRemaining < menuWidth + 20) {
+        setSideOffset(spaceRemaining - menuWidth + BASE_ALIGN_OFFSET);
+        setAlignOffset(BASE_ALIGN_OFFSET + 8);
       }
     }
   }, []);
