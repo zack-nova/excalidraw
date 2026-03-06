@@ -6,6 +6,8 @@ import {
   getMimeType,
 } from "@excalidraw/excalidraw/data/blob";
 
+import { createEngineeringTableMaterialLibraryItem } from "./engineeringTableMaterial";
+
 import type {
   BinaryFileData,
   LibraryItem,
@@ -479,11 +481,16 @@ export const fetchComponentLibrarySourcesFromBackend = async () => {
 };
 
 export const loadEngineeringLibraryItems = async () => {
+  const tableMaterialLibraryItem = createEngineeringTableMaterialLibraryItem();
+
   try {
     const sources = await fetchComponentLibrarySourcesFromBackend();
-    return buildLibraryItemsFromComponentSources(sources);
+    const componentLibraryItems = await buildLibraryItemsFromComponentSources(
+      sources,
+    );
+    return [tableMaterialLibraryItem, ...componentLibraryItems];
   } catch (error) {
     // Keep app usable even if backend library endpoint is unavailable.
-    return [];
+    return [tableMaterialLibraryItem];
   }
 };

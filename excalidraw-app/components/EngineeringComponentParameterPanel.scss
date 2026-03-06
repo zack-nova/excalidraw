@@ -199,6 +199,13 @@
     transform: translateY(1px);
   }
 
+  .engineering-parameter-panel__button:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    transform: none;
+    filter: none;
+  }
+
   .engineering-parameter-panel__button--ghost {
     background: color-mix(
       in srgb,
@@ -261,5 +268,13 @@
         transparent 52%
       ),
       var(--color-surface-low);
+  }
+
+  .engineering-parameter-panel__tableMaterialActions {
+    margin-top: 0.65rem;
+    margin-bottom: 0.65rem;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.45rem;
   }
 }

@@ -137,6 +137,7 @@ export const canChangeBackgroundColor = (
 };
 
 type PropertiesSectionTab =
+  | "actions"
   | "input"
   | "output"
   | "anchors"
@@ -144,7 +145,16 @@ type PropertiesSectionTab =
   | "placeholder"
   | "properties";
 
-let lastSelectedShapeActionsDataTab: PropertiesSectionTab = "data";
+type EngineeringDataTab =
+  | "input"
+  | "output"
+  | "anchors"
+  | "data"
+  | "placeholder";
+type RegularDataTab = "actions" | "data";
+
+let lastSelectedEngineeringDataTab: EngineeringDataTab = "data";
+let lastSelectedRegularDataTab: RegularDataTab = "data";
 
 type ComponentAnchorMetadata = {
   id?: string | null;
@@ -170,6 +180,7 @@ type ComponentAnchorMetadata = {
 type ComponentMetadata = {
   id?: string | null;
   uuid?: string | null;
+  isEngineeringComponent?: boolean | null;
   data?: {
     name?: string | null;
     name_cn?: string | null;
@@ -208,6 +219,34 @@ const getFirstNonEmptyString = (...values: unknown[]) => {
   return null;
 };
 
+const getComponentFromElement = (
+  element: ExcalidrawElement,
+): ComponentMetadata | null => {
+  const component = element.customData?.component;
+  if (!isRecord(component)) {
+    return null;
+  }
+
+  return component as ComponentMetadata;
+};
+
+const isEngineeringComponentElement = (element: ExcalidrawElement) => {
+  const component = getComponentFromElement(element);
+  if (!component) {
+    return false;
+  }
+
+  const customData = element.customData;
+  if (
+    isRecord(customData) &&
+    typeof customData.isEngineeringComponent === "boolean"
+  ) {
+    return customData.isEngineeringComponent;
+  }
+
+  return component.isEngineeringComponent === true;
+};
+
 const getSelectedElementWithComponent = (
   targetElements: ExcalidrawElement[],
 ): {
@@ -219,17 +258,52 @@ const getSelectedElementWithComponent = (
   }
 
   const element = targetElements[0];
-  const component = element.customData?.component;
-
-  if (!isRecord(component)) {
+  const component = getComponentFromElement(element);
+  if (!component) {
     return null;
   }
 
   return {
     element,
-    component: component as ComponentMetadata,
+    component,
   };
 };
+
+const hasOnlyEngineeringComponentSelection = (
+  targetElements: ExcalidrawElement[],
+) =>
+  targetElements.length > 0 &&
+  targetElements.every((element) => isEngineeringComponentElement(element));
+
+const getEngineeringComponentFlag = (
+  selectedElementWithComponent: ReturnType<typeof getSelectedElementWithComponent>,
+) => {
+  if (!selectedElementWithComponent) {
+    return false;
+  }
+
+  const customData = selectedElementWithComponent.element.customData;
+  if (
+    isRecord(customData) &&
+    typeof customData.isEngineeringComponent === "boolean"
+  ) {
+    return customData.isEngineeringComponent;
+  }
+
+  return selectedElementWithComponent.component.isEngineeringComponent === true;
+};
+
+const isEngineeringDataTab = (
+  tab: PropertiesSectionTab,
+): tab is EngineeringDataTab =>
+  tab === "input" ||
+  tab === "output" ||
+  tab === "anchors" ||
+  tab === "data" ||
+  tab === "placeholder";
+
+const isRegularDataTab = (tab: PropertiesSectionTab): tab is RegularDataTab =>
+  tab === "actions" || tab === "data";
 
 const getComponentAnchors = (
   targetElements: ExcalidrawElement[],
@@ -782,6 +856,15 @@ export const SelectedShapeActions = ({
   const selectedElementWithComponent =
     getSelectedElementWithComponent(targetElements);
   const componentAnchors = getComponentAnchors(targetElements);
+  const anchorFocusSelection = getAnchorFocusSelection({
+    targetElements,
+    appState,
+    elementsMap,
+    componentAnchors,
+  });
+  const anchorFocusKey = anchorFocusSelection
+    ? `${anchorFocusSelection.elementId}:${anchorFocusSelection.anchorIndex}`
+    : null;
   const componentName =
     getFirstNonEmptyString(
       selectedElementWithComponent?.component.data?.name,
@@ -802,40 +885,46 @@ export const SelectedShapeActions = ({
   );
   const anchorItems = toInspectorItems(componentAnchors);
   const dataEntries = getSelectedElementDataEntries(targetElements);
+  const isEngineeringDataLayout =
+    layout === "data-tabs" &&
+    (getEngineeringComponentFlag(selectedElementWithComponent) ||
+      hasOnlyEngineeringComponentSelection(targetElements) ||
+      !!anchorFocusSelection);
   const tabsResetKey = `${appState.activeTool.type}:${targetElements
     .map((element) => element.id)
     .join(",")}`;
-  const [activeTab, setActiveTab] =
-    useState<PropertiesSectionTab>(
-      layout === "data-tabs" ? lastSelectedShapeActionsDataTab : "properties",
-    );
+  const [activeTab, setActiveTab] = useState<PropertiesSectionTab>(() =>
+    layout === "data-tabs"
+      ? isEngineeringDataLayout
+        ? lastSelectedEngineeringDataTab
+        : lastSelectedRegularDataTab
+      : "properties",
+  );
   const getRenderedPanel = (panel: PropertiesSectionTab) =>
     activeTab === panel ? renderPanel?.(panel, appState) : null;
-  const anchorFocusSelection = getAnchorFocusSelection({
-    targetElements,
-    appState,
-    elementsMap,
-    componentAnchors,
-  });
-  const anchorFocusKey = anchorFocusSelection
-    ? `${anchorFocusSelection.elementId}:${anchorFocusSelection.anchorIndex}`
-    : null;
   const lastAutoAnchorsTabFocusKeyRef = useRef<string | null>(null);
   const tabs: Array<{
     value: PropertiesSectionTab;
     label: string;
   }> =
     layout === "data-tabs"
-      ? [
-          { value: "input", label: t("labels.propertiesTabs.input") },
-          { value: "output", label: t("labels.propertiesTabs.output") },
-          { value: "anchors", label: t("labels.propertiesTabs.anchors") },
-          { value: "data", label: t("labels.propertiesTabs.data") },
-          {
-            value: "placeholder",
-            label: t("labels.propertiesTabs.placeholder"),
-          },
-        ]
+      ? targetElements.length === 0
+        ? []
+        : isEngineeringDataLayout
+        ? [
+            { value: "input", label: t("labels.propertiesTabs.input") },
+            { value: "output", label: t("labels.propertiesTabs.output") },
+            { value: "anchors", label: t("labels.propertiesTabs.anchors") },
+            { value: "data", label: t("labels.propertiesTabs.data") },
+            {
+              value: "placeholder",
+              label: t("labels.propertiesTabs.placeholder"),
+            },
+          ]
+        : [
+            { value: "actions", label: t("labels.actions") },
+            { value: "data", label: t("labels.propertiesTabs.data") },
+          ]
       : [
           { value: "input", label: t("labels.propertiesTabs.input") },
           { value: "output", label: t("labels.propertiesTabs.output") },
@@ -843,28 +932,32 @@ export const SelectedShapeActions = ({
           { value: "data", label: t("labels.propertiesTabs.data") },
           { value: "properties", label: t("labels.propertiesTabs.properties") },
         ];
+  const hasTab = (tab: PropertiesSectionTab) =>
+    tabs.some((entry) => entry.value === tab);
+  const hasAnchorsTab = hasTab("anchors");
 
   useEffect(() => {
+    if (layout === "properties-only") {
+      setActiveTab("properties");
+      return;
+    }
+
     setActiveTab((current) => {
       if (layout === "data-tabs") {
-        return current === "properties" ? lastSelectedShapeActionsDataTab : current;
-      }
-      if (current !== "properties") {
-        lastSelectedShapeActionsDataTab = current;
+        if (isEngineeringDataLayout) {
+          return isEngineeringDataTab(current)
+            ? current
+            : lastSelectedEngineeringDataTab;
+        }
+
+        return isRegularDataTab(current) ? current : lastSelectedRegularDataTab;
       }
       return "properties";
     });
-  }, [layout]);
+  }, [isEngineeringDataLayout, layout, tabsResetKey]);
 
   useEffect(() => {
-    if (layout === "data-tabs") {
-      return;
-    }
-    setActiveTab("properties");
-  }, [layout, tabsResetKey]);
-
-  useEffect(() => {
-    if (layout !== "data-tabs") {
+    if (layout !== "data-tabs" || !hasAnchorsTab) {
       lastAutoAnchorsTabFocusKeyRef.current = null;
       return;
     }
@@ -880,8 +973,8 @@ export const SelectedShapeActions = ({
 
     lastAutoAnchorsTabFocusKeyRef.current = anchorFocusKey;
     setActiveTab("anchors");
-    lastSelectedShapeActionsDataTab = "anchors";
-  }, [anchorFocusKey, layout]);
+    lastSelectedEngineeringDataTab = "anchors";
+  }, [anchorFocusKey, hasAnchorsTab, layout]);
 
   if (layout === "properties-only") {
     return (
@@ -892,6 +985,14 @@ export const SelectedShapeActions = ({
           elementsMap={elementsMap}
           renderAction={renderAction}
         />
+        {footer}
+      </div>
+    );
+  }
+
+  if (tabs.length === 0) {
+    return (
+      <div className="selected-shape-actions">
         {footer}
       </div>
     );
@@ -914,8 +1015,17 @@ export const SelectedShapeActions = ({
             key={tab.value}
             onClick={() => {
               setActiveTab(tab.value);
-              if (tab.value !== "properties") {
-                lastSelectedShapeActionsDataTab = tab.value;
+              if (layout !== "data-tabs" || tab.value === "properties") {
+                return;
+              }
+
+              if (isEngineeringDataLayout && isEngineeringDataTab(tab.value)) {
+                lastSelectedEngineeringDataTab = tab.value;
+                return;
+              }
+
+              if (!isEngineeringDataLayout && isRegularDataTab(tab.value)) {
+                lastSelectedRegularDataTab = tab.value;
               }
             }}
             role="tab"
@@ -925,106 +1035,138 @@ export const SelectedShapeActions = ({
           </button>
         ))}
       </div>
-      <div
-        aria-labelledby="selected-shape-actions-tab-input"
-        className="selected-shape-actions-panel"
-        data-state={activeTab === "input" ? "active" : "inactive"}
-        hidden={activeTab !== "input"}
-        id="selected-shape-actions-panel-input"
-        role="tabpanel"
-        tabIndex={0}
-      >
-        {getRenderedPanel("input") ?? (
-          <ShapeActionsInspectorPanel
-            emptyMessage={t("labels.propertiesTabs.emptyInput")}
-            items={inputItems}
-          />
-        )}
-      </div>
-      <div
-        aria-labelledby="selected-shape-actions-tab-output"
-        className="selected-shape-actions-panel"
-        data-state={activeTab === "output" ? "active" : "inactive"}
-        hidden={activeTab !== "output"}
-        id="selected-shape-actions-panel-output"
-        role="tabpanel"
-        tabIndex={0}
-      >
-        {getRenderedPanel("output") ?? (
-          <ShapeActionsInspectorPanel
-            emptyMessage={t("labels.propertiesTabs.emptyOutput")}
-            items={outputItems}
-          />
-        )}
-      </div>
-      <div
-        aria-labelledby="selected-shape-actions-tab-anchors"
-        className="selected-shape-actions-panel"
-        data-state={activeTab === "anchors" ? "active" : "inactive"}
-        hidden={activeTab !== "anchors"}
-        id="selected-shape-actions-panel-anchors"
-        role="tabpanel"
-        tabIndex={0}
-      >
-        {getRenderedPanel("anchors") ?? (
-          <ShapeActionsInspectorPanel
-            emptyMessage={t("labels.propertiesTabs.emptyAnchors")}
-            items={anchorItems}
-          />
-        )}
-      </div>
-      <div
-        aria-labelledby="selected-shape-actions-tab-data"
-        className="selected-shape-actions-panel"
-        data-state={activeTab === "data" ? "active" : "inactive"}
-        hidden={activeTab !== "data"}
-        id="selected-shape-actions-panel-data"
-        role="tabpanel"
-        tabIndex={0}
-      >
-        {getRenderedPanel("data") ?? (
-          <ShapeActionsDataPanel
-            componentName={componentName}
-            dataEntries={dataEntries}
-          />
-        )}
-      </div>
-      <div
-        aria-labelledby="selected-shape-actions-tab-placeholder"
-        className="selected-shape-actions-panel"
-        data-state={activeTab === "placeholder" ? "active" : "inactive"}
-        data-testid="selected-shape-actions-placeholder-panel"
-        hidden={activeTab !== "placeholder"}
-        id="selected-shape-actions-panel-placeholder"
-        role="tabpanel"
-        tabIndex={0}
-      >
-        {getRenderedPanel("placeholder") ?? (
-          <div className="selected-shape-actions-data-card">
-            <div className="selected-shape-actions-placeholder">
-              {t("labels.propertiesTabs.emptyPlaceholder")}
+      {hasTab("actions") && (
+        <div
+          aria-labelledby="selected-shape-actions-tab-actions"
+          className="selected-shape-actions-panel"
+          data-state={activeTab === "actions" ? "active" : "inactive"}
+          hidden={activeTab !== "actions"}
+          id="selected-shape-actions-panel-actions"
+          role="tabpanel"
+          tabIndex={0}
+        >
+          {getRenderedPanel("actions") ?? (
+            <SelectedShapeActionsPropertiesPanel
+              app={app}
+              appState={appState}
+              elementsMap={elementsMap}
+              renderAction={renderAction}
+            />
+          )}
+        </div>
+      )}
+      {hasTab("input") && (
+        <div
+          aria-labelledby="selected-shape-actions-tab-input"
+          className="selected-shape-actions-panel"
+          data-state={activeTab === "input" ? "active" : "inactive"}
+          hidden={activeTab !== "input"}
+          id="selected-shape-actions-panel-input"
+          role="tabpanel"
+          tabIndex={0}
+        >
+          {getRenderedPanel("input") ?? (
+            <ShapeActionsInspectorPanel
+              emptyMessage={t("labels.propertiesTabs.emptyInput")}
+              items={inputItems}
+            />
+          )}
+        </div>
+      )}
+      {hasTab("output") && (
+        <div
+          aria-labelledby="selected-shape-actions-tab-output"
+          className="selected-shape-actions-panel"
+          data-state={activeTab === "output" ? "active" : "inactive"}
+          hidden={activeTab !== "output"}
+          id="selected-shape-actions-panel-output"
+          role="tabpanel"
+          tabIndex={0}
+        >
+          {getRenderedPanel("output") ?? (
+            <ShapeActionsInspectorPanel
+              emptyMessage={t("labels.propertiesTabs.emptyOutput")}
+              items={outputItems}
+            />
+          )}
+        </div>
+      )}
+      {hasTab("anchors") && (
+        <div
+          aria-labelledby="selected-shape-actions-tab-anchors"
+          className="selected-shape-actions-panel"
+          data-state={activeTab === "anchors" ? "active" : "inactive"}
+          hidden={activeTab !== "anchors"}
+          id="selected-shape-actions-panel-anchors"
+          role="tabpanel"
+          tabIndex={0}
+        >
+          {getRenderedPanel("anchors") ?? (
+            <ShapeActionsInspectorPanel
+              emptyMessage={t("labels.propertiesTabs.emptyAnchors")}
+              items={anchorItems}
+            />
+          )}
+        </div>
+      )}
+      {hasTab("data") && (
+        <div
+          aria-labelledby="selected-shape-actions-tab-data"
+          className="selected-shape-actions-panel"
+          data-state={activeTab === "data" ? "active" : "inactive"}
+          hidden={activeTab !== "data"}
+          id="selected-shape-actions-panel-data"
+          role="tabpanel"
+          tabIndex={0}
+        >
+          {getRenderedPanel("data") ?? (
+            <ShapeActionsDataPanel
+              componentName={componentName}
+              dataEntries={dataEntries}
+            />
+          )}
+        </div>
+      )}
+      {hasTab("placeholder") && (
+        <div
+          aria-labelledby="selected-shape-actions-tab-placeholder"
+          className="selected-shape-actions-panel"
+          data-state={activeTab === "placeholder" ? "active" : "inactive"}
+          data-testid="selected-shape-actions-placeholder-panel"
+          hidden={activeTab !== "placeholder"}
+          id="selected-shape-actions-panel-placeholder"
+          role="tabpanel"
+          tabIndex={0}
+        >
+          {getRenderedPanel("placeholder") ?? (
+            <div className="selected-shape-actions-data-card">
+              <div className="selected-shape-actions-placeholder">
+                {t("labels.propertiesTabs.emptyPlaceholder")}
+              </div>
             </div>
-          </div>
-        )}
-      </div>
-      <div
-        aria-labelledby="selected-shape-actions-tab-properties"
-        className="selected-shape-actions-panel"
-        data-state={activeTab === "properties" ? "active" : "inactive"}
-        hidden={activeTab !== "properties"}
-        id="selected-shape-actions-panel-properties"
-        role="tabpanel"
-        tabIndex={0}
-      >
-        {getRenderedPanel("properties") ?? (
-          <SelectedShapeActionsPropertiesPanel
-            app={app}
-            appState={appState}
-            elementsMap={elementsMap}
-            renderAction={renderAction}
-          />
-        )}
-      </div>
+          )}
+        </div>
+      )}
+      {hasTab("properties") && (
+        <div
+          aria-labelledby="selected-shape-actions-tab-properties"
+          className="selected-shape-actions-panel"
+          data-state={activeTab === "properties" ? "active" : "inactive"}
+          hidden={activeTab !== "properties"}
+          id="selected-shape-actions-panel-properties"
+          role="tabpanel"
+          tabIndex={0}
+        >
+          {getRenderedPanel("properties") ?? (
+            <SelectedShapeActionsPropertiesPanel
+              app={app}
+              appState={appState}
+              elementsMap={elementsMap}
+              renderAction={renderAction}
+            />
+          )}
+        </div>
+      )}
     </div>
   );
 };

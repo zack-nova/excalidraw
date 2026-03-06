@@ -613,7 +613,14 @@ export interface ExcalidrawProps {
     appState: UIAppState,
   ) => JSX.Element | null;
   renderSelectedShapeActionsPanel?: (
-    panel: "input" | "output" | "anchors" | "data" | "placeholder" | "properties",
+    panel:
+      | "actions"
+      | "input"
+      | "output"
+      | "anchors"
+      | "data"
+      | "placeholder"
+      | "properties",
     appState: UIAppState,
   ) => JSX.Element | null;
   langCode?: Language["code"];

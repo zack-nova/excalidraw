@@ -33,6 +33,11 @@ import {
   toComponentParameterLookupKey,
   toComponentParameterStableToken,
 } from "../engineering-parameter-identity";
+import {
+  ENGINEERING_TABLE_MATERIAL_MAX_SIZE,
+  getSelectedEngineeringTableMaterialContext,
+  type EngineeringTableMaterialResizeOperation,
+} from "../data/engineeringTableMaterial";
 import "./EngineeringComponentParameterPanel.scss";
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -66,6 +71,12 @@ type SelectedComponentContext = {
   componentType: string;
   anchors: SelectedComponentAnchor[];
   focusedAnchorIndex: number | null;
+};
+
+type SelectedShapeVariableBinding = {
+  id: string;
+  expression: string;
+  variableTokens: string[];
 };
 
 type IndexedParameter = {
@@ -286,6 +297,113 @@ const getSelectedComponentContext = (
     elements,
     appState,
   );
+};
+
+const normalizeVariableToken = (value: string) => {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  if (
+    (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+    (trimmed.startsWith("'") && trimmed.endsWith("'"))
+  ) {
+    const unquoted = trimmed.slice(1, -1).trim();
+    return unquoted || null;
+  }
+
+  return trimmed;
+};
+
+const getTextTemplateFromElement = (
+  element: ReturnType<typeof useExcalidrawElements>[number],
+) => {
+  if (element.type !== "text") {
+    return null;
+  }
+
+  if (
+    typeof element.originalText === "string" &&
+    element.originalText.includes("{{")
+  ) {
+    return element.originalText;
+  }
+
+  const storedTemplate = element.customData?.engineeringTemplate;
+  if (typeof storedTemplate === "string" && storedTemplate.includes("{{")) {
+    return storedTemplate;
+  }
+
+  return null;
+};
+
+const extractVariableTokensFromExpression = (expression: string) => {
+  const tokens = new Set<string>();
+
+  for (const match of expression.matchAll(/data\[([^[\]]+?)\]/g)) {
+    const token = normalizeVariableToken(match[1] || "");
+    if (token) {
+      tokens.add(token);
+    }
+  }
+
+  for (const match of expression.matchAll(/ref\((["'])(.+?)\1\)/g)) {
+    const token = normalizeVariableToken(match[2] || "");
+    if (token) {
+      tokens.add(token);
+    }
+  }
+
+  return Array.from(tokens);
+};
+
+const collectSelectedShapeVariableBindings = ({
+  elements,
+  appState,
+  tableGroupId,
+}: {
+  elements: ReturnType<typeof useExcalidrawElements>;
+  appState: ReturnType<typeof useExcalidrawAppState>;
+  tableGroupId: string | null;
+}): SelectedShapeVariableBinding[] => {
+  const selectedElements = getSelectedElements(elements, appState, {
+    includeBoundTextElement: false,
+    includeElementsInFrames: false,
+  });
+
+  const targetElements = tableGroupId
+    ? elements.filter(
+        (element) =>
+          !element.isDeleted && element.groupIds.includes(tableGroupId),
+      )
+    : selectedElements;
+
+  const bindings = new Map<string, SelectedShapeVariableBinding>();
+
+  targetElements.forEach((element) => {
+    const template = getTextTemplateFromElement(element);
+    if (!template) {
+      return;
+    }
+
+    for (const match of template.matchAll(/\{\{([\s\S]+?)\}\}/g)) {
+      const expression = (match[1] || "").trim();
+      if (!expression) {
+        continue;
+      }
+
+      if (!bindings.has(expression)) {
+        bindings.set(expression, {
+          id: expression,
+          expression,
+          variableTokens: extractVariableTokensFromExpression(expression),
+        });
+      }
+    }
+  });
+
+  return Array.from(bindings.values());
 };
 
 const DEFAULT_PARAMETER_GROUP_NAME = "未分组";
@@ -859,10 +977,119 @@ const AnchorParameterRows = ({
   );
 };
 
+const EngineeringTableMaterialPanel = ({
+  rows,
+  cols,
+  onResize,
+}: {
+  rows: number;
+  cols: number;
+  onResize?: (operation: EngineeringTableMaterialResizeOperation) => void;
+}) => {
+  const canAddRow = rows < ENGINEERING_TABLE_MATERIAL_MAX_SIZE;
+  const canRemoveRow = rows > 1;
+  const canAddCol = cols < ENGINEERING_TABLE_MATERIAL_MAX_SIZE;
+  const canRemoveCol = cols > 1;
+
+  return (
+    <div className="selected-shape-actions__stack engineering-parameter-panel">
+      <div className="selected-shape-actions-card engineering-parameter-panel__drawer">
+        <div className="selected-shape-actions-card__title">表格素材</div>
+        <div className="selected-shape-actions-card__meta">
+          当前尺寸：{rows} 行 × {cols} 列（上限 {ENGINEERING_TABLE_MATERIAL_MAX_SIZE}
+          ×{ENGINEERING_TABLE_MATERIAL_MAX_SIZE}）
+        </div>
+        <div className="engineering-parameter-panel__tableMaterialActions">
+          <button
+            className="engineering-parameter-panel__button"
+            disabled={!onResize || !canAddRow}
+            onClick={() => onResize?.("addRow")}
+            type="button"
+          >
+            + 行
+          </button>
+          <button
+            className="engineering-parameter-panel__button engineering-parameter-panel__button--ghost"
+            disabled={!onResize || !canRemoveRow}
+            onClick={() => onResize?.("removeRow")}
+            type="button"
+          >
+            - 行
+          </button>
+          <button
+            className="engineering-parameter-panel__button"
+            disabled={!onResize || !canAddCol}
+            onClick={() => onResize?.("addColumn")}
+            type="button"
+          >
+            + 列
+          </button>
+          <button
+            className="engineering-parameter-panel__button engineering-parameter-panel__button--ghost"
+            disabled={!onResize || !canRemoveCol}
+            onClick={() => onResize?.("removeColumn")}
+            type="button"
+          >
+            - 列
+          </button>
+        </div>
+        <div className="selected-shape-actions-card__meta">
+          单元格支持普通文本与变量模板（例如 <code>{"{{data[var:ambient].value}}"}</code>
+          ）。
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const NormalShapeOperationsPanel = () => (
+  <div className="selected-shape-actions-placeholder">
+    当前图元暂无可用操作。
+  </div>
+);
+
+const NormalShapeDataPanel = ({
+  bindings,
+}: {
+  bindings: SelectedShapeVariableBinding[];
+}) => {
+  if (bindings.length === 0) {
+    return (
+      <div className="selected-shape-actions-placeholder">
+        当前图元未绑定变量。
+      </div>
+    );
+  }
+
+  return (
+    <div className="selected-shape-actions-data">
+      <dl className="selected-shape-actions-data-list">
+        {bindings.map((binding) => (
+          <div
+            className="selected-shape-actions-data-row"
+            key={binding.id}
+          >
+            <dt>{binding.expression}</dt>
+            <dd>
+              {binding.variableTokens.length > 0
+                ? binding.variableTokens.join(", ")
+                : "表达式未识别变量"}
+            </dd>
+          </div>
+        ))}
+      </dl>
+    </div>
+  );
+};
+
 export const EngineeringComponentParameterPanel = ({
   section,
+  onEngineeringTableResize,
 }: {
-  section: "input" | "output" | "anchors";
+  section: "actions" | "input" | "output" | "anchors" | "data";
+  onEngineeringTableResize?: (
+    operation: EngineeringTableMaterialResizeOperation,
+  ) => void;
 }) => {
   const elements = useExcalidrawElements();
   const appState = useExcalidrawAppState();
@@ -885,6 +1112,17 @@ export const EngineeringComponentParameterPanel = ({
   const specCatalog = useAtomValue(componentSpecCatalogAtom);
   const curveCatalog = useAtomValue(componentCurveCatalogAtom);
   const interfaceCatalog = useAtomValue(interfaceSpecCatalogAtom);
+  const selectedEngineeringTableMaterial = getSelectedEngineeringTableMaterialContext(
+    {
+      elements,
+      appState,
+    },
+  );
+  const selectedShapeVariableBindings = collectSelectedShapeVariableBindings({
+    elements,
+    appState,
+    tableGroupId: selectedEngineeringTableMaterial?.groupId || null,
+  });
   const selectedComponent = getSelectedComponentContext(elements, appState);
   const componentType = selectedComponent?.componentType || null;
   const selectedComponentElementId = selectedComponent?.elementId || null;
@@ -979,6 +1217,37 @@ export const EngineeringComponentParameterPanel = ({
     status,
     syncEngineeringComponentSpecBridge,
   ]);
+
+
+  if (section === "actions") {
+    if (selectedEngineeringTableMaterial) {
+      return (
+        <EngineeringTableMaterialPanel
+          rows={selectedEngineeringTableMaterial.rows}
+          cols={selectedEngineeringTableMaterial.cols}
+          onResize={onEngineeringTableResize}
+        />
+      );
+    }
+
+    return <NormalShapeOperationsPanel />;
+  }
+
+  if (section === "data") {
+    if (componentType) {
+      return null;
+    }
+    return <NormalShapeDataPanel bindings={selectedShapeVariableBindings} />;
+  }
+  if (!componentType && selectedEngineeringTableMaterial) {
+    return (
+      <EngineeringTableMaterialPanel
+        rows={selectedEngineeringTableMaterial.rows}
+        cols={selectedEngineeringTableMaterial.cols}
+        onResize={onEngineeringTableResize}
+      />
+    );
+  }
 
   if (!componentType) {
     return (

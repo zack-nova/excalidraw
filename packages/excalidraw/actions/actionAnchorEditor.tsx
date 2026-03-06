@@ -1,6 +1,7 @@
 import { CaptureUpdateAction } from "@excalidraw/element";
 import {
   isBindableElement,
+  shouldShowBindableElementAnchorsWhenUnselected,
   setBindableElementAnchorsWhenUnselected,
   supportsBindableElementAnchorPoints,
 } from "@excalidraw/element";
@@ -163,8 +164,7 @@ export const actionToggleAnchorEditor = register<AnchorEditorFormData>({
             name={showWhenUnselectedName}
             title={showWhenUnselectedLabel}
             checked={selectedAnchorElements.every(
-              (element) =>
-                element.customData?.showAnchorsWhenUnselected !== false,
+              (element) => shouldShowBindableElementAnchorsWhenUnselected(element),
             )}
             onChange={(checked) =>
               updateData({

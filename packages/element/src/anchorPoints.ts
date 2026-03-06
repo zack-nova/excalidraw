@@ -23,6 +23,33 @@ const DEFAULT_RECTANGLE_ANCHOR_POINTS: readonly FixedPoint[] = [
   [0, 0.5],
 ];
 const SHOW_ANCHORS_WHEN_UNSELECTED_KEY = "showAnchorsWhenUnselected";
+const ENGINEERING_COMPONENT_FLAG = "isEngineeringComponent";
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  !!value && typeof value === "object" && !Array.isArray(value);
+
+const getDefaultShowWhenUnselected = (
+  element: ExcalidrawBindableElement,
+) => {
+  const customData = isRecord(element.customData) ? element.customData : null;
+  if (!customData) {
+    return false;
+  }
+
+  if (typeof customData[ENGINEERING_COMPONENT_FLAG] === "boolean") {
+    return customData[ENGINEERING_COMPONENT_FLAG] as boolean;
+  }
+
+  const component = customData.component;
+  if (
+    isRecord(component) &&
+    typeof component[ENGINEERING_COMPONENT_FLAG] === "boolean"
+  ) {
+    return component[ENGINEERING_COMPONENT_FLAG] as boolean;
+  }
+
+  return false;
+};
 
 export const supportsBindableElementAnchorPoints = (
   element: ExcalidrawBindableElement,
@@ -95,18 +122,26 @@ export const getCustomBindableElementAnchorPoints = (
 
 export const shouldShowBindableElementAnchorsWhenUnselected = (
   element: ExcalidrawBindableElement,
-): boolean => element.customData?.[SHOW_ANCHORS_WHEN_UNSELECTED_KEY] !== false;
+): boolean => {
+  const customValue = element.customData?.[SHOW_ANCHORS_WHEN_UNSELECTED_KEY];
+  if (typeof customValue === "boolean") {
+    return customValue;
+  }
+
+  return getDefaultShowWhenUnselected(element);
+};
 
 export const setBindableElementAnchorsWhenUnselected = (
   element: ExcalidrawBindableElement,
   shouldShowWhenUnselected: boolean,
 ) => {
   const customData = { ...(element.customData || {}) };
+  const defaultValue = getDefaultShowWhenUnselected(element);
 
-  if (shouldShowWhenUnselected) {
+  if (shouldShowWhenUnselected === defaultValue) {
     delete customData[SHOW_ANCHORS_WHEN_UNSELECTED_KEY];
   } else {
-    customData[SHOW_ANCHORS_WHEN_UNSELECTED_KEY] = false;
+    customData[SHOW_ANCHORS_WHEN_UNSELECTED_KEY] = shouldShowWhenUnselected;
   }
 
   return Object.keys(customData).length > 0 ? customData : undefined;

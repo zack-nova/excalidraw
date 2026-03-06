@@ -180,7 +180,7 @@ describe("rectangle anchor points", () => {
     ]);
   });
 
-  it("shows anchors when unselected by default", () => {
+  it("hides anchors when unselected by default for normal shapes", () => {
     const rectangle = newElement({
       type: "rectangle",
       x: 100,
@@ -190,11 +190,28 @@ describe("rectangle anchor points", () => {
     }) as ExcalidrawBindableElement;
 
     expect(shouldShowBindableElementAnchorsWhenUnselected(rectangle)).toBe(
+      false,
+    );
+  });
+
+  it("shows anchors when unselected by default for engineering components", () => {
+    const rectangle = newElement({
+      type: "rectangle",
+      x: 100,
+      y: 100,
+      width: 200,
+      height: 100,
+      customData: {
+        isEngineeringComponent: true,
+      },
+    }) as ExcalidrawBindableElement;
+
+    expect(shouldShowBindableElementAnchorsWhenUnselected(rectangle)).toBe(
       true,
     );
   });
 
-  it("stores the unselected anchor visibility flag alongside anchor points", () => {
+  it("stores unselected anchor visibility overrides relative to engineering defaults", () => {
     const rectangle = newElement({
       type: "rectangle",
       x: 100,
@@ -205,14 +222,40 @@ describe("rectangle anchor points", () => {
         anchorPoints: [[0.25, 0]],
       },
     }) as ExcalidrawBindableElement;
+    const engineeringRectangle = newElement({
+      type: "rectangle",
+      x: 100,
+      y: 100,
+      width: 200,
+      height: 100,
+      customData: {
+        isEngineeringComponent: true,
+        anchorPoints: [[0.25, 0]],
+      },
+    }) as ExcalidrawBindableElement;
 
     expect(setBindableElementAnchorsWhenUnselected(rectangle, false)).toEqual({
       anchorPoints: [[0.25, 0]],
-      showAnchorsWhenUnselected: false,
     });
 
     expect(setBindableElementAnchorsWhenUnselected(rectangle, true)).toEqual({
       anchorPoints: [[0.25, 0]],
+      showAnchorsWhenUnselected: true,
+    });
+
+    expect(
+      setBindableElementAnchorsWhenUnselected(engineeringRectangle, true),
+    ).toEqual({
+      isEngineeringComponent: true,
+      anchorPoints: [[0.25, 0]],
+    });
+
+    expect(
+      setBindableElementAnchorsWhenUnselected(engineeringRectangle, false),
+    ).toEqual({
+      isEngineeringComponent: true,
+      anchorPoints: [[0.25, 0]],
+      showAnchorsWhenUnselected: false,
     });
   });
 

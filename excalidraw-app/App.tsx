@@ -134,6 +134,10 @@ import {
 import {
   loadEngineeringLibraryItems,
 } from "./data/componentLibrary";
+import {
+  resizeSelectedEngineeringTableMaterial,
+  type EngineeringTableMaterialResizeOperation,
+} from "./data/engineeringTableMaterial";
 
 import { updateStaleImageStatuses } from "./data/FileManager";
 import {
@@ -881,6 +885,33 @@ const ExcalidrawWrapper = () => {
     }
   };
 
+  const resizeEngineeringTableMaterial = useCallback(
+    (operation: EngineeringTableMaterialResizeOperation) => {
+      if (!excalidrawAPI) {
+        return;
+      }
+
+      const resizeResult = resizeSelectedEngineeringTableMaterial({
+        elements: excalidrawAPI.getSceneElementsIncludingDeleted(),
+        appState: excalidrawAPI.getAppState(),
+        operation,
+      });
+      if (!resizeResult) {
+        return;
+      }
+
+      excalidrawAPI.updateScene({
+        elements: resizeResult.elements,
+        appState: {
+          selectedElementIds: resizeResult.selectedElementIds,
+          selectedGroupIds: {},
+        },
+        captureUpdate: CaptureUpdateAction.IMMEDIATELY,
+      });
+    },
+    [excalidrawAPI],
+  );
+
   const onPointerDown = useCallback(
     (
       activeTool: AppState["activeTool"],
@@ -1200,16 +1231,49 @@ const ExcalidrawWrapper = () => {
             return null;
           }
 
+          if (panel === "actions") {
+            return (
+              <EngineeringComponentParameterPanel
+                section="actions"
+                onEngineeringTableResize={resizeEngineeringTableMaterial}
+              />
+            );
+          }
+
           if (panel === "input") {
-            return <EngineeringComponentParameterPanel section="input" />;
+            return (
+              <EngineeringComponentParameterPanel
+                section="input"
+                onEngineeringTableResize={resizeEngineeringTableMaterial}
+              />
+            );
           }
 
           if (panel === "output") {
-            return <EngineeringComponentParameterPanel section="output" />;
+            return (
+              <EngineeringComponentParameterPanel
+                section="output"
+                onEngineeringTableResize={resizeEngineeringTableMaterial}
+              />
+            );
           }
 
           if (panel === "anchors") {
-            return <EngineeringComponentParameterPanel section="anchors" />;
+            return (
+              <EngineeringComponentParameterPanel
+                section="anchors"
+                onEngineeringTableResize={resizeEngineeringTableMaterial}
+              />
+            );
+          }
+
+          if (panel === "data") {
+            return (
+              <EngineeringComponentParameterPanel
+                section="data"
+                onEngineeringTableResize={resizeEngineeringTableMaterial}
+              />
+            );
           }
 
           return null;

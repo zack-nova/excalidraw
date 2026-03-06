@@ -9,13 +9,17 @@ import {
 } from "@excalidraw/excalidraw/tests/test-utils";
 import { sceneCoordsToViewportCoords } from "@excalidraw/common";
 import { CaptureUpdateAction } from "@excalidraw/excalidraw";
+import { newElementWith } from "@excalidraw/element";
 import { API } from "@excalidraw/excalidraw/tests/helpers/api";
 import { Pointer } from "@excalidraw/excalidraw/tests/helpers/ui";
 import { pointFrom } from "@excalidraw/math";
+import { configure } from "@testing-library/react";
+import { vi } from "vitest";
 
 import ExcalidrawApp from "../App";
 import { appJotaiStore } from "../app-jotai";
 import { componentCurveCatalogAtom } from "../component-spec-store";
+import { createEngineeringTableMaterialLibraryItem } from "../data/engineeringTableMaterial";
 import { createProjectDocument } from "../engineering-domain";
 import {
   engineeringLastCalculationRequestAtom,
@@ -26,8 +30,21 @@ import {
 } from "../engineering-domain-state";
 import { engineeringWorkspaceModeAtom } from "../engineering-ui-state";
 
+vi.mock("@excalidraw/common", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@excalidraw/common")>();
+  return {
+    ...actual,
+    isRunningInIframe: () => true,
+  };
+});
+
+configure({
+  asyncUtilTimeout: 10_000,
+});
+
 const PANEL_WIDTH_STORAGE_KEY = "engineering:selected-shape-actions-widths:v1";
 const mouse = new Pointer("mouse");
+const ENGINEERING_TABLE_META_KEY = "engineeringTableMaterial";
 
 const createEngineeringImage = ({
   id,
@@ -106,6 +123,74 @@ const createEngineeringImage = ({
   return image;
 };
 
+const getTableMeta = (element: { customData?: Record<string, unknown> }) => {
+  const tableMeta = element.customData?.[
+    ENGINEERING_TABLE_META_KEY
+  ] as
+    | {
+        role?: unknown;
+        row?: unknown;
+        col?: unknown;
+      }
+    | undefined;
+
+  if (!tableMeta || typeof tableMeta !== "object") {
+    return null;
+  }
+
+  if (
+    (tableMeta.role !== "cell" && tableMeta.role !== "text") ||
+    typeof tableMeta.row !== "number" ||
+    typeof tableMeta.col !== "number"
+  ) {
+    return null;
+  }
+
+  return {
+    role: tableMeta.role,
+    row: tableMeta.row,
+    col: tableMeta.col,
+  } as const;
+};
+
+const getTableCellAt = (
+  elements: readonly ReturnType<typeof API.createElement>[],
+  row: number,
+  col: number,
+) =>
+  elements.find((element) => {
+    const meta = getTableMeta(element);
+    return meta?.role === "cell" && meta.row === row && meta.col === col;
+  });
+
+const withTableTemplateAt = ({
+  elements,
+  row,
+  col,
+  template,
+}: {
+  elements: readonly ReturnType<typeof API.createElement>[];
+  row: number;
+  col: number;
+  template: string;
+}) =>
+  elements.map((element) => {
+    const meta = getTableMeta(element);
+    if (
+      element.type === "text" &&
+      meta?.role === "text" &&
+      meta.row === row &&
+      meta.col === col
+    ) {
+      return newElementWith(element, {
+        text: template,
+        originalText: template,
+      });
+    }
+
+    return element;
+  });
+
 describe("Engineering data workspace", () => {
   beforeEach(() => {
     window.localStorage.removeItem(PANEL_WIDTH_STORAGE_KEY);
@@ -169,6 +254,126 @@ describe("Engineering data workspace", () => {
           /backend_calculation/i,
         ),
       ).toHaveLength(0);
+    });
+  });
+
+  it("shows engineering tabs for engineering components and actions/data tabs for normal shapes", async () => {
+    appJotaiStore.set(engineeringWorkspaceModeAtom, "data");
+    appJotaiStore.set(engineeringProjectDocumentAtom, createProjectDocument());
+    appJotaiStore.set(componentCurveCatalogAtom, {
+      curvesByType: {},
+      loadStatusByType: {},
+      errorsByType: {},
+    });
+
+    await render(<ExcalidrawApp />);
+
+    await withExcalidrawDimensions({ width: 1920, height: 1080 }, async () => {
+      const boiler = createEngineeringImage({
+        id: "component:boiler",
+        name: "锅炉",
+        componentType: "Boiler",
+      });
+      const rectangle = API.createElement({
+        id: "shape:rect",
+        type: "rectangle",
+        x: 320,
+        y: 120,
+        width: 120,
+        height: 80,
+      });
+
+      API.updateScene({
+        elements: [boiler, rectangle],
+        captureUpdate: CaptureUpdateAction.NEVER,
+      });
+
+      API.setSelectedElements([boiler]);
+
+      await waitFor(() => {
+        const tablist = screen.getByRole("tablist", {
+          name: "Properties sections",
+        });
+        expect(within(tablist).getAllByRole("tab")).toHaveLength(5);
+      });
+      expect(screen.getByRole("tab", { name: /^Input$/i })).toBeVisible();
+      expect(screen.getByRole("tab", { name: /^Output$/i })).toBeVisible();
+      expect(screen.getByRole("tab", { name: /^Anchors$/i })).toBeVisible();
+      expect(screen.getByRole("tab", { name: /^Data$/i })).toBeVisible();
+      expect(
+        screen.getByRole("tab", { name: /placeholder|占位|待定/i }),
+      ).toBeVisible();
+
+      API.setSelectedElements([rectangle]);
+
+      await waitFor(() => {
+        const tablist = screen.getByRole("tablist", {
+          name: "Properties sections",
+        });
+        expect(within(tablist).getAllByRole("tab")).toHaveLength(2);
+      });
+
+      expect(screen.getByRole("tab", { name: /^Actions$/i })).toBeVisible();
+      expect(screen.getByRole("tab", { name: /^Data$/i })).toBeVisible();
+      expect(screen.queryByRole("tab", { name: /^Input$/i })).toBeNull();
+      expect(screen.queryByRole("tab", { name: /^Output$/i })).toBeNull();
+      expect(screen.queryByRole("tab", { name: /^Anchors$/i })).toBeNull();
+    });
+  });
+
+  it("puts table row/column operations under Actions tab and variable bindings under Data tab", async () => {
+    appJotaiStore.set(engineeringWorkspaceModeAtom, "data");
+    appJotaiStore.set(engineeringProjectDocumentAtom, createProjectDocument());
+    appJotaiStore.set(componentCurveCatalogAtom, {
+      curvesByType: {},
+      loadStatusByType: {},
+      errorsByType: {},
+    });
+
+    await render(<ExcalidrawApp />);
+
+    await withExcalidrawDimensions({ width: 1920, height: 1080 }, async () => {
+      const tableItem = createEngineeringTableMaterialLibraryItem();
+      const tableElements = withTableTemplateAt({
+        elements: tableItem.elements,
+        row: 0,
+        col: 0,
+        template: "{{data[var:ambient].value}}",
+      });
+      const selectedCell = getTableCellAt(tableElements, 0, 0);
+      if (!selectedCell) {
+        throw new Error("missing table cell at 0:0");
+      }
+
+      API.updateScene({
+        elements: tableElements,
+        captureUpdate: CaptureUpdateAction.NEVER,
+      });
+      API.setSelectedElements([selectedCell]);
+
+      const tablist = await screen.findByRole("tablist", {
+        name: "Properties sections",
+      });
+
+      fireEvent.click(within(tablist).getByRole("tab", { name: /^Actions$/i }));
+
+      await waitFor(() => {
+        expect(screen.getByText("表格素材")).toBeVisible();
+      });
+      expect(screen.getByText(/当前尺寸：3 行 × 3 列/)).toBeVisible();
+
+      fireEvent.click(screen.getByRole("button", { name: "+ 行" }));
+
+      await waitFor(() => {
+        expect(screen.getByText(/当前尺寸：4 行 × 3 列/)).toBeVisible();
+      });
+
+      fireEvent.click(within(tablist).getByRole("tab", { name: /^Data$/i }));
+
+      await waitFor(() => {
+        const dataPanel = screen.getByRole("tabpanel", { name: /^Data$/i });
+        expect(within(dataPanel).getByText("var:ambient")).toBeVisible();
+      });
     });
   });
 

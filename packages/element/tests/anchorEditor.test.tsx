@@ -54,7 +54,7 @@ describe("rectangle anchor editor", () => {
     expect(h.state.selectedAnchorPointIndex).toBe(null);
   });
 
-  it("should show anchor controls for ellipse, diamond, and image", () => {
+  it("should default the unselected anchor visibility toggle based on engineering flag", () => {
     const ellipse = API.createElement({
       type: "ellipse",
       x: 100,
@@ -76,19 +76,36 @@ describe("rectangle anchor editor", () => {
       width: 100,
       height: 100,
     });
+    const engineeringImage = API.createElement({
+      type: "image",
+      x: 100,
+      y: 100,
+      width: 100,
+      height: 100,
+    });
 
     API.setElements([ellipse]);
     API.setSelectedElements([ellipse]);
     expect(screen.getByLabelText("Edit anchor points")).not.toBeChecked();
-    expect(screen.getByLabelText("Show anchors when unselected")).toBeChecked();
+    expect(screen.getByLabelText("Show anchors when unselected")).not.toBeChecked();
 
     API.setElements([diamond]);
     API.setSelectedElements([diamond]);
     expect(screen.getByLabelText("Edit anchor points")).not.toBeChecked();
-    expect(screen.getByLabelText("Show anchors when unselected")).toBeChecked();
+    expect(screen.getByLabelText("Show anchors when unselected")).not.toBeChecked();
 
     API.setElements([image]);
     API.setSelectedElements([image]);
+    expect(screen.getByLabelText("Edit anchor points")).not.toBeChecked();
+    expect(screen.getByLabelText("Show anchors when unselected")).not.toBeChecked();
+
+    API.setElements([engineeringImage]);
+    API.updateElement(engineeringImage, {
+      customData: {
+        isEngineeringComponent: true,
+      },
+    });
+    API.setSelectedElements([engineeringImage]);
     expect(screen.getByLabelText("Edit anchor points")).not.toBeChecked();
     expect(screen.getByLabelText("Show anchors when unselected")).toBeChecked();
   });
@@ -110,7 +127,7 @@ describe("rectangle anchor editor", () => {
 
     expect(
       API.getElement(rectangle).customData?.showAnchorsWhenUnselected,
-    ).toBe(false);
+    ).toBe(true);
 
     fireEvent.click(getShowWhenUnselectedToggle());
 
@@ -146,9 +163,9 @@ describe("rectangle anchor editor", () => {
 
     expect(
       API.getElement(rectangle).customData?.showAnchorsWhenUnselected,
-    ).toBe(false);
+    ).toBe(true);
     expect(API.getElement(ellipse).customData?.showAnchorsWhenUnselected).toBe(
-      false,
+      true,
     );
 
     fireEvent.click(getShowWhenUnselectedToggle());
@@ -354,6 +371,11 @@ describe("rectangle anchor editor", () => {
     });
 
     API.setElements([rectangle]);
+    API.updateElement(rectangle, {
+      customData: {
+        isEngineeringComponent: true,
+      },
+    });
     API.clearSelection();
 
     mouse.moveTo(150, 100);
@@ -377,6 +399,11 @@ describe("rectangle anchor editor", () => {
     });
 
     API.setElements([diamond]);
+    API.updateElement(diamond, {
+      customData: {
+        isEngineeringComponent: true,
+      },
+    });
     API.clearSelection();
 
     mouse.moveTo(150, 100);
@@ -395,6 +422,11 @@ describe("rectangle anchor editor", () => {
     });
 
     API.setElements([rectangle]);
+    API.updateElement(rectangle, {
+      customData: {
+        isEngineeringComponent: true,
+      },
+    });
     API.setSelectedElements([rectangle]);
 
     fireEvent.click(getShowWhenUnselectedToggle());

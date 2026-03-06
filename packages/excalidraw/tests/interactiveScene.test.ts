@@ -65,6 +65,9 @@ describe("interactive binding highlights", () => {
       y: 100,
       width: 100,
       height: 100,
+      customData: {
+        isEngineeringComponent: true,
+      },
     }) as ExcalidrawBindableElement;
 
     expect(
@@ -104,6 +107,7 @@ describe("interactive binding highlights", () => {
       width: 100,
       height: 100,
       customData: {
+        isEngineeringComponent: true,
         anchorPoints: [
           [0.5, 0],
           [1, 0.5],
@@ -284,7 +288,7 @@ describe("interactive binding highlights", () => {
     ).toHaveLength(4);
   });
 
-  it("shows default image anchors as passive handles", () => {
+  it("shows default image anchors as passive handles for engineering components", () => {
     const image = newImageElement({
       type: "image",
       x: 100,
@@ -294,6 +298,9 @@ describe("interactive binding highlights", () => {
       fileId: null,
       status: "pending",
       scale: [1, 1],
+      customData: {
+        isEngineeringComponent: true,
+      },
     }) as ExcalidrawBindableElement;
 
     expect(
@@ -319,5 +326,30 @@ describe("interactive binding highlights", () => {
         expect.objectContaining({ index: 3, fixedPoint: [0, 0.5] }),
       ]),
     );
+  });
+
+  it("hides default image anchors as passive handles for normal shapes", () => {
+    const image = newImageElement({
+      type: "image",
+      x: 100,
+      y: 100,
+      width: 100,
+      height: 100,
+      fileId: null,
+      status: "pending",
+      scale: [1, 1],
+    }) as ExcalidrawBindableElement;
+
+    expect(
+      getAnchorPointHandleStatesForBindableElement(image, arrayToMap([image]), {
+        isEditing: false,
+        isSelected: false,
+        pointerCoords: pointFrom<GlobalPoint>(149, 100),
+        selectedAnchorPointIndex: null,
+        zoomValue: 1,
+        hoveredAnchorElementId: image.id,
+        hoveredAnchorPointIndex: 0,
+      }),
+    ).toEqual([]);
   });
 });
