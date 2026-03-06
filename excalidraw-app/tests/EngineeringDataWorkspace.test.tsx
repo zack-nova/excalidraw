@@ -7,8 +7,10 @@ import {
   withExcalidrawDimensions,
   within,
 } from "@excalidraw/excalidraw/tests/test-utils";
+import { sceneCoordsToViewportCoords } from "@excalidraw/common";
 import { CaptureUpdateAction } from "@excalidraw/excalidraw";
 import { API } from "@excalidraw/excalidraw/tests/helpers/api";
+import { Pointer } from "@excalidraw/excalidraw/tests/helpers/ui";
 import { pointFrom } from "@excalidraw/math";
 
 import ExcalidrawApp from "../App";
@@ -25,6 +27,7 @@ import {
 import { engineeringWorkspaceModeAtom } from "../engineering-ui-state";
 
 const PANEL_WIDTH_STORAGE_KEY = "engineering:selected-shape-actions-widths:v1";
+const mouse = new Pointer("mouse");
 
 const createEngineeringImage = ({
   id,
@@ -393,6 +396,102 @@ describe("Engineering data workspace", () => {
     });
   });
 
+  it("[anchor-sync] clicks canvas anchor point and switches to anchors tab with nearest anchor output", async () => {
+    appJotaiStore.set(engineeringWorkspaceModeAtom, "data");
+    appJotaiStore.set(engineeringProjectDocumentAtom, createProjectDocument());
+    appJotaiStore.set(componentCurveCatalogAtom, {
+      curvesByType: {},
+      loadStatusByType: {},
+      errorsByType: {},
+    });
+
+    await render(<ExcalidrawApp />);
+
+    await withExcalidrawDimensions({ width: 1920, height: 1080 }, async () => {
+      const boiler = createEngineeringImage({
+        id: "component:boiler",
+        name: "锅炉",
+        componentType: "Boiler",
+        anchors: [
+          {
+            id: "anchor-in",
+            uuid: "anchor-in",
+            node_id: "node-in",
+            position: { x: 0, y: 0.5 },
+            data: {
+              name: "Inlet",
+              name_cn: "入口",
+              interface_type: "Inlet",
+              connection_type: "inlet",
+              is_connected: false,
+              is_visible: true,
+              allow_not_display: false,
+              material_type: "water",
+              tpis_extra_info: null,
+            },
+          },
+          {
+            id: "anchor-out",
+            uuid: "anchor-out",
+            node_id: "node-out",
+            position: { x: 1, y: 0.5 },
+            data: {
+              name: "Outlet",
+              name_cn: "",
+              interface_type: "Outlet",
+              connection_type: "outlet",
+              is_connected: false,
+              is_visible: true,
+              allow_not_display: false,
+              material_type: "gas",
+              tpis_extra_info: null,
+            },
+          },
+        ],
+      });
+
+      API.updateScene({
+        elements: [boiler],
+        captureUpdate: CaptureUpdateAction.NEVER,
+      });
+      API.setSelectedElements([boiler]);
+
+      fireEvent.click(screen.getByRole("tab", { name: /^Input$/i }));
+      await waitFor(() => {
+        expect(screen.getByRole("tab", { name: /^Input$/i })).toHaveAttribute(
+          "aria-selected",
+          "true",
+        );
+      });
+
+      const anchorSceneX = boiler.x + boiler.width;
+      const anchorSceneY = boiler.y + boiler.height * 0.5;
+      const anchorViewport = sceneCoordsToViewportCoords(
+        { sceneX: anchorSceneX, sceneY: anchorSceneY },
+        window.h.state,
+      );
+
+      mouse.clickAt(anchorViewport.x, anchorViewport.y);
+
+      await waitFor(() => {
+        expect(screen.getByRole("tab", { name: /^Anchors$/i })).toHaveAttribute(
+          "aria-selected",
+          "true",
+        );
+      });
+
+      const anchorsPanel = await screen.findByRole("tabpanel", {
+        name: /^Anchors$/i,
+      });
+
+      await waitFor(() => {
+        expect(within(anchorsPanel).getByText("Outlet")).toBeVisible();
+      });
+      expect(within(anchorsPanel).queryByText("入口")).not.toBeInTheDocument();
+      expect(within(anchorsPanel).getByText("gas")).toBeVisible();
+    });
+  });
+
   it("[anchor-sync] treats selected pipe endpoint as anchor selection and jumps to the bound anchor tab content", async () => {
     appJotaiStore.set(engineeringWorkspaceModeAtom, "data");
     appJotaiStore.set(engineeringProjectDocumentAtom, createProjectDocument());
@@ -671,6 +770,7 @@ describe("Engineering data workspace", () => {
         expect(screen.getByTestId("engineering-structure-tree")).toBeVisible();
       });
 
+      let componentNodeTestId = "";
       let anchorNodeTestId = "";
       await waitFor(() => {
         const project = appJotaiStore.get(engineeringProjectDocumentAtom);
@@ -684,7 +784,13 @@ describe("Engineering data workspace", () => {
 
         expect(componentEntity).toBeDefined();
         expect(componentEntity!.anchorIds.length).toBeGreaterThan(1);
+        componentNodeTestId = `engineering-structure-node-${componentEntity!.id}`;
         anchorNodeTestId = `engineering-structure-node-${componentEntity!.anchorIds[1]}`;
+      });
+
+      fireEvent.click(screen.getByTestId(componentNodeTestId));
+      await waitFor(() => {
+        expect(screen.getByTestId(anchorNodeTestId)).toBeVisible();
       });
 
       fireEvent.click(screen.getByTestId(anchorNodeTestId));
@@ -704,6 +810,167 @@ describe("Engineering data workspace", () => {
       });
       expect(within(anchorsPanel).queryByText("入口")).not.toBeInTheDocument();
       expect(within(anchorsPanel).getByText("gas")).toBeVisible();
+    });
+  });
+
+  it("[structure-tree] keeps anchors collapsed by default and allows only one component anchors section expanded", async () => {
+    appJotaiStore.set(engineeringWorkspaceModeAtom, "data");
+    appJotaiStore.set(engineeringProjectDocumentAtom, createProjectDocument());
+    appJotaiStore.set(componentCurveCatalogAtom, {
+      curvesByType: {},
+      loadStatusByType: {},
+      errorsByType: {},
+    });
+
+    await render(<ExcalidrawApp />);
+
+    await withExcalidrawDimensions({ width: 1920, height: 1080 }, async () => {
+      const boilerA = createEngineeringImage({
+        id: "component:boiler-a",
+        name: "锅炉A",
+        componentType: "Boiler",
+      });
+      const boilerB = createEngineeringImage({
+        id: "component:boiler-b",
+        name: "锅炉B",
+        componentType: "Boiler",
+      });
+
+      API.updateScene({
+        elements: [boilerA, boilerB],
+        captureUpdate: CaptureUpdateAction.NEVER,
+      });
+      API.setSelectedElements([boilerA]);
+      API.setAppState({
+        openSidebar: {
+          name: "default",
+          tab: "engineering-structure",
+        },
+      });
+
+      await waitFor(() => {
+        expect(screen.getByTestId("engineering-structure-tree")).toBeVisible();
+      });
+
+      let componentNodeATestId = "";
+      let componentNodeBTestId = "";
+      let anchorNodeAInletTestId = "";
+      let anchorNodeBInletTestId = "";
+      await waitFor(() => {
+        const project = appJotaiStore.get(engineeringProjectDocumentAtom);
+        const findComponentEntity = (elementId: string) =>
+          Object.values(project.topology.componentsById).find(
+            (component) =>
+              (component.props.elementId === elementId ||
+                (Array.isArray(component.props.elementIds) &&
+                  component.props.elementIds.includes(elementId))) &&
+              component.templateKey === "Boiler",
+          );
+
+        const componentA = findComponentEntity(boilerA.id);
+        const componentB = findComponentEntity(boilerB.id);
+        expect(componentA).toBeDefined();
+        expect(componentB).toBeDefined();
+        expect(componentA!.anchorIds.length).toBeGreaterThan(0);
+        expect(componentB!.anchorIds.length).toBeGreaterThan(0);
+
+        componentNodeATestId = `engineering-structure-node-${componentA!.id}`;
+        componentNodeBTestId = `engineering-structure-node-${componentB!.id}`;
+        anchorNodeAInletTestId = `engineering-structure-node-${componentA!.anchorIds[0]}`;
+        anchorNodeBInletTestId = `engineering-structure-node-${componentB!.anchorIds[0]}`;
+      });
+
+      expect(screen.queryByTestId(anchorNodeAInletTestId)).not.toBeInTheDocument();
+      expect(screen.queryByTestId(anchorNodeBInletTestId)).not.toBeInTheDocument();
+
+      fireEvent.click(screen.getByTestId(componentNodeATestId));
+      await waitFor(() => {
+        expect(screen.getByTestId(anchorNodeAInletTestId)).toBeVisible();
+      });
+      expect(screen.queryByTestId(anchorNodeBInletTestId)).not.toBeInTheDocument();
+
+      fireEvent.click(screen.getByTestId(componentNodeBTestId));
+      await waitFor(() => {
+        expect(screen.getByTestId(anchorNodeBInletTestId)).toBeVisible();
+      });
+      expect(screen.queryByTestId(anchorNodeAInletTestId)).not.toBeInTheDocument();
+    });
+  });
+
+  it("[structure-tree] auto-expands the component when its anchor is selected", async () => {
+    appJotaiStore.set(engineeringWorkspaceModeAtom, "data");
+    appJotaiStore.set(engineeringProjectDocumentAtom, createProjectDocument());
+    appJotaiStore.set(componentCurveCatalogAtom, {
+      curvesByType: {},
+      loadStatusByType: {},
+      errorsByType: {},
+    });
+
+    await render(<ExcalidrawApp />);
+
+    await withExcalidrawDimensions({ width: 1920, height: 1080 }, async () => {
+      const boilerA = createEngineeringImage({
+        id: "component:boiler-a",
+        name: "锅炉A",
+        componentType: "Boiler",
+      });
+      const boilerB = createEngineeringImage({
+        id: "component:boiler-b",
+        name: "锅炉B",
+        componentType: "Boiler",
+      });
+
+      API.updateScene({
+        elements: [boilerA, boilerB],
+        captureUpdate: CaptureUpdateAction.NEVER,
+      });
+      API.setSelectedElements([boilerB]);
+      API.setAppState({
+        openSidebar: {
+          name: "default",
+          tab: "engineering-structure",
+        },
+      });
+
+      await waitFor(() => {
+        expect(screen.getByTestId("engineering-structure-tree")).toBeVisible();
+      });
+
+      let anchorNodeAInletTestId = "";
+      let anchorNodeBInletTestId = "";
+      await waitFor(() => {
+        const project = appJotaiStore.get(engineeringProjectDocumentAtom);
+        const findComponentEntity = (elementId: string) =>
+          Object.values(project.topology.componentsById).find(
+            (component) =>
+              (component.props.elementId === elementId ||
+                (Array.isArray(component.props.elementIds) &&
+                  component.props.elementIds.includes(elementId))) &&
+              component.templateKey === "Boiler",
+          );
+
+        const componentA = findComponentEntity(boilerA.id);
+        const componentB = findComponentEntity(boilerB.id);
+        expect(componentA).toBeDefined();
+        expect(componentB).toBeDefined();
+        expect(componentA!.anchorIds.length).toBeGreaterThan(0);
+        expect(componentB!.anchorIds.length).toBeGreaterThan(0);
+
+        anchorNodeAInletTestId = `engineering-structure-node-${componentA!.anchorIds[0]}`;
+        anchorNodeBInletTestId = `engineering-structure-node-${componentB!.anchorIds[0]}`;
+      });
+
+      expect(screen.queryByTestId(anchorNodeAInletTestId)).not.toBeInTheDocument();
+      expect(screen.queryByTestId(anchorNodeBInletTestId)).not.toBeInTheDocument();
+
+      API.setAppState({
+        selectedAnchorPointIndex: 0,
+      });
+
+      await waitFor(() => {
+        expect(screen.getByTestId(anchorNodeBInletTestId)).toBeVisible();
+      });
+      expect(screen.queryByTestId(anchorNodeAInletTestId)).not.toBeInTheDocument();
     });
   });
 

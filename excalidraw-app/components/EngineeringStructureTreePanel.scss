@@ -61,6 +61,13 @@
   color: inherit;
 }
 
+.engineering-structure-tree__expander {
+  margin-left: auto;
+  color: var(--text-secondary-color);
+  font-size: 0.75rem;
+  line-height: 1;
+}
+
 .engineering-structure-tree__item--anchor {
   padding-left: 1.5rem;
   font-size: 0.875rem;
@@ -81,6 +88,11 @@
 }
 
 .engineering-structure-tree__item[data-selected="true"] .engineering-structure-tree__detail {
+  color: inherit;
+  opacity: 0.8;
+}
+
+.engineering-structure-tree__item[data-selected="true"] .engineering-structure-tree__expander {
   color: inherit;
   opacity: 0.8;
 }

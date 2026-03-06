@@ -47,7 +47,13 @@ import {
   share,
   youtubeIcon,
 } from "@excalidraw/excalidraw/components/icons";
-import { isElementLink } from "@excalidraw/element";
+import {
+  findClosestBindableElementEditorAnchorPoint,
+  getSelectedElements,
+  isBindableElement,
+  isElementLink,
+  supportsBindableElementAnchorPoints,
+} from "@excalidraw/element";
 import {
   bumpElementVersions,
   restoreAppState,
@@ -55,6 +61,7 @@ import {
 } from "@excalidraw/excalidraw/data/restore";
 import { newElementWith } from "@excalidraw/element";
 import { isInitializedImageElement } from "@excalidraw/element";
+import { pointFrom } from "@excalidraw/math";
 import clsx from "clsx";
 import {
   parseLibraryTokensFromUrl,
@@ -420,6 +427,8 @@ const initializeScene = async (opts: {
 };
 
 const ExcalidrawWrapper = () => {
+  const ANCHOR_POINT_HANDLE_SIZE = 10;
+  const ANCHOR_HIT_DISTANCE_FACTOR = 1.5;
   const [errorMessage, setErrorMessage] = useState("");
   const isCollabDisabled = isRunningInIframe();
 
@@ -872,6 +881,71 @@ const ExcalidrawWrapper = () => {
     }
   };
 
+  const onPointerDown = useCallback(
+    (
+      activeTool: AppState["activeTool"],
+      pointerDownState: { origin: { x: number; y: number } },
+    ) => {
+      if (!excalidrawAPI || workspaceMode !== "data") {
+        return;
+      }
+
+      if (activeTool.type !== "selection") {
+        return;
+      }
+
+      const appState = excalidrawAPI.getAppState();
+      const elements = excalidrawAPI.getSceneElements();
+      const selectedElements = getSelectedElements(elements, appState, {
+        includeBoundTextElement: false,
+        includeElementsInFrames: false,
+      });
+
+      if (selectedElements.length !== 1) {
+        return;
+      }
+
+      const selectedElement = selectedElements[0];
+      if (
+        !isBindableElement(selectedElement) ||
+        !supportsBindableElementAnchorPoints(selectedElement)
+      ) {
+        return;
+      }
+
+      if (appState.editingAnchorElementId === selectedElement.id) {
+        return;
+      }
+
+      const hitDistance =
+        (ANCHOR_POINT_HANDLE_SIZE * ANCHOR_HIT_DISTANCE_FACTOR) /
+        appState.zoom.value;
+      const closestAnchor = findClosestBindableElementEditorAnchorPoint(
+        selectedElement,
+        pointFrom(pointerDownState.origin.x, pointerDownState.origin.y),
+        excalidrawAPI.getSceneElementsMapIncludingDeleted(),
+        hitDistance,
+      );
+
+      if (!closestAnchor) {
+        return;
+      }
+
+      if (appState.selectedAnchorPointIndex === closestAnchor.index) {
+        return;
+      }
+
+      excalidrawAPI.updateScene({
+        appState: {
+          selectedAnchorPointIndex: closestAnchor.index,
+          draggedAnchorPointIndex: null,
+        },
+        captureUpdate: CaptureUpdateAction.NEVER,
+      });
+    },
+    [excalidrawAPI, workspaceMode, ANCHOR_POINT_HANDLE_SIZE, ANCHOR_HIT_DISTANCE_FACTOR],
+  );
+
   const [latestShareableLink, setLatestShareableLink] = useState<string | null>(
     null,
   );
@@ -1006,6 +1080,7 @@ const ExcalidrawWrapper = () => {
       <Excalidraw
         excalidrawAPI={excalidrawRefCallback}
         onChange={onChange}
+        onPointerDown={onPointerDown}
         initialData={initialStatePromiseRef.current.promise}
         isCollaborating={isCollaborating}
         onPointerUpdate={collabAPI?.onPointerUpdate}

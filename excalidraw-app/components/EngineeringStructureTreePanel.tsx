@@ -5,7 +5,7 @@ import {
   useExcalidrawElements,
   useExcalidrawSetAppState,
 } from "@excalidraw/excalidraw/components/App";
-import type { ReactElement } from "react";
+import { useEffect, useState, type ReactElement } from "react";
 
 import { useAtomValue } from "../app-jotai";
 import type { ProjectDocument, RuntimeProjection } from "../engineering-domain";
@@ -104,6 +104,8 @@ const StructureTreeSection = ({
   onSelect,
   selectedElementIds,
   renderChildren,
+  isItemExpandable,
+  getItemExpandedState,
 }: {
   title: string;
   items: StructureTreeItem[];
@@ -111,6 +113,8 @@ const StructureTreeSection = ({
   onSelect: (item: StructureTreeItem) => void;
   selectedElementIds: Readonly<Record<string, true>>;
   renderChildren?: (item: StructureTreeItem, isSelected: boolean) => ReactElement | null;
+  isItemExpandable?: (item: StructureTreeItem) => boolean;
+  getItemExpandedState?: (item: StructureTreeItem) => boolean;
 }) => (
   <section className="engineering-structure-tree__section">
     <h4 className="engineering-structure-tree__section-title">
@@ -123,6 +127,8 @@ const StructureTreeSection = ({
           const isSelected = item.elementIds.some(
             (elementId) => !!selectedElementIds[elementId],
           );
+          const itemIsExpandable = !!isItemExpandable?.(item);
+          const itemIsExpanded = !!getItemExpandedState?.(item);
 
           return (
             <li key={item.entityId}>
@@ -131,6 +137,7 @@ const StructureTreeSection = ({
                 className="engineering-structure-tree__item"
                 data-selected={isSelected ? "true" : "false"}
                 data-testid={`engineering-structure-node-${item.entityId}`}
+                aria-expanded={itemIsExpandable ? itemIsExpanded : undefined}
                 onClick={() => onSelect(item)}
               >
                 <span>{item.label}</span>
@@ -138,6 +145,14 @@ const StructureTreeSection = ({
                   <span className="engineering-structure-tree__detail">
                     {" "}
                     {item.detail}
+                  </span>
+                ) : null}
+                {itemIsExpandable ? (
+                  <span
+                    className="engineering-structure-tree__expander"
+                    data-state={itemIsExpanded ? "expanded" : "collapsed"}
+                  >
+                    {itemIsExpanded ? "▾" : "▸"}
                   </span>
                 ) : null}
               </button>
@@ -161,6 +176,9 @@ export const EngineeringStructureTreePanel = () => {
   const project = useAtomValue(engineeringProjectDocumentAtom);
   const runtimeProjection = useAtomValue(engineeringRuntimeProjectionAtom);
   const workspaceMode = useAtomValue(engineeringWorkspaceModeAtom);
+  const [expandedComponentEntityId, setExpandedComponentEntityId] = useState<
+    string | null
+  >(null);
   const componentNameVariableIdByComponentId =
     buildComponentNameVariableIdByComponentId(structureTree, project);
   const components: ComponentStructureTreeItem[] = structureTree.components.map(
@@ -232,6 +250,45 @@ export const EngineeringStructureTreePanel = () => {
     };
   });
 
+  useEffect(() => {
+    if (workspaceMode !== "data") {
+      return;
+    }
+
+    if (typeof appState.selectedAnchorPointIndex !== "number") {
+      return;
+    }
+
+    const selectedComponentItems = components.filter((component) =>
+      component.elementIds.some(
+        (elementId) => !!appState.selectedElementIds[elementId],
+      ),
+    );
+
+    if (selectedComponentItems.length !== 1) {
+      return;
+    }
+
+    const [selectedComponent] = selectedComponentItems;
+    if (
+      appState.selectedAnchorPointIndex < 0 ||
+      appState.selectedAnchorPointIndex >= selectedComponent.anchors.length
+    ) {
+      return;
+    }
+
+    setExpandedComponentEntityId((current) =>
+      current === selectedComponent.entityId
+        ? current
+        : selectedComponent.entityId,
+    );
+  }, [
+    appState.selectedAnchorPointIndex,
+    appState.selectedElementIds,
+    components,
+    workspaceMode,
+  ]);
+
   const getSelectedElementsForTreeItem = (item: StructureTreeItem) =>
     item.elementIds
       .map((elementId) => elements.find((element) => element.id === elementId))
@@ -275,10 +332,18 @@ export const EngineeringStructureTreePanel = () => {
     handleSelect(item, null);
   };
 
+  const handleSelectComponentNode = (item: ComponentStructureTreeItem) => {
+    handleSelect(item, null);
+    setExpandedComponentEntityId((current) =>
+      current === item.entityId ? null : item.entityId,
+    );
+  };
+
   const handleSelectAnchorNode = (
     component: ComponentStructureTreeItem,
     anchor: StructureTreeAnchorItem,
   ) => {
+    setExpandedComponentEntityId(component.entityId);
     handleSelect(component, anchor.anchorIndex);
   };
 
@@ -287,7 +352,9 @@ export const EngineeringStructureTreePanel = () => {
     isComponentSelected: boolean,
   ) => {
     const componentItem = item as ComponentStructureTreeItem;
-    if (!componentItem.anchors.length) {
+    const isExpanded = expandedComponentEntityId === componentItem.entityId;
+
+    if (!componentItem.anchors.length || !isExpanded) {
       return null;
     }
 
@@ -336,8 +403,10 @@ export const EngineeringStructureTreePanel = () => {
         title="组件"
         items={components}
         testId="engineering-structure-components"
-        onSelect={handleSelectNode}
+        onSelect={(item) => handleSelectComponentNode(item as ComponentStructureTreeItem)}
         selectedElementIds={appState.selectedElementIds}
+        isItemExpandable={(item) => (item as ComponentStructureTreeItem).anchors.length > 0}
+        getItemExpandedState={(item) => expandedComponentEntityId === item.entityId}
         renderChildren={renderComponentAnchors}
       />
       <StructureTreeSection
