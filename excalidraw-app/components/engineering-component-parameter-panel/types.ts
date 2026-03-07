@@ -1,6 +1,6 @@
 import type { ComponentSpecParameter } from "../../component-spec-store";
-import type { ParsedEngineeringAnchor } from "../../engineering-component-data-utils";
-import type { EngineeringValue } from "../../engineering-domain";
+import type { ParsedEngineeringAnchor } from "../../engineering/engineering-component-data-utils";
+import type { EngineeringValue } from "../../engineering/engineering-domain";
 
 export type SelectedComponentAnchor = ParsedEngineeringAnchor;
 

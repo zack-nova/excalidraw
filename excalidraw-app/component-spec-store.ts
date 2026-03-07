@@ -3,7 +3,7 @@ import manifestJson from "./data/componentSpecsMock/manifest.json";
 import {
   getConfiguredEngineeringBackendBaseUrl,
   requestEngineeringBackendJson,
-} from "./engineering-backend-client";
+} from "./engineering/engineering-backend-client";
 
 export type ComponentSpecManifestEntry = {
   componentType: string;

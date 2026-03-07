@@ -8,7 +8,7 @@ import {
 import {
   getConfiguredEngineeringBackendBaseUrl,
   requestEngineeringBackendJson,
-} from "../engineering-backend-client";
+} from "../engineering/engineering-backend-client";
 
 import { createEngineeringTableMaterialLibraryItem } from "./engineeringTableMaterial";
 import { createEngineeringChartMaterialLibraryItems } from "./engineeringChartMaterial";

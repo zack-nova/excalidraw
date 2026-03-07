@@ -1,5 +1,5 @@
-import { atom } from "./app-jotai";
-import { componentSpecCatalogAtom } from "./component-spec-store";
+import { atom } from "../app-jotai";
+import { componentSpecCatalogAtom } from "../component-spec-store";
 import {
   applyEngineeringProjectMutationAtom,
   engineeringProjectDocumentAtom,

@@ -19,25 +19,25 @@ import {
   engineeringProjectDocumentAtom,
   engineeringRuntimeProjectionAtom,
   engineeringScenarioDocumentAtom,
-} from "../engineering-domain-state";
+} from "../engineering/engineering-domain-state";
 import type {
   ProjectDocument,
   RuntimeProjection,
   ScenarioDocument,
   VariableDef,
-} from "../engineering-domain";
+} from "../engineering/engineering-domain";
 import {
   toComponentParameterLookupKey,
   toComponentParameterStableToken,
-} from "../engineering-parameter-identity";
-import { engineeringWorkspaceModeAtom } from "../engineering-ui-state";
+} from "../engineering/engineering-parameter-identity";
+import { engineeringWorkspaceModeAtom } from "../engineering/engineering-ui-state";
 import {
   getFirstNonEmptyString,
   isRecord,
   normalizeLookupKey,
   parseEngineeringComponent,
   type ParsedEngineeringAnchor,
-} from "../engineering-component-data-utils";
+} from "../engineering/engineering-component-data-utils";
 
 import "./EngineeringHoverPreviewOverlay.scss";
 

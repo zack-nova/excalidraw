@@ -11,7 +11,7 @@ import {
   createProjectDocument,
   createScenarioDocument,
   createValueSnapshot,
-} from "../engineering-domain";
+} from "../engineering/engineering-domain";
 
 describe("engineering data templates", () => {
   it("renders variables, normalized aliases, and arithmetic expressions", () => {

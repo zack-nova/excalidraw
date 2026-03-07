@@ -5,7 +5,7 @@ import type { AppState } from "@excalidraw/excalidraw/types";
 import {
   parseEngineeringComponent,
   type ParsedEngineeringAnchor,
-} from "../../engineering-component-data-utils";
+} from "../../engineering/engineering-component-data-utils";
 import type {
   SelectedComponentContext,
   SelectedShapeVariableBinding,

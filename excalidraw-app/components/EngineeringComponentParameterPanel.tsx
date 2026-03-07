@@ -20,18 +20,18 @@ import {
   type EngineeringValue,
   type ProjectDocument,
   type ScenarioDocument,
-} from "../engineering-domain";
-import { syncEngineeringComponentSpecBridgeAtom } from "../engineering-component-spec-bridge-state";
+} from "../engineering/engineering-domain";
+import { syncEngineeringComponentSpecBridgeAtom } from "../engineering/engineering-component-spec-bridge-state";
 import {
   applyEngineeringScenarioMutationAtom,
   engineeringProjectDocumentAtom,
   engineeringScenarioDocumentAtom,
   upsertEngineeringPointBindingAtom,
-} from "../engineering-domain-state";
+} from "../engineering/engineering-domain-state";
 import {
   toComponentParameterLookupKey,
   toComponentParameterStableToken,
-} from "../engineering-parameter-identity";
+} from "../engineering/engineering-parameter-identity";
 import {
   getSelectedEngineeringTableMaterialContext,
   type EngineeringTableMaterialResizeOperation,
@@ -43,7 +43,7 @@ import {
 import {
   getFirstNonEmptyString,
   normalizeLookupKey,
-} from "../engineering-component-data-utils";
+} from "../engineering/engineering-component-data-utils";
 import {
   EngineeringChartMaterialActionsPanel,
   EngineeringChartMaterialDataPanel,

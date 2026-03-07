@@ -1,4 +1,4 @@
-import type { ComponentSpec, ComponentSpecParameter } from "./component-spec-store";
+import type { ComponentSpec, ComponentSpecParameter } from "../component-spec-store";
 import type {
   EngineeringValue,
   ProjectDocument,

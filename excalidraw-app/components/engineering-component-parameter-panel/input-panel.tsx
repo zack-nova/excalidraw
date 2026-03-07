@@ -1,7 +1,7 @@
 import { useState } from "react";
 
 import type { ComponentSpecParameter } from "../../component-spec-store";
-import type { EngineeringValue } from "../../engineering-domain";
+import type { EngineeringValue } from "../../engineering/engineering-domain";
 import {
   getEnumOptions,
   getInputType,

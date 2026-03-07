@@ -64,6 +64,7 @@ export enum EVENT {
   DROP = "drop",
   GESTURE_END = "gestureend",
   BEFORE_UNLOAD = "beforeunload",
+  PAGE_HIDE = "pagehide",
   GESTURE_START = "gesturestart",
   GESTURE_CHANGE = "gesturechange",
   POINTER_MOVE = "pointermove",

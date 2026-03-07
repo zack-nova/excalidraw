@@ -182,18 +182,18 @@ import {
   EngineeringCalculateTrigger,
   EngineeringWorkspaceModeTrigger,
 } from "./components/EngineeringWorkspaceControls";
-import { syncEngineeringSceneToModelAtom } from "./engineering-modeling-state";
-import { engineeringWorkspaceModeAtom } from "./engineering-ui-state";
+import { syncEngineeringSceneToModelAtom } from "./engineering/engineering-modeling-state";
+import { engineeringWorkspaceModeAtom } from "./engineering/engineering-ui-state";
 import {
   ENGINEERING_SELECTED_SHAPE_ACTIONS_MAX_WIDTH,
   ENGINEERING_SELECTED_SHAPE_ACTIONS_MIN_WIDTH,
   persistEngineeringSelectedShapeActionsWidthsToStorage,
   readEngineeringSelectedShapeActionsWidthsFromStorage,
-} from "./engineering-ui-state";
+} from "./engineering/engineering-ui-state";
 import {
   engineeringProjectDocumentAtom,
   engineeringRuntimeProjectionAtom,
-} from "./engineering-domain-state";
+} from "./engineering/engineering-domain-state";
 
 import type { CollabAPI } from "./collab/Collab";
 
@@ -793,7 +793,7 @@ const ExcalidrawWrapper = () => {
       }
     }, SYNC_BROWSER_TABS_TIMEOUT);
 
-    const onUnload = () => {
+    const onPageHide = () => {
       LocalData.flushSave();
     };
 
@@ -810,13 +810,13 @@ const ExcalidrawWrapper = () => {
     };
 
     window.addEventListener(EVENT.HASHCHANGE, onHashChange, false);
-    window.addEventListener(EVENT.UNLOAD, onUnload, false);
+    window.addEventListener(EVENT.PAGE_HIDE, onPageHide, false);
     window.addEventListener(EVENT.BLUR, visibilityChange, false);
     document.addEventListener(EVENT.VISIBILITY_CHANGE, visibilityChange, false);
     window.addEventListener(EVENT.FOCUS, visibilityChange, false);
     return () => {
       window.removeEventListener(EVENT.HASHCHANGE, onHashChange, false);
-      window.removeEventListener(EVENT.UNLOAD, onUnload, false);
+      window.removeEventListener(EVENT.PAGE_HIDE, onPageHide, false);
       window.removeEventListener(EVENT.BLUR, visibilityChange, false);
       window.removeEventListener(EVENT.FOCUS, visibilityChange, false);
       document.removeEventListener(

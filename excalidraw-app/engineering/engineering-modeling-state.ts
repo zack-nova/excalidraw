@@ -1,4 +1,4 @@
-import { atom } from "./app-jotai";
+import { atom } from "../app-jotai";
 import { syncEngineeringComponentSpecBridgeAtom } from "./engineering-component-spec-bridge-state";
 import {
   applyEngineeringProjectMutationAtom,

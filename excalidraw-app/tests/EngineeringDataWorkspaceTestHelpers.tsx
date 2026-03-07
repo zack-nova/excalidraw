@@ -12,7 +12,7 @@ import {
   engineeringLiveSnapshotsAtom,
   engineeringRunRuntimeAtom,
   engineeringSelectedCalculationRunIdAtom,
-} from "../engineering-domain-state";
+} from "../engineering/engineering-domain-state";
 
 vi.mock("@excalidraw/common", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@excalidraw/common")>();
@@ -206,7 +206,7 @@ export { componentCurveCatalogAtom } from "../component-spec-store";
 export { createEngineeringChartMaterialLibraryItems } from "../data/engineeringChartMaterial";
 export { publishEngineeringData } from "../data/engineeringData";
 export { createEngineeringTableMaterialLibraryItem } from "../data/engineeringTableMaterial";
-export { createProjectDocument } from "../engineering-domain";
+export { createProjectDocument } from "../engineering/engineering-domain";
 export {
   engineeringCalculationRunsAtom,
   engineeringLastCalculationRequestAtom,
@@ -214,8 +214,8 @@ export {
   engineeringRunRuntimeAtom,
   engineeringScenarioDocumentAtom,
   engineeringSelectedCalculationRunIdAtom,
-} from "../engineering-domain-state";
-export { engineeringWorkspaceModeAtom } from "../engineering-ui-state";
+} from "../engineering/engineering-domain-state";
+export { engineeringWorkspaceModeAtom } from "../engineering/engineering-ui-state";
 
 export {
   act,

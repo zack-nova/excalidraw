@@ -29,11 +29,11 @@ import {
   createProjectDocument,
   createScenarioDocument,
   createValueSnapshot,
-} from "../engineering-domain";
+} from "../engineering/engineering-domain";
 import {
   engineeringProjectDocumentAtom,
   engineeringScenarioDocumentAtom,
-} from "../engineering-domain-state";
+} from "../engineering/engineering-domain-state";
 
 const mouse = new Pointer("mouse");
 

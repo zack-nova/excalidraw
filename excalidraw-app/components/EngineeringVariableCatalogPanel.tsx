@@ -6,11 +6,11 @@ import type {
   ProjectDocument,
   ValueProvider,
   VariableDef,
-} from "../engineering-domain";
+} from "../engineering/engineering-domain";
 import {
   applyEngineeringProjectMutationAtom,
   engineeringProjectDocumentAtom,
-} from "../engineering-domain-state";
+} from "../engineering/engineering-domain-state";
 
 import "./EngineeringVariableCatalogPanel.scss";
 

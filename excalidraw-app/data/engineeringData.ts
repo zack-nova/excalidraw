@@ -17,7 +17,7 @@ import type {
   ProjectDocument,
   RuntimeProjection,
   ValueProvider,
-} from "../engineering-domain";
+} from "../engineering/engineering-domain";
 import { createEngineeringDataChannel } from "./engineering-data-channel";
 import { createMockEngineeringDataFrame } from "./engineering-data-mock";
 import { renderEngineeringTemplate } from "./engineering-data-template-render";

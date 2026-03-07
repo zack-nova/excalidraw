@@ -8,15 +8,15 @@ import {
 import { useEffect, useState, type ReactElement } from "react";
 
 import { useAtomValue } from "../app-jotai";
-import type { ProjectDocument, RuntimeProjection } from "../engineering-domain";
-import type { EngineeringStructureTree } from "../engineering-modeling";
-import { isDynamicEngineeringAnchor } from "../engineering-modeling";
-import { engineeringStructureTreeAtom } from "../engineering-modeling-state";
+import type { ProjectDocument, RuntimeProjection } from "../engineering/engineering-domain";
+import type { EngineeringStructureTree } from "../engineering/engineering-modeling";
+import { isDynamicEngineeringAnchor } from "../engineering/engineering-modeling";
+import { engineeringStructureTreeAtom } from "../engineering/engineering-modeling-state";
 import {
   engineeringProjectDocumentAtom,
   engineeringRuntimeProjectionAtom,
-} from "../engineering-domain-state";
-import { engineeringWorkspaceModeAtom } from "../engineering-ui-state";
+} from "../engineering/engineering-domain-state";
+import { engineeringWorkspaceModeAtom } from "../engineering/engineering-ui-state";
 
 import "./EngineeringStructureTreePanel.scss";
 

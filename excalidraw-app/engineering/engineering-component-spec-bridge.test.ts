@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { ComponentSpec } from "./component-spec-store";
+import type { ComponentSpec } from "../component-spec-store";
 import {
   buildVariableCatalogFromLoadedComponentSpecs,
   isSpecManagedVariableId,

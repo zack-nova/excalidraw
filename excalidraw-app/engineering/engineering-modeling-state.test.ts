@@ -5,7 +5,7 @@ import { API } from "@excalidraw/excalidraw/tests/helpers/api";
 import { pointFrom } from "@excalidraw/math";
 
 import { createProjectDocument } from "./engineering-domain";
-import { componentSpecCatalogAtom } from "./component-spec-store";
+import { componentSpecCatalogAtom } from "../component-spec-store";
 import {
   engineeringModelingProjectionAtom,
   engineeringStructureTreeAtom,

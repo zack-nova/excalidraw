@@ -2,7 +2,7 @@ import { createStore } from "jotai";
 import { describe, expect, it, vi } from "vitest";
 
 import * as bridgeModule from "./engineering-component-spec-bridge";
-import { componentSpecCatalogAtom } from "./component-spec-store";
+import { componentSpecCatalogAtom } from "../component-spec-store";
 import { createProjectDocument } from "./engineering-domain";
 import { engineeringProjectDocumentAtom } from "./engineering-domain-state";
 import { syncEngineeringComponentSpecBridgeAtom } from "./engineering-component-spec-bridge-state";

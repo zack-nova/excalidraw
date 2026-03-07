@@ -16,9 +16,9 @@ import { vi } from "vitest";
 
 import ExcalidrawApp from "../App";
 import { appJotaiStore } from "../app-jotai";
-import { createProjectDocument } from "../engineering-domain";
-import { engineeringProjectDocumentAtom } from "../engineering-domain-state";
-import { engineeringWorkspaceModeAtom } from "../engineering-ui-state";
+import { createProjectDocument } from "../engineering/engineering-domain";
+import { engineeringProjectDocumentAtom } from "../engineering/engineering-domain-state";
+import { engineeringWorkspaceModeAtom } from "../engineering/engineering-ui-state";
 
 const createEngineeringImage = ({
   id,

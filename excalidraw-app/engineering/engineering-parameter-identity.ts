@@ -1,4 +1,4 @@
-import type { ComponentSpecParameter } from "./component-spec-store";
+import type { ComponentSpecParameter } from "../component-spec-store";
 
 const getFirstNonEmptyString = (...values: (string | null | undefined)[]) => {
   for (const value of values) {
