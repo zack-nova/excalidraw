@@ -138,6 +138,12 @@ import {
   resizeSelectedEngineeringTableMaterial,
   type EngineeringTableMaterialResizeOperation,
 } from "./data/engineeringTableMaterial";
+import {
+  applySelectedEngineeringChartMaterialConfig,
+  isEngineeringChartMaterialElement,
+  renderEngineeringChartMaterialElements,
+  type EngineeringChartMaterialPatch,
+} from "./data/engineeringChartMaterial";
 
 import { updateStaleImageStatuses } from "./data/FileManager";
 import {
@@ -433,6 +439,7 @@ const initializeScene = async (opts: {
 const ExcalidrawWrapper = () => {
   const ANCHOR_POINT_HANDLE_SIZE = 10;
   const ANCHOR_HIT_DISTANCE_FACTOR = 1.5;
+  const ENGINEERING_CHART_RENDER_DEBOUNCE_MS = 250;
   const [errorMessage, setErrorMessage] = useState("");
   const isCollabDisabled = isRunningInIframe();
 
@@ -473,6 +480,9 @@ const ExcalidrawWrapper = () => {
     aliasToId: {},
   });
   const isApplyingEngineeringDataRef = useRef(false);
+  const pendingEngineeringChartElementIdsRef = useRef(new Set<string>());
+  const engineeringChartDebounceTimersRef = useRef(new Map<string, number>());
+  const engineeringChartFrameRequestRef = useRef<number | null>(null);
 
   const [, setShareDialogState] = useAtom(shareDialogStateAtom);
   const [collabAPI] = useAtom(collabAPIAtom);
@@ -497,6 +507,94 @@ const ExcalidrawWrapper = () => {
       selectedShapeActionsWidths,
     );
   }, [selectedShapeActionsWidths]);
+
+  const flushEngineeringChartRenderQueue = useCallback(() => {
+    engineeringChartFrameRequestRef.current = null;
+
+    if (!excalidrawAPI) {
+      pendingEngineeringChartElementIdsRef.current.clear();
+      return;
+    }
+
+    if (pendingEngineeringChartElementIdsRef.current.size === 0) {
+      return;
+    }
+
+    const targetElementIds = new Set(pendingEngineeringChartElementIdsRef.current);
+    pendingEngineeringChartElementIdsRef.current.clear();
+
+    const renderResult = renderEngineeringChartMaterialElements({
+      elements: excalidrawAPI.getSceneElementsIncludingDeleted(),
+      context: engineeringDataContextRef.current,
+      targetElementIds,
+    });
+
+    if (!renderResult.didChange) {
+      return;
+    }
+
+    isApplyingEngineeringDataRef.current = true;
+    excalidrawAPI.updateScene({
+      elements: renderResult.elements,
+      captureUpdate: CaptureUpdateAction.NEVER,
+    });
+  }, [excalidrawAPI]);
+
+  const enqueueEngineeringChartRenderElement = useCallback(
+    (elementId: string) => {
+      const previousTimer =
+        engineeringChartDebounceTimersRef.current.get(elementId);
+      if (typeof previousTimer === "number") {
+        window.clearTimeout(previousTimer);
+      }
+
+      const timerId = window.setTimeout(() => {
+        engineeringChartDebounceTimersRef.current.delete(elementId);
+        pendingEngineeringChartElementIdsRef.current.add(elementId);
+
+        if (engineeringChartFrameRequestRef.current !== null) {
+          return;
+        }
+
+        engineeringChartFrameRequestRef.current = window.requestAnimationFrame(
+          () => {
+            flushEngineeringChartRenderQueue();
+          },
+        );
+      }, ENGINEERING_CHART_RENDER_DEBOUNCE_MS);
+
+      engineeringChartDebounceTimersRef.current.set(elementId, timerId);
+    },
+    [ENGINEERING_CHART_RENDER_DEBOUNCE_MS, flushEngineeringChartRenderQueue],
+  );
+
+  const scheduleEngineeringChartRenderForElements = useCallback(
+    (elements: readonly OrderedExcalidrawElement[]) => {
+      elements.forEach((element) => {
+        if (element.isDeleted || !isEngineeringChartMaterialElement(element)) {
+          return;
+        }
+        enqueueEngineeringChartRenderElement(element.id);
+      });
+    },
+    [enqueueEngineeringChartRenderElement],
+  );
+
+  useEffect(
+    () => () => {
+      engineeringChartDebounceTimersRef.current.forEach((timerId) =>
+        window.clearTimeout(timerId),
+      );
+      engineeringChartDebounceTimersRef.current.clear();
+      pendingEngineeringChartElementIdsRef.current.clear();
+
+      if (engineeringChartFrameRequestRef.current !== null) {
+        window.cancelAnimationFrame(engineeringChartFrameRequestRef.current);
+        engineeringChartFrameRequestRef.current = null;
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
     publishEngineeringDomainData(
@@ -757,6 +855,7 @@ const ExcalidrawWrapper = () => {
       );
 
       if (nextElements !== elements) {
+        scheduleEngineeringChartRenderForElements(nextElements);
         isApplyingEngineeringDataRef.current = true;
         excalidrawAPI.updateScene({
           elements: nextElements,
@@ -770,14 +869,16 @@ const ExcalidrawWrapper = () => {
     const stopMockFeed = maybeStartEngineeringDataMockFromUrl();
     const unsubscribe = subscribeEngineeringData((context) => {
       engineeringDataContextRef.current = context;
-      syncEngineeringDataElements(excalidrawAPI.getSceneElementsIncludingDeleted());
+      const sceneElements = excalidrawAPI.getSceneElementsIncludingDeleted();
+      syncEngineeringDataElements(sceneElements);
+      scheduleEngineeringChartRenderForElements(sceneElements);
     });
 
     return () => {
       unsubscribe();
       stopMockFeed();
     };
-  }, [excalidrawAPI]);
+  }, [excalidrawAPI, scheduleEngineeringChartRenderForElements]);
 
   useEffect(() => {
     const unloadHandler = (event: BeforeUnloadEvent) => {
@@ -835,6 +936,8 @@ const ExcalidrawWrapper = () => {
         return;
       }
     }
+
+    scheduleEngineeringChartRenderForElements(elements);
 
     if (collabAPI?.isCollaborating()) {
       collabAPI.syncElements(elements);
@@ -910,6 +1013,61 @@ const ExcalidrawWrapper = () => {
       });
     },
     [excalidrawAPI],
+  );
+
+  const applyEngineeringChartMaterial = useCallback(
+    (patch: EngineeringChartMaterialPatch) => {
+      if (!excalidrawAPI) {
+        return;
+      }
+
+      const availableVariableKeys = new Set<string>();
+      Object.keys(engineeringRuntimeProjection.effectiveValues).forEach((key) =>
+        availableVariableKeys.add(key),
+      );
+      Object.keys(engineeringDataContextRef.current.values).forEach((key) =>
+        availableVariableKeys.add(key),
+      );
+      Object.keys(engineeringDataContextRef.current.data).forEach((key) =>
+        availableVariableKeys.add(key),
+      );
+      Object.entries(engineeringDataContextRef.current.aliasToId).forEach(
+        ([alias, variableId]) => {
+          availableVariableKeys.add(alias);
+          if (variableId) {
+            availableVariableKeys.add(variableId);
+          }
+        },
+      );
+      engineeringDataContextRef.current.rows.forEach((row) => {
+        const rawKeys = [row.alias, row.id, row.uuid, row.name];
+        rawKeys.forEach((key) => {
+          if (typeof key === "string" && key.trim()) {
+            availableVariableKeys.add(key.trim());
+          }
+        });
+      });
+
+      const applyResult = applySelectedEngineeringChartMaterialConfig({
+        elements: excalidrawAPI.getSceneElementsIncludingDeleted(),
+        appState: excalidrawAPI.getAppState(),
+        patch,
+        availableVariableKeys,
+      });
+      if (!applyResult) {
+        return;
+      }
+
+      excalidrawAPI.updateScene({
+        elements: applyResult.elements,
+        appState: {
+          selectedElementIds: applyResult.selectedElementIds,
+          selectedGroupIds: {},
+        },
+        captureUpdate: CaptureUpdateAction.IMMEDIATELY,
+      });
+    },
+    [engineeringRuntimeProjection, excalidrawAPI],
   );
 
   const onPointerDown = useCallback(
@@ -1236,6 +1394,7 @@ const ExcalidrawWrapper = () => {
               <EngineeringComponentParameterPanel
                 section="actions"
                 onEngineeringTableResize={resizeEngineeringTableMaterial}
+                onEngineeringChartApply={applyEngineeringChartMaterial}
               />
             );
           }
@@ -1245,6 +1404,7 @@ const ExcalidrawWrapper = () => {
               <EngineeringComponentParameterPanel
                 section="input"
                 onEngineeringTableResize={resizeEngineeringTableMaterial}
+                onEngineeringChartApply={applyEngineeringChartMaterial}
               />
             );
           }
@@ -1254,6 +1414,7 @@ const ExcalidrawWrapper = () => {
               <EngineeringComponentParameterPanel
                 section="output"
                 onEngineeringTableResize={resizeEngineeringTableMaterial}
+                onEngineeringChartApply={applyEngineeringChartMaterial}
               />
             );
           }
@@ -1263,6 +1424,7 @@ const ExcalidrawWrapper = () => {
               <EngineeringComponentParameterPanel
                 section="anchors"
                 onEngineeringTableResize={resizeEngineeringTableMaterial}
+                onEngineeringChartApply={applyEngineeringChartMaterial}
               />
             );
           }
@@ -1272,6 +1434,7 @@ const ExcalidrawWrapper = () => {
               <EngineeringComponentParameterPanel
                 section="data"
                 onEngineeringTableResize={resizeEngineeringTableMaterial}
+                onEngineeringChartApply={applyEngineeringChartMaterial}
               />
             );
           }

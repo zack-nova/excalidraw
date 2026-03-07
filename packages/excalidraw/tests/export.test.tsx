@@ -218,4 +218,35 @@ describe("export", () => {
     // src/tests/fixtures/svg-image-exporting-reference.svg
     expect(svgText).toMatchSnapshot(`svg export output`);
   });
+
+  it("embeds engineering chart preview bitmap into svg export", async () => {
+    const previewDataURL =
+      "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP8z8DwHwAFgwJ/l5jB7QAAAABJRU5ErkJggg==";
+    const chartElement = API.createElement({
+      type: "rectangle",
+      width: 480,
+      height: 320,
+    });
+    (
+      chartElement as typeof chartElement & {
+        customData: Record<string, unknown>;
+      }
+    ).customData = {
+      engineeringChartMaterial: {
+        kind: "chart",
+        chartType: "line",
+        lastRenderImageDataURL: previewDataURL,
+      },
+    };
+
+    const svg = await exportToSvg(
+      [chartElement],
+      { ...getDefaultAppState(), exportBackground: false },
+      {},
+    );
+    const svgText = svg.outerHTML;
+
+    expect(svgText).toContain("<image");
+    expect(svgText).toContain(previewDataURL);
+  });
 });

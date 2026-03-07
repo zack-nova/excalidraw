@@ -7,6 +7,7 @@ import {
 } from "@excalidraw/excalidraw/data/blob";
 
 import { createEngineeringTableMaterialLibraryItem } from "./engineeringTableMaterial";
+import { createEngineeringChartMaterialLibraryItems } from "./engineeringChartMaterial";
 
 import type {
   BinaryFileData,
@@ -482,15 +483,20 @@ export const fetchComponentLibrarySourcesFromBackend = async () => {
 
 export const loadEngineeringLibraryItems = async () => {
   const tableMaterialLibraryItem = createEngineeringTableMaterialLibraryItem();
+  const chartMaterialLibraryItems = createEngineeringChartMaterialLibraryItems();
 
   try {
     const sources = await fetchComponentLibrarySourcesFromBackend();
     const componentLibraryItems = await buildLibraryItemsFromComponentSources(
       sources,
     );
-    return [tableMaterialLibraryItem, ...componentLibraryItems];
+    return [
+      tableMaterialLibraryItem,
+      ...chartMaterialLibraryItems,
+      ...componentLibraryItems,
+    ];
   } catch (error) {
     // Keep app usable even if backend library endpoint is unavailable.
-    return [tableMaterialLibraryItem];
+    return [tableMaterialLibraryItem, ...chartMaterialLibraryItems];
   }
 };

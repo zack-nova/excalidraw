@@ -84,6 +84,41 @@ const maybeWrapNodesInFrameClipPath = (
   return null;
 };
 
+const ENGINEERING_CHART_MATERIAL_META_KEY = "engineeringChartMaterial";
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  !!value && typeof value === "object" && !Array.isArray(value);
+
+const getEngineeringChartPreviewImageDataURL = (
+  element: NonDeletedExcalidrawElement,
+) => {
+  if (element.type !== "rectangle") {
+    return null;
+  }
+
+  const customData = isRecord(element.customData) ? element.customData : null;
+  if (!customData) {
+    return null;
+  }
+
+  const material = customData[ENGINEERING_CHART_MATERIAL_META_KEY];
+  if (!isRecord(material) || material.kind !== "chart") {
+    return null;
+  }
+
+  const lastRender = material.lastRenderImageDataURL;
+  if (typeof lastRender === "string" && lastRender.trim().length > 0) {
+    return lastRender;
+  }
+
+  const lastGood = material.lastGoodImageDataURL;
+  if (typeof lastGood === "string" && lastGood.trim().length > 0) {
+    return lastGood;
+  }
+
+  return null;
+};
+
 const renderElementToSvg = (
   element: NonDeletedExcalidrawElement,
   elementsMap: RenderableElementsMap,
@@ -148,7 +183,15 @@ const renderElementToSvg = (
     case "rectangle":
     case "diamond":
     case "ellipse": {
-      const shape = ShapeCache.generateElementShape(element, renderConfig);
+      const chartPreviewDataURL = getEngineeringChartPreviewImageDataURL(element);
+      const shapeElement =
+        element.type === "rectangle" && chartPreviewDataURL
+          ? ({
+              ...element,
+              strokeColor: "transparent",
+            } as typeof element)
+          : element;
+      const shape = ShapeCache.generateElementShape(shapeElement, renderConfig);
       const node = roughSVGDrawWithPrecision(
         rsvg,
         shape,
@@ -165,16 +208,41 @@ const renderElementToSvg = (
           offsetY || 0
         }) rotate(${degree} ${cx} ${cy})`,
       );
+      const nodes: SVGElement[] = [];
+      if (chartPreviewDataURL) {
+        const chartImage = svgRoot.ownerDocument.createElementNS(SVG_NS, "image");
+        chartImage.setAttribute("x", "0");
+        chartImage.setAttribute("y", "0");
+        chartImage.setAttribute("width", `${element.width}`);
+        chartImage.setAttribute("height", `${element.height}`);
+        chartImage.setAttribute("href", chartPreviewDataURL);
+        chartImage.setAttribute("preserveAspectRatio", "none");
+        chartImage.setAttribute(
+          "transform",
+          `translate(${offsetX || 0} ${
+            offsetY || 0
+          }) rotate(${degree} ${cx} ${cy})`,
+        );
+        if (opacity !== 1) {
+          chartImage.setAttribute("opacity", `${opacity}`);
+        }
+        nodes.push(chartImage);
+      }
+      nodes.push(node);
 
       const g = maybeWrapNodesInFrameClipPath(
         element,
         root,
-        [node],
+        nodes,
         renderConfig.frameRendering,
         elementsMap,
       );
 
-      addToRoot(g || node, element);
+      if (g) {
+        addToRoot(g, element);
+      } else {
+        nodes.forEach((svgNode) => addToRoot(svgNode, element));
+      }
       break;
     }
     case "iframe":

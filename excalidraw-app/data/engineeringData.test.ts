@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildEngineeringDataRowsFromRuntimeProjection,
+  createMockEngineeringDataFrame,
   createEngineeringDataContext,
   renderEngineeringTemplate,
 } from "./engineeringData";
@@ -235,5 +236,29 @@ describe("engineering data templates", () => {
         context,
       ),
     ).toBe("Ambient=25, Sum=25");
+  });
+
+  it("generates mock chart variables for all built-in chart templates", () => {
+    const frame = createMockEngineeringDataFrame(3);
+    const aliasSet = new Set(frame.map((row) => row.alias));
+
+    expect(aliasSet.has("plant.boiler.mainSteamPressure.labels")).toBe(true);
+    expect(aliasSet.has("plant.boiler.mainSteamPressure.values")).toBe(true);
+    expect(aliasSet.has("plant.units.power.labels")).toBe(true);
+    expect(aliasSet.has("plant.units.power.values")).toBe(true);
+    expect(aliasSet.has("plant.aux.rate.labels")).toBe(true);
+    expect(aliasSet.has("plant.aux.rate.values")).toBe(true);
+    expect(aliasSet.has("plant.fuel.mix.labels")).toBe(true);
+    expect(aliasSet.has("plant.fuel.mix.values")).toBe(true);
+
+    const mainSteamValues = frame.find(
+      (row) => row.alias === "plant.boiler.mainSteamPressure.values",
+    )?.value;
+    const fuelMixValues = frame.find(
+      (row) => row.alias === "plant.fuel.mix.values",
+    )?.value;
+
+    expect(mainSteamValues).toMatch(/^\[.+\]$/);
+    expect(fuelMixValues).toMatch(/^\[.+\]$/);
   });
 });

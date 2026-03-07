@@ -16,9 +16,13 @@ import { pointFrom } from "@excalidraw/math";
 import { configure } from "@testing-library/react";
 import { vi } from "vitest";
 
+import type { ExcalidrawElement } from "@excalidraw/element/types";
+
 import ExcalidrawApp from "../App";
 import { appJotaiStore } from "../app-jotai";
 import { componentCurveCatalogAtom } from "../component-spec-store";
+import { createEngineeringChartMaterialLibraryItems } from "../data/engineeringChartMaterial";
+import { publishEngineeringData } from "../data/engineeringData";
 import { createEngineeringTableMaterialLibraryItem } from "../data/engineeringTableMaterial";
 import { createProjectDocument } from "../engineering-domain";
 import {
@@ -154,7 +158,7 @@ const getTableMeta = (element: { customData?: Record<string, unknown> }) => {
 };
 
 const getTableCellAt = (
-  elements: readonly ReturnType<typeof API.createElement>[],
+  elements: readonly ExcalidrawElement[],
   row: number,
   col: number,
 ) =>
@@ -169,7 +173,7 @@ const withTableTemplateAt = ({
   col,
   template,
 }: {
-  elements: readonly ReturnType<typeof API.createElement>[];
+  elements: readonly ExcalidrawElement[];
   row: number;
   col: number;
   template: string;
@@ -373,6 +377,323 @@ describe("Engineering data workspace", () => {
       await waitFor(() => {
         const dataPanel = screen.getByRole("tabpanel", { name: /^Data$/i });
         expect(within(dataPanel).getByText("var:ambient")).toBeVisible();
+      });
+    });
+  });
+
+  it("shows chart material actions for normal shape and persists config only after clicking apply", async () => {
+    appJotaiStore.set(engineeringWorkspaceModeAtom, "data");
+    appJotaiStore.set(engineeringProjectDocumentAtom, createProjectDocument());
+    appJotaiStore.set(componentCurveCatalogAtom, {
+      curvesByType: {},
+      loadStatusByType: {},
+      errorsByType: {},
+    });
+
+    await render(<ExcalidrawApp />);
+
+    await withExcalidrawDimensions({ width: 1920, height: 1080 }, async () => {
+      const lineChartItem = createEngineeringChartMaterialLibraryItems()[0];
+      const chartElement = lineChartItem.elements[0];
+
+      API.updateScene({
+        elements: lineChartItem.elements,
+        captureUpdate: CaptureUpdateAction.NEVER,
+      });
+      API.setSelectedElements([chartElement]);
+
+      const tablist = await screen.findByRole("tablist", {
+        name: "Properties sections",
+      });
+      fireEvent.click(within(tablist).getByRole("tab", { name: /^Actions$/i }));
+
+      await waitFor(() => {
+        expect(screen.getByText("图示素材")).toBeVisible();
+      });
+
+      const labelsInput = screen.getByLabelText("图示分类变量");
+      const valuesInput = screen.getByLabelText("图示数值变量");
+
+      fireEvent.change(labelsInput, {
+        target: {
+          value: '{{vars["plant.units.power.labels"]}}',
+        },
+      });
+      fireEvent.change(valuesInput, {
+        target: {
+          value: '{{vars["plant.units.power.values"]}}',
+        },
+      });
+
+      const beforeApply = API.getElement(chartElement);
+      expect(
+        (beforeApply?.customData as Record<string, any> | undefined)
+          ?.engineeringChartMaterial?.bindings?.labels,
+      ).not.toBe('{{vars["plant.units.power.labels"]}}');
+
+      fireEvent.click(screen.getByRole("button", { name: "应用图示配置" }));
+
+      await waitFor(() => {
+        const nextChart = API.getElement(chartElement);
+        expect(
+          (nextChart?.customData as Record<string, any> | undefined)
+            ?.engineeringChartMaterial?.bindings,
+        ).toEqual({
+          labels: '{{vars["plant.units.power.labels"]}}',
+          values: '{{vars["plant.units.power.values"]}}',
+        });
+      });
+    });
+  });
+
+  it("does not warn dotted alias bindings as missing after data feed is available", async () => {
+    appJotaiStore.set(engineeringWorkspaceModeAtom, "data");
+    appJotaiStore.set(engineeringProjectDocumentAtom, createProjectDocument());
+    appJotaiStore.set(componentCurveCatalogAtom, {
+      curvesByType: {},
+      loadStatusByType: {},
+      errorsByType: {},
+    });
+
+    await render(<ExcalidrawApp />);
+
+    await withExcalidrawDimensions({ width: 1920, height: 1080 }, async () => {
+      const lineChartItem = createEngineeringChartMaterialLibraryItems()[0];
+      const chartElement = lineChartItem.elements[0];
+
+      API.updateScene({
+        elements: lineChartItem.elements,
+        captureUpdate: CaptureUpdateAction.NEVER,
+      });
+      API.setSelectedElements([chartElement]);
+
+      await act(async () => {
+        publishEngineeringData([
+          {
+            id: "var:chart:unit-power:labels",
+            alias: "plant.units.power.labels",
+            value: "1号机,2号机,3号机",
+          },
+          {
+            id: "var:chart:unit-power:values",
+            alias: "plant.units.power.values",
+            value: "630,615,642",
+          },
+        ]);
+      });
+
+      const tablist = await screen.findByRole("tablist", {
+        name: "Properties sections",
+      });
+      fireEvent.click(within(tablist).getByRole("tab", { name: /^Actions$/i }));
+
+      await waitFor(() => {
+        expect(screen.getByText("图示素材")).toBeVisible();
+      });
+
+      fireEvent.change(screen.getByLabelText("图示分类变量"), {
+        target: {
+          value: '{{vars["plant.units.power.labels"]}}',
+        },
+      });
+      fireEvent.change(screen.getByLabelText("图示数值变量"), {
+        target: {
+          value: '{{vars["plant.units.power.values"]}}',
+        },
+      });
+      fireEvent.click(screen.getByRole("button", { name: "应用图示配置" }));
+
+      await waitFor(() => {
+        const nextChart = API.getElement(chartElement);
+        const chartMeta = (nextChart?.customData as Record<string, any> | undefined)
+          ?.engineeringChartMaterial;
+        expect(chartMeta?.warnings || []).not.toContain(
+          "变量不存在: plant.units.power.labels",
+        );
+        expect(chartMeta?.warnings || []).not.toContain(
+          "变量不存在: plant.units.power.values",
+        );
+        expect(chartMeta?.lastGoodOption).toEqual(
+          expect.objectContaining({
+            series: [expect.objectContaining({ data: [630, 615, 642] })],
+          }),
+        );
+      });
+
+      await act(async () => {
+        publishEngineeringData([]);
+      });
+    });
+  });
+
+  it("keeps chart code draft when data refresh updates snapshot metadata", async () => {
+    appJotaiStore.set(engineeringWorkspaceModeAtom, "data");
+    appJotaiStore.set(engineeringProjectDocumentAtom, createProjectDocument());
+    appJotaiStore.set(componentCurveCatalogAtom, {
+      curvesByType: {},
+      loadStatusByType: {},
+      errorsByType: {},
+    });
+
+    await render(<ExcalidrawApp />);
+
+    await withExcalidrawDimensions({ width: 1920, height: 1080 }, async () => {
+      const lineChartItem = createEngineeringChartMaterialLibraryItems()[0];
+      const chartElement = lineChartItem.elements[0];
+
+      API.updateScene({
+        elements: lineChartItem.elements,
+        captureUpdate: CaptureUpdateAction.NEVER,
+      });
+      API.setSelectedElements([chartElement]);
+
+      const tablist = await screen.findByRole("tablist", {
+        name: "Properties sections",
+      });
+      fireEvent.click(within(tablist).getByRole("tab", { name: /^Actions$/i }));
+
+      await waitFor(() => {
+        expect(screen.getByText("图示素材")).toBeVisible();
+      });
+
+      fireEvent.change(screen.getByLabelText("图示模式"), {
+        target: { value: "code" },
+      });
+
+      const codeDraft =
+        '(vars) => ({ title: { text: "未应用草稿" }, xAxis: { type: "category", data: ["A"] }, yAxis: { type: "value" }, series: [{ type: "line", data: [1] }] })';
+      fireEvent.change(screen.getByLabelText("图示代码函数"), {
+        target: { value: codeDraft },
+      });
+
+      expect(
+        (screen.getByLabelText("图示模式") as HTMLSelectElement).value,
+      ).toBe("code");
+      expect(
+        (screen.getByLabelText("图示代码函数") as HTMLTextAreaElement).value,
+      ).toBe(codeDraft);
+
+      await act(async () => {
+        publishEngineeringData([
+          {
+            id: "var:chart:main-steam-pressure:labels",
+            alias: "plant.boiler.mainSteamPressure.labels",
+            value: "08:00,09:00,10:00",
+          },
+          {
+            id: "var:chart:main-steam-pressure:values",
+            alias: "plant.boiler.mainSteamPressure.values",
+            value: "13.2,13.4,13.1",
+          },
+        ]);
+      });
+
+      await waitFor(
+        () => {
+          const nextChart = API.getElement(chartElement);
+          const chartMeta = (nextChart?.customData as Record<string, any> | undefined)
+            ?.engineeringChartMaterial;
+          expect(chartMeta?.lastRenderImageDataURL).toMatch(/^data:image\/svg\+xml/);
+        },
+        {
+          timeout: 3_000,
+        },
+      );
+
+      expect(
+        (screen.getByLabelText("图示模式") as HTMLSelectElement).value,
+      ).toBe("code");
+      expect(
+        (screen.getByLabelText("图示代码函数") as HTMLTextAreaElement).value,
+      ).toBe(codeDraft);
+
+      await act(async () => {
+        publishEngineeringData([]);
+      });
+    });
+  });
+
+  it("refreshes chart snapshot metadata from engineering data feed with debounce scheduling", async () => {
+    appJotaiStore.set(engineeringWorkspaceModeAtom, "data");
+    appJotaiStore.set(engineeringProjectDocumentAtom, createProjectDocument());
+    appJotaiStore.set(componentCurveCatalogAtom, {
+      curvesByType: {},
+      loadStatusByType: {},
+      errorsByType: {},
+    });
+
+    await render(<ExcalidrawApp />);
+
+    await withExcalidrawDimensions({ width: 1920, height: 1080 }, async () => {
+      const lineChartItem = createEngineeringChartMaterialLibraryItems()[0];
+      const chartElement = lineChartItem.elements[0];
+
+      API.updateScene({
+        elements: lineChartItem.elements,
+        captureUpdate: CaptureUpdateAction.NEVER,
+      });
+      API.setSelectedElements([chartElement]);
+
+      const tablist = await screen.findByRole("tablist", {
+        name: "Properties sections",
+      });
+      fireEvent.click(within(tablist).getByRole("tab", { name: /^Actions$/i }));
+
+      fireEvent.change(screen.getByLabelText("图示分类变量"), {
+        target: {
+          value: '{{vars["chart.demo.labels"]}}',
+        },
+      });
+      fireEvent.change(screen.getByLabelText("图示数值变量"), {
+        target: {
+          value: '{{vars["chart.demo.values"]}}',
+        },
+      });
+      fireEvent.click(screen.getByRole("button", { name: "应用图示配置" }));
+
+      await waitFor(() => {
+        const nextChart = API.getElement(chartElement);
+        expect(
+          (nextChart?.customData as Record<string, any> | undefined)
+            ?.engineeringChartMaterial?.bindings,
+        ).toEqual({
+          labels: '{{vars["chart.demo.labels"]}}',
+          values: '{{vars["chart.demo.values"]}}',
+        });
+      });
+
+      await act(async () => {
+        publishEngineeringData([
+          {
+            id: "var:chart-demo-labels",
+            alias: "chart.demo.labels",
+            value: "1号机,2号机,3号机",
+          },
+          {
+            id: "var:chart-demo-values",
+            alias: "chart.demo.values",
+            value: "630,615,642",
+          },
+        ]);
+      });
+
+      await waitFor(
+        () => {
+          const nextChart = API.getElement(chartElement);
+          const chartMeta = (nextChart?.customData as Record<string, any> | undefined)
+            ?.engineeringChartMaterial;
+          expect(chartMeta?.lastGoodOption).toBeTruthy();
+          expect(chartMeta?.lastGoodImageDataURL).toMatch(
+            /^data:image\/svg\+xml/,
+          );
+        },
+        {
+          timeout: 3_000,
+        },
+      );
+
+      await act(async () => {
+        publishEngineeringData([]);
       });
     });
   });
