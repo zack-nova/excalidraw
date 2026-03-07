@@ -109,6 +109,7 @@ import { AppFooter } from "./components/AppFooter";
 import { AppMainMenu } from "./components/AppMainMenu";
 import { EngineeringModelingFooter } from "./components/EngineeringModelingFooter";
 import { EngineeringComponentParameterPanel } from "./components/EngineeringComponentParameterPanel";
+import { EngineeringHoverPreviewOverlay } from "./components/EngineeringHoverPreviewOverlay";
 import { AppWelcomeScreen } from "./components/AppWelcomeScreen";
 import {
   ExportToExcalidrawPlus,
@@ -1360,6 +1361,7 @@ const ExcalidrawWrapper = () => {
         />
 
         <AppSidebar />
+        <EngineeringHoverPreviewOverlay />
 
         {errorMessage && (
           <ErrorDialog onClose={() => setErrorMessage("")}>
