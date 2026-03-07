@@ -242,6 +242,7 @@ const normalizeParameter = (
     getNonEmptyString(readField(parameter, ["tpisKey", "tpis_key"])) ||
     getNonEmptyString(readField(parameter, ["name", "nameCn", "name_cn"])) ||
     `${scope}:${index}`;
+  const curveData = readField(parameter, ["curveData", "curve_data"]);
 
   return {
     id: parameterId,
@@ -276,7 +277,7 @@ const normalizeParameter = (
     tpisExtraInfo: readField(parameter, ["tpisExtraInfo", "tpis_extra_info"]),
     hasCurveData:
       readField(parameter, ["hasCurveData"]) === true ||
-      readField(parameter, ["curve_data"]) !== null,
+      (curveData !== null && curveData !== undefined),
   };
 };
 

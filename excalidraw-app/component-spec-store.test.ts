@@ -164,6 +164,12 @@ describe("component spec store", () => {
     expect(
       boilerSpec.inputParameters.some(
         (parameter) =>
+          parameter.id === "boiler:eta" && parameter.hasCurveData === false,
+      ),
+    ).toBe(true);
+    expect(
+      boilerSpec.inputParameters.some(
+        (parameter) =>
           parameter.name === "MainDPcv" && parameter.hasCurveData === true,
       ),
     ).toBe(true);
