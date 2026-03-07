@@ -205,6 +205,68 @@ describe("engineering modeling projection", () => {
     ]);
   });
 
+  it("excludes dynamic pipe binding anchors from structure tree anchor counts and labels", () => {
+    const project = createProjectDocument();
+    const source = createEngineeringImage({
+      id: "component:source",
+      name: "源",
+      componentType: "Source",
+    });
+    const sink = createEngineeringImage({
+      id: "component:sink",
+      name: "汇",
+      componentType: "Sink",
+    });
+    const pipe = API.createElement({
+      id: "arrow:pipe-dynamic-1",
+      type: "arrow",
+      x: 0,
+      y: 0,
+      width: 300,
+      height: 0,
+      points: [
+        pointFrom(0, 0),
+        pointFrom(300, 0),
+      ],
+      startBinding: {
+        elementId: source.id,
+        fixedPoint: [1.0975, 0.4992],
+        mode: "orbit",
+      },
+      endBinding: {
+        elementId: sink.id,
+        fixedPoint: [0, 0.5],
+        mode: "orbit",
+      },
+    });
+
+    const projection = buildEngineeringModelingProjection(project, [
+      source,
+      sink,
+      pipe,
+    ]);
+
+    const sourceComponentId = `component:${source.id}`;
+    const sourceComponent = projection.topology.componentsById[sourceComponentId];
+    expect(sourceComponent).toBeDefined();
+
+    const hasDynamicAnchor = sourceComponent!.anchorIds.some((anchorId) =>
+      projection.topology.anchorsById[anchorId]?.key.startsWith("dynamic:"),
+    );
+    expect(hasDynamicAnchor).toBe(true);
+
+    const sourceStructureNode = projection.structureTree.components.find(
+      (component) => component.entityId === sourceComponentId,
+    );
+    expect(sourceStructureNode).toBeDefined();
+    expect(sourceStructureNode?.detail).toBe("2 anchors");
+    expect(
+      sourceStructureNode?.childLabels?.some((label) =>
+        label.startsWith("dynamic:"),
+      ),
+    ).toBe(false);
+  });
+
   it("rejects arrows that are not connected to engineering component anchors", () => {
     const project = createProjectDocument();
     const pump = createEngineeringImage({

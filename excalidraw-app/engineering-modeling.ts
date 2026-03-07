@@ -21,6 +21,7 @@ import type {
 const ENGINEERING_COMPONENT_FLAG = "isEngineeringComponent";
 const ENGINEERING_COMPONENT_GROUP_ID = "engineeringComponentGroupId";
 const FIXED_POINT_EPSILON = 0.0001;
+const DYNAMIC_ANCHOR_KEY_PREFIX = "dynamic:";
 const ENGINEERING_COMPONENT_ELEMENT_TYPES = new Set<
   ExcalidrawElement["type"]
 >(["image", "rectangle", "diamond", "ellipse"]);
@@ -241,7 +242,13 @@ const resolveAnchorIdFromBinding = (
 };
 
 const getDynamicAnchorId = (elementId: string, point: FixedPoint) =>
-  `dynamic:${elementId}:${point[0].toFixed(4)}:${point[1].toFixed(4)}`;
+  `${DYNAMIC_ANCHOR_KEY_PREFIX}${elementId}:${point[0].toFixed(4)}:${point[1].toFixed(4)}`;
+
+export const isDynamicEngineeringAnchor = (
+  anchor: Pick<AnchorEntity, "key"> | null | undefined,
+) =>
+  typeof anchor?.key === "string" &&
+  anchor.key.startsWith(DYNAMIC_ANCHOR_KEY_PREFIX);
 
 const mergeDynamicAnchors = (
   element: ExcalidrawElement,
@@ -273,22 +280,35 @@ const getComponentOwnerKey = (element: ExcalidrawElement) => {
   return engineeringGroupId ? `group:${engineeringGroupId}` : element.id;
 };
 
-const createStructureTree = (topology: TopologyState): EngineeringStructureTree => {
-  const components = Object.values(topology.componentsById).map((component) => ({
-    entityId: component.id,
-    label: component.name || component.templateKey || component.id,
-    detail: `${component.anchorIds.length} anchors`,
-    childLabels: component.anchorIds.map((anchorId) => {
-      const anchor = topology.anchorsById[anchorId];
+const getVisibleAnchorIds = (
+  component: ComponentEntity,
+  topology: TopologyState,
+) =>
+  component.anchorIds.filter((anchorId) => {
+    const anchorEntity = topology.anchorsById[anchorId];
+    return !!anchorEntity && !isDynamicEngineeringAnchor(anchorEntity);
+  });
 
-      return anchor?.name || anchor?.key || anchorId;
-    }),
-    elementIds: Array.isArray(component.props.elementIds)
-      ? (component.props.elementIds as string[]).filter(Boolean)
-      : typeof component.props.elementId === "string"
-        ? [component.props.elementId]
-        : [],
-  }));
+const createStructureTree = (topology: TopologyState): EngineeringStructureTree => {
+  const components = Object.values(topology.componentsById).map((component) => {
+    const visibleAnchorIds = getVisibleAnchorIds(component, topology);
+
+    return {
+      entityId: component.id,
+      label: component.name || component.templateKey || component.id,
+      detail: `${visibleAnchorIds.length} anchors`,
+      childLabels: visibleAnchorIds.map((anchorId) => {
+        const anchor = topology.anchorsById[anchorId];
+
+        return anchor?.name || anchor?.key || anchorId;
+      }),
+      elementIds: Array.isArray(component.props.elementIds)
+        ? (component.props.elementIds as string[]).filter(Boolean)
+        : typeof component.props.elementId === "string"
+          ? [component.props.elementId]
+          : [],
+    };
+  });
   const pipes = Object.values(topology.pipesById).map((pipe) => {
     const sourceAnchor = topology.anchorsById[pipe.fromAnchorId];
     const targetAnchor = topology.anchorsById[pipe.toAnchorId];

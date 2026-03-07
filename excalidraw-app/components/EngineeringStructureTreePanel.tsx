@@ -10,6 +10,7 @@ import { useEffect, useState, type ReactElement } from "react";
 import { useAtomValue } from "../app-jotai";
 import type { ProjectDocument, RuntimeProjection } from "../engineering-domain";
 import type { EngineeringStructureTree } from "../engineering-modeling";
+import { isDynamicEngineeringAnchor } from "../engineering-modeling";
 import { engineeringStructureTreeAtom } from "../engineering-modeling-state";
 import {
   engineeringProjectDocumentAtom,
@@ -184,9 +185,16 @@ export const EngineeringStructureTreePanel = () => {
   const components: ComponentStructureTreeItem[] = structureTree.components.map(
     (component) => {
       const topologyComponent = project.topology.componentsById[component.entityId];
-      const anchors: StructureTreeAnchorItem[] = (
-        topologyComponent?.anchorIds || []
-      ).map((anchorId, anchorIndex) => {
+      const visibleAnchorIds = (topologyComponent?.anchorIds || []).filter(
+        (anchorId) => {
+          const anchorEntity = project.topology.anchorsById[anchorId];
+          return !!anchorEntity && !isDynamicEngineeringAnchor(anchorEntity);
+        },
+      );
+      const anchors: StructureTreeAnchorItem[] = visibleAnchorIds.map((
+        anchorId,
+        anchorIndex,
+      ) => {
         const anchorEntity = project.topology.anchorsById[anchorId];
 
         return {
