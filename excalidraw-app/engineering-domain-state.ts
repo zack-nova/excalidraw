@@ -20,6 +20,11 @@ import {
   type ValueSnapshot,
   type ValueSnapshotStatus,
 } from "./engineering-domain";
+import {
+  EngineeringBackendHttpError,
+  getConfiguredEngineeringBackendBaseUrl,
+  requestEngineeringBackendJson,
+} from "./engineering-backend-client";
 
 export type EngineeringProjectMutationScope =
   | "model"
@@ -108,11 +113,6 @@ const RECOVERABLE_BACKEND_ERROR_CODES = new Set([
   "session_not_found",
 ]);
 
-type EngineeringBackendErrorDetail = {
-  code?: string;
-  message?: string;
-};
-
 type EngineeringBackendLiveRowsResponse = {
   rows?: unknown;
 };
@@ -125,52 +125,6 @@ type EngineeringBackendRunResponse = {
   finishedAt?: number;
   resultValues?: unknown;
   diagnostics?: unknown;
-};
-
-class EngineeringBackendHttpError extends Error {
-  status: number;
-  detail?: EngineeringBackendErrorDetail;
-
-  constructor(
-    message: string,
-    status: number,
-    detail?: EngineeringBackendErrorDetail,
-  ) {
-    super(message);
-    this.name = "EngineeringBackendHttpError";
-    this.status = status;
-    this.detail = detail;
-  }
-}
-
-const getConfiguredEngineeringBackendBaseUrl = () => {
-  const runtimeBaseUrl = (
-    globalThis as typeof globalThis & {
-      __EXCALIDRAW_ENGINEERING_BACKEND_BASE_URL__?: unknown;
-    }
-  ).__EXCALIDRAW_ENGINEERING_BACKEND_BASE_URL__;
-  if (typeof runtimeBaseUrl === "string") {
-    const runtimeTrimmed = runtimeBaseUrl.trim();
-    if (runtimeTrimmed) {
-      return runtimeTrimmed.replace(/\/+$/, "");
-    }
-  }
-
-  // Avoid real network calls in tests unless explicitly injected at runtime.
-  if (import.meta.env.MODE === "test") {
-    return null;
-  }
-
-  const candidate = import.meta.env.VITE_APP_ENGINEERING_BACKEND_URL;
-  if (typeof candidate !== "string") {
-    return null;
-  }
-  const trimmed = candidate.trim();
-  if (!trimmed) {
-    return null;
-  }
-
-  return trimmed.replace(/\/+$/, "");
 };
 
 const toValueSnapshotStatus = (
@@ -188,46 +142,6 @@ const toValueSnapshotSource = (
   VALUE_SNAPSHOT_SOURCES.includes(value as ValueSnapshot["source"])
     ? (value as ValueSnapshot["source"])
     : fallback;
-
-const requestEngineeringBackendJson = async <T>(
-  baseUrl: string,
-  path: string,
-  init?: RequestInit,
-): Promise<T> => {
-  const response = await fetch(`${baseUrl}${path}`, {
-    ...init,
-    headers: {
-      "Content-Type": "application/json",
-      ...(init?.headers || {}),
-    },
-  });
-  let responseBody: unknown = null;
-
-  try {
-    responseBody = await response.json();
-  } catch {
-    responseBody = null;
-  }
-
-  if (!response.ok) {
-    const detail =
-      responseBody &&
-      typeof responseBody === "object" &&
-      "detail" in responseBody &&
-      responseBody.detail &&
-      typeof responseBody.detail === "object"
-        ? (responseBody.detail as EngineeringBackendErrorDetail)
-        : undefined;
-
-    throw new EngineeringBackendHttpError(
-      detail?.message || `Engineering backend request failed with ${response.status}`,
-      response.status,
-      detail,
-    );
-  }
-
-  return (responseBody ?? {}) as T;
-};
 
 const isRecoverableEngineeringBackendError = (error: unknown) =>
   error instanceof EngineeringBackendHttpError &&

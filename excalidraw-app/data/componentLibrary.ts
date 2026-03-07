@@ -5,6 +5,10 @@ import {
   getDataURL,
   getMimeType,
 } from "@excalidraw/excalidraw/data/blob";
+import {
+  getConfiguredEngineeringBackendBaseUrl,
+  requestEngineeringBackendJson,
+} from "../engineering-backend-client";
 
 import { createEngineeringTableMaterialLibraryItem } from "./engineeringTableMaterial";
 import { createEngineeringChartMaterialLibraryItems } from "./engineeringChartMaterial";
@@ -122,16 +126,6 @@ type BackendLibraryListResponse = {
   total?: number;
 };
 
-class EngineeringBackendHttpError extends Error {
-  readonly status: number;
-
-  constructor(message: string, status: number) {
-    super(message);
-    this.name = "EngineeringBackendHttpError";
-    this.status = status;
-  }
-}
-
 const getStableHashNumber = (value: string) => {
   let hash = 0;
 
@@ -141,57 +135,6 @@ const getStableHashNumber = (value: string) => {
   }
 
   return Math.abs(hash) || 1;
-};
-
-const getConfiguredEngineeringBackendBaseUrl = () => {
-  const runtimeBaseUrl = (
-    globalThis as typeof globalThis & {
-      __EXCALIDRAW_ENGINEERING_BACKEND_BASE_URL__?: unknown;
-    }
-  ).__EXCALIDRAW_ENGINEERING_BACKEND_BASE_URL__;
-  if (typeof runtimeBaseUrl === "string") {
-    const runtimeTrimmed = runtimeBaseUrl.trim();
-    if (runtimeTrimmed) {
-      return runtimeTrimmed.replace(/\/+$/, "");
-    }
-  }
-
-  // Avoid real network calls in tests unless explicitly injected at runtime.
-  if (import.meta.env.MODE === "test") {
-    return null;
-  }
-
-  const candidate = import.meta.env.VITE_APP_ENGINEERING_BACKEND_URL;
-  if (typeof candidate !== "string") {
-    return null;
-  }
-  const trimmed = candidate.trim();
-  if (!trimmed) {
-    return null;
-  }
-
-  return trimmed.replace(/\/+$/, "");
-};
-
-const requestEngineeringBackendJson = async <T>(
-  baseUrl: string,
-  path: string,
-): Promise<T> => {
-  const response = await fetch(`${baseUrl}${path}`, {
-    headers: {
-      "Content-Type": "application/json",
-    },
-  });
-  const responseBody = await response.json();
-
-  if (!response.ok) {
-    throw new EngineeringBackendHttpError(
-      `Engineering backend request failed with ${response.status}`,
-      response.status,
-    );
-  }
-
-  return responseBody as T;
 };
 
 const toBackendAnchor = (anchor: BackendLibraryAnchor): ComponentAnchor => ({

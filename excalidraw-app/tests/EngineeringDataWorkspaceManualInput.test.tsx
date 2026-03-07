@@ -1,0 +1,691 @@
+import { describe, expect, it } from "vitest";
+
+import {
+  act,
+  API,
+  CaptureUpdateAction,
+  appJotaiStore,
+  componentCurveCatalogAtom,
+  createEngineeringImage,
+  createProjectDocument,
+  engineeringLastCalculationRequestAtom,
+  engineeringProjectDocumentAtom,
+  engineeringRunRuntimeAtom,
+  engineeringScenarioDocumentAtom,
+  engineeringSelectedCalculationRunIdAtom,
+  engineeringWorkspaceModeAtom,
+  ExcalidrawApp,
+  fireEvent,
+  render,
+  screen,
+  setupEngineeringWorkspaceBeforeEach,
+  waitFor,
+  withExcalidrawDimensions,
+  within,
+} from "./EngineeringDataWorkspaceTestHelpers";
+
+describe("Engineering data workspace [manual-input]", () => {
+  setupEngineeringWorkspaceBeforeEach();
+
+  it("shows lazily loaded input and output parameter specs for the selected component", async () => {
+    appJotaiStore.set(engineeringWorkspaceModeAtom, "data");
+    appJotaiStore.set(engineeringProjectDocumentAtom, createProjectDocument());
+    appJotaiStore.set(componentCurveCatalogAtom, {
+      curvesByType: {},
+      loadStatusByType: {},
+      errorsByType: {},
+    });
+
+    await render(<ExcalidrawApp />);
+
+    await withExcalidrawDimensions({ width: 1920, height: 1080 }, async () => {
+      const boiler = createEngineeringImage({
+        id: "component:boiler",
+        name: "锅炉",
+        componentType: "Boiler",
+      });
+
+      API.updateScene({
+        elements: [boiler],
+        captureUpdate: CaptureUpdateAction.NEVER,
+      });
+      API.setSelectedElements([boiler]);
+
+      await waitFor(() => {
+        expect(
+          screen.getByRole("tablist", { name: "Properties sections" }),
+        ).toBeVisible();
+      });
+
+      fireEvent.click(screen.getByRole("tab", { name: /^Input$/i }));
+
+      await waitFor(() => {
+        const inputPanel = screen.getByRole("tabpanel", {
+          name: /^Input$/i,
+        });
+        expect(within(inputPanel).getByText("机械不完全燃烧损失")).toBeVisible();
+      });
+      expect(
+        within(screen.getByRole("tabpanel", { name: /^Input$/i })).getAllByText(
+          "锅炉效率",
+        ).length,
+      ).toBeGreaterThan(0);
+
+      fireEvent.click(screen.getByRole("tab", { name: /^Output$/i }));
+
+      await waitFor(() => {
+        expect(
+          within(screen.getByRole("tabpanel", { name: /^Output$/i })).getByText(
+            "锅炉热负荷",
+          ),
+        ).toBeVisible();
+      });
+      expect(
+        within(screen.getByRole("tabpanel", { name: /^Output$/i })).queryAllByText(
+          /backend_calculation/i,
+        ),
+      ).toHaveLength(0);
+    });
+  });
+
+  it("groups input parameters by group in the input tab", async () => {
+    appJotaiStore.set(engineeringWorkspaceModeAtom, "data");
+    appJotaiStore.set(engineeringProjectDocumentAtom, createProjectDocument());
+    appJotaiStore.set(componentCurveCatalogAtom, {
+      curvesByType: {},
+      loadStatusByType: {},
+      errorsByType: {},
+    });
+
+    await render(<ExcalidrawApp />);
+
+    await withExcalidrawDimensions({ width: 1920, height: 1080 }, async () => {
+      const boiler = createEngineeringImage({
+        id: "component:boiler",
+        name: "锅炉",
+        componentType: "Boiler",
+      });
+
+      API.updateScene({
+        elements: [boiler],
+        captureUpdate: CaptureUpdateAction.NEVER,
+      });
+      API.setSelectedElements([boiler]);
+
+      fireEvent.click(screen.getByRole("tab", { name: /^Input$/i }));
+
+      const inputPanel = await screen.findByRole("tabpanel", {
+        name: /^Input$/i,
+      });
+
+      await waitFor(() => {
+        expect(
+          within(inputPanel).getByText("机械不完全燃烧损失"),
+        ).toBeVisible();
+      });
+      expect(within(inputPanel).getByText("基本")).toBeVisible();
+      expect(within(inputPanel).getByText("汽水")).toBeVisible();
+      expect(within(inputPanel).getByText("烟风")).toBeVisible();
+    });
+  });
+
+  it("renders output without sensor column and keeps anchor material data in anchors tab", async () => {
+    appJotaiStore.set(engineeringWorkspaceModeAtom, "data");
+    appJotaiStore.set(engineeringProjectDocumentAtom, createProjectDocument());
+    appJotaiStore.set(componentCurveCatalogAtom, {
+      curvesByType: {},
+      loadStatusByType: {},
+      errorsByType: {},
+    });
+
+    await render(<ExcalidrawApp />);
+
+    await withExcalidrawDimensions({ width: 1920, height: 1080 }, async () => {
+      const boiler = createEngineeringImage({
+        id: "component:boiler",
+        name: "锅炉",
+        componentType: "Boiler",
+        anchors: [
+          {
+            id: "anchor-in",
+            uuid: "anchor-in",
+            node_id: "node-in",
+            position: { x: 0, y: 0.5 },
+            data: {
+              name: "Inlet",
+              name_cn: "入口",
+              interface_type: "Inlet",
+              connection_type: "inlet",
+              is_connected: false,
+              is_visible: true,
+              allow_not_display: false,
+              material_type: "water",
+              tpis_extra_info: null,
+            },
+          },
+          {
+            id: "anchor-out",
+            uuid: "anchor-out",
+            node_id: "node-out",
+            position: { x: 1, y: 0.5 },
+            data: {
+              name: "Outlet",
+              name_cn: "",
+              interface_type: "Outlet",
+              connection_type: "outlet",
+              is_connected: false,
+              is_visible: true,
+              allow_not_display: false,
+              material_type: "gas",
+              tpis_extra_info: null,
+            },
+          },
+        ],
+      });
+
+      API.updateScene({
+        elements: [boiler],
+        captureUpdate: CaptureUpdateAction.NEVER,
+      });
+      API.setSelectedElements([boiler]);
+
+      fireEvent.click(screen.getByRole("tab", { name: /^Output$/i }));
+
+      const outputPanel = await screen.findByRole("tabpanel", {
+        name: /^Output$/i,
+      });
+
+      await waitFor(() => {
+        expect(within(outputPanel).getByText("锅炉热负荷")).toBeVisible();
+      });
+
+      expect(within(outputPanel).queryByText("测点")).not.toBeInTheDocument();
+      expect(within(outputPanel).queryByText("入口")).not.toBeInTheDocument();
+      expect(within(outputPanel).queryByText("Outlet")).not.toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole("tab", { name: /^Anchors$/i }));
+
+      const anchorsPanel = await screen.findByRole("tabpanel", {
+        name: /^Anchors$/i,
+      });
+
+      expect(within(anchorsPanel).getByText("入口")).toBeVisible();
+      expect(within(anchorsPanel).getByText("water")).toBeVisible();
+      expect(within(anchorsPanel).getByText("Outlet")).toBeVisible();
+      expect(within(anchorsPanel).getByText("gas")).toBeVisible();
+      await waitFor(() => {
+        expect(within(anchorsPanel).getByText("干度")).toBeVisible();
+      });
+      expect(within(anchorsPanel).getByText("相对湿度")).toBeVisible();
+    });
+  });
+
+  it("exposes sensor binding entry and opens the curve panel placeholder in input tab", async () => {
+    appJotaiStore.set(engineeringWorkspaceModeAtom, "data");
+    appJotaiStore.set(engineeringProjectDocumentAtom, createProjectDocument());
+    appJotaiStore.set(componentCurveCatalogAtom, {
+      curvesByType: {},
+      loadStatusByType: {},
+      errorsByType: {},
+    });
+
+    await render(<ExcalidrawApp />);
+
+    await withExcalidrawDimensions({ width: 1920, height: 1080 }, async () => {
+      const boiler = createEngineeringImage({
+        id: "component:boiler",
+        name: "锅炉",
+        componentType: "Boiler",
+      });
+
+      API.updateScene({
+        elements: [boiler],
+        captureUpdate: CaptureUpdateAction.NEVER,
+      });
+      API.setSelectedElements([boiler]);
+
+      fireEvent.click(screen.getByRole("tab", { name: /^Input$/i }));
+
+      await waitFor(() => {
+        expect(screen.getByRole("button", { name: "绑定测点-锅炉效率" })).toBeVisible();
+      });
+
+      fireEvent.click(screen.getByRole("button", { name: "绑定测点-锅炉效率" }));
+
+      await waitFor(() => {
+        expect(screen.getByText("测点绑定")).toBeVisible();
+      });
+      expect(screen.getByText("当前参数：锅炉效率")).toBeVisible();
+
+      fireEvent.click(screen.getByRole("button", { name: "关闭绑定面板" }));
+      expect(screen.queryByText("测点绑定")).not.toBeInTheDocument();
+
+      expect(appJotaiStore.get(componentCurveCatalogAtom).curvesByType.Boiler).toBeUndefined();
+
+      fireEvent.click(
+        screen.getByRole("button", { name: "打开曲线面板-主流量-主汽压降" }),
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText("曲线面板")).toBeVisible();
+      });
+      expect(screen.getByText("当前参数：主流量-主汽压降")).toBeVisible();
+
+      await waitFor(() => {
+        expect(
+          appJotaiStore.get(componentCurveCatalogAtom).loadStatusByType.Boiler,
+        ).toBe("ready");
+      });
+    });
+  });
+
+  it("persists sensor binding config into scenario pointBindings from the binding panel", async () => {
+    appJotaiStore.set(engineeringWorkspaceModeAtom, "data");
+    appJotaiStore.set(engineeringProjectDocumentAtom, createProjectDocument());
+    appJotaiStore.set(componentCurveCatalogAtom, {
+      curvesByType: {},
+      loadStatusByType: {},
+      errorsByType: {},
+    });
+
+    await render(<ExcalidrawApp />);
+
+    await withExcalidrawDimensions({ width: 1920, height: 1080 }, async () => {
+      const boiler = createEngineeringImage({
+        id: "component:boiler",
+        name: "锅炉",
+        componentType: "Boiler",
+      });
+
+      API.updateScene({
+        elements: [boiler],
+        captureUpdate: CaptureUpdateAction.NEVER,
+      });
+      API.setSelectedElements([boiler]);
+
+      fireEvent.click(screen.getByRole("tab", { name: /^Input$/i }));
+      fireEvent.click(screen.getByRole("button", { name: "绑定测点-锅炉效率" }));
+
+      const measurementInput = await screen.findByLabelText("measurement-input");
+      const pointNameInput = screen.getByLabelText("point-name-input");
+      const fieldInput = screen.getByLabelText("field-input");
+
+      fireEvent.change(measurementInput, {
+        target: {
+          value: "ambient.temperature",
+        },
+      });
+      fireEvent.change(pointNameInput, {
+        target: {
+          value: "sensor.ambient.t",
+        },
+      });
+      fireEvent.change(fieldInput, {
+        target: {
+          value: "value",
+        },
+      });
+      fireEvent.click(screen.getByRole("button", { name: "保存绑定" }));
+
+      await waitFor(() => {
+        const scenario = appJotaiStore.get(engineeringScenarioDocumentAtom);
+        const pointBinding = Object.values(scenario.pointBindings || {})[0];
+        expect(pointBinding).toMatchObject({
+          measurement: "ambient.temperature",
+          pointName: "sensor.ambient.t",
+          field: "value",
+        });
+      });
+    });
+  });
+
+  it("renders the input panel as a list with stable columns and keeps string fields editable via text input", async () => {
+    appJotaiStore.set(engineeringWorkspaceModeAtom, "data");
+    appJotaiStore.set(engineeringProjectDocumentAtom, createProjectDocument());
+    appJotaiStore.set(componentCurveCatalogAtom, {
+      curvesByType: {},
+      loadStatusByType: {},
+      errorsByType: {},
+    });
+
+    await render(<ExcalidrawApp />);
+
+    await withExcalidrawDimensions({ width: 1920, height: 1080 }, async () => {
+      const boiler = createEngineeringImage({
+        id: "component:boiler",
+        name: "锅炉",
+        componentType: "Boiler",
+      });
+
+      API.updateScene({
+        elements: [boiler],
+        captureUpdate: CaptureUpdateAction.NEVER,
+      });
+      API.setSelectedElements([boiler]);
+
+      fireEvent.click(screen.getByRole("tab", { name: /^Input$/i }));
+
+      const inputPanel = await screen.findByRole("tabpanel", {
+        name: /^Input$/i,
+      });
+
+      expect(within(inputPanel).getByText("属性名")).toBeVisible();
+      expect(within(inputPanel).getByText("值")).toBeVisible();
+      expect(within(inputPanel).getByText("单位")).toBeVisible();
+      expect(within(inputPanel).getByText("测点")).toBeVisible();
+      expect(
+        within(inputPanel).queryAllByText(/frontend_manual_input/i),
+      ).toHaveLength(0);
+      expect(within(inputPanel).queryAllByText("绑定测点")).toHaveLength(0);
+      expect(
+        within(inputPanel).getByRole("button", { name: "绑定测点-锅炉效率" }),
+      ).toBeVisible();
+
+      const textInputs = within(inputPanel).getAllByRole("textbox");
+      expect(textInputs.length).toBeGreaterThan(0);
+    });
+  });
+
+  it("keeps the active data tab when switching selected components", async () => {
+    appJotaiStore.set(engineeringWorkspaceModeAtom, "data");
+    appJotaiStore.set(engineeringProjectDocumentAtom, createProjectDocument());
+    appJotaiStore.set(componentCurveCatalogAtom, {
+      curvesByType: {},
+      loadStatusByType: {},
+      errorsByType: {},
+    });
+
+    await render(<ExcalidrawApp />);
+
+    await withExcalidrawDimensions({ width: 1920, height: 1080 }, async () => {
+      const boilerA = createEngineeringImage({
+        id: "component:boiler-a",
+        name: "锅炉A",
+        componentType: "Boiler",
+      });
+      const boilerB = createEngineeringImage({
+        id: "component:boiler-b",
+        name: "锅炉B",
+        componentType: "Boiler",
+      });
+
+      API.updateScene({
+        elements: [boilerA, boilerB],
+        captureUpdate: CaptureUpdateAction.NEVER,
+      });
+
+      API.setSelectedElements([boilerA]);
+      fireEvent.click(screen.getByRole("tab", { name: /^Input$/i }));
+
+      await waitFor(() => {
+        expect(screen.getByRole("tab", { name: /^Input$/i })).toHaveAttribute(
+          "aria-selected",
+          "true",
+        );
+      });
+
+      API.setSelectedElements([boilerB]);
+
+      await waitFor(() => {
+        expect(screen.getByRole("tab", { name: /^Input$/i })).toHaveAttribute(
+          "aria-selected",
+          "true",
+        );
+      });
+      expect(
+        screen.getByRole("tabpanel", { name: /^Input$/i }),
+      ).toBeVisible();
+    });
+  });
+
+  it("keeps the active data tab when leaving data workspace and returning", async () => {
+    appJotaiStore.set(engineeringWorkspaceModeAtom, "data");
+    appJotaiStore.set(engineeringProjectDocumentAtom, createProjectDocument());
+    appJotaiStore.set(componentCurveCatalogAtom, {
+      curvesByType: {},
+      loadStatusByType: {},
+      errorsByType: {},
+    });
+
+    await render(<ExcalidrawApp />);
+
+    await withExcalidrawDimensions({ width: 1920, height: 1080 }, async () => {
+      const container = document.querySelector(".excalidraw-container");
+      expect(container).toBeTruthy();
+      expect(
+        (container as HTMLElement).style.getPropertyValue("--right-sidebar-width"),
+      ).toBe("302px");
+
+      const boiler = createEngineeringImage({
+        id: "component:boiler",
+        name: "锅炉",
+        componentType: "Boiler",
+      });
+
+      API.updateScene({
+        elements: [boiler],
+        captureUpdate: CaptureUpdateAction.NEVER,
+      });
+      API.setSelectedElements([boiler]);
+
+      fireEvent.click(screen.getByRole("tab", { name: /^Input$/i }));
+
+      await waitFor(() => {
+        expect(screen.getByRole("tab", { name: /^Input$/i })).toHaveAttribute(
+          "aria-selected",
+          "true",
+        );
+      });
+
+      await act(async () => {
+        appJotaiStore.set(engineeringWorkspaceModeAtom, "modeling");
+      });
+      await waitFor(() => {
+        expect(
+          screen.queryByRole("tablist", { name: "Properties sections" }),
+        ).not.toBeInTheDocument();
+      });
+
+      await act(async () => {
+        appJotaiStore.set(engineeringWorkspaceModeAtom, "analysis");
+      });
+      await waitFor(() => {
+        expect(
+          screen.queryByRole("tablist", { name: "Properties sections" }),
+        ).not.toBeInTheDocument();
+      });
+
+      await act(async () => {
+        appJotaiStore.set(engineeringWorkspaceModeAtom, "data");
+      });
+      await waitFor(() => {
+        expect(screen.getByRole("tab", { name: /^Input$/i })).toHaveAttribute(
+          "aria-selected",
+          "true",
+        );
+      });
+    });
+  });
+
+  it("keeps the active data tab after deselecting and selecting a component again", async () => {
+    appJotaiStore.set(engineeringWorkspaceModeAtom, "data");
+    appJotaiStore.set(engineeringProjectDocumentAtom, createProjectDocument());
+    appJotaiStore.set(componentCurveCatalogAtom, {
+      curvesByType: {},
+      loadStatusByType: {},
+      errorsByType: {},
+    });
+
+    await render(<ExcalidrawApp />);
+
+    await withExcalidrawDimensions({ width: 1920, height: 1080 }, async () => {
+      const boiler = createEngineeringImage({
+        id: "component:boiler",
+        name: "锅炉",
+        componentType: "Boiler",
+      });
+
+      API.updateScene({
+        elements: [boiler],
+        captureUpdate: CaptureUpdateAction.NEVER,
+      });
+      API.setSelectedElements([boiler]);
+
+      fireEvent.click(screen.getByRole("tab", { name: /^Input$/i }));
+      await waitFor(() => {
+        expect(screen.getByRole("tab", { name: /^Input$/i })).toHaveAttribute(
+          "aria-selected",
+          "true",
+        );
+      });
+
+      API.setSelectedElements([]);
+      await waitFor(() => {
+        expect(
+          screen.queryByRole("tablist", { name: "Properties sections" }),
+        ).not.toBeInTheDocument();
+      });
+
+      API.setSelectedElements([boiler]);
+      await waitFor(() => {
+        expect(screen.getByRole("tab", { name: /^Input$/i })).toHaveAttribute(
+          "aria-selected",
+          "true",
+        );
+      });
+    });
+  });
+
+  it("persists edited component input values into scenario.manualInputs by variable id", async () => {
+    appJotaiStore.set(engineeringWorkspaceModeAtom, "data");
+    appJotaiStore.set(engineeringProjectDocumentAtom, createProjectDocument());
+    appJotaiStore.set(componentCurveCatalogAtom, {
+      curvesByType: {},
+      loadStatusByType: {},
+      errorsByType: {},
+    });
+
+    await render(<ExcalidrawApp />);
+
+    await withExcalidrawDimensions({ width: 1920, height: 1080 }, async () => {
+      const boiler = createEngineeringImage({
+        id: "component:boiler",
+        name: "锅炉",
+        componentType: "Boiler",
+      });
+
+      API.updateScene({
+        elements: [boiler],
+        captureUpdate: CaptureUpdateAction.NEVER,
+      });
+      API.setSelectedElements([boiler]);
+
+      fireEvent.click(screen.getByRole("tab", { name: /^Input$/i }));
+
+      const nameInput = await screen.findByLabelText("参数输入-Boiler-Name");
+      fireEvent.change(nameInput, {
+        target: {
+          value: "锅炉A",
+        },
+      });
+
+      await waitFor(() => {
+        const scenario = appJotaiStore.get(engineeringScenarioDocumentAtom);
+        expect(Object.keys(scenario.manualInputs).length).toBeGreaterThan(0);
+      });
+
+      const project = appJotaiStore.get(engineeringProjectDocumentAtom);
+      const scenario = appJotaiStore.get(engineeringScenarioDocumentAtom);
+      const componentEntity = Object.values(project.topology.componentsById).find(
+        (component) =>
+          (component.props.elementId === boiler.id ||
+            (Array.isArray(component.props.elementIds) &&
+              component.props.elementIds.includes(boiler.id))) &&
+          component.templateKey === "Boiler",
+      );
+
+      expect(componentEntity).toBeDefined();
+
+      const nameVariable = Object.values(project.variableCatalog.variablesById).find(
+        (variable) =>
+          variable.owner.kind === "component" &&
+          variable.owner.id === componentEntity!.id &&
+          variable.backend?.tpisKey === "Name",
+      );
+
+      expect(nameVariable).toBeDefined();
+
+      const providerIds =
+        project.variableCatalog.providerIdsByVariableId[nameVariable!.id] || [];
+      const manualProviderId = providerIds.find(
+        (providerId) =>
+          project.variableCatalog.providersById[providerId]?.kind === "manual",
+      );
+
+      expect(scenario.manualInputs[nameVariable!.id]).toMatchObject({
+        variableId: nameVariable!.id,
+        value: "锅炉A",
+        source: "frontend_manual_input",
+        status: "ok",
+        providerId: manualProviderId,
+      });
+    });
+  });
+
+  it("builds calculation request payload from scenario values when clicking calculate", async () => {
+    appJotaiStore.set(engineeringWorkspaceModeAtom, "data");
+    appJotaiStore.set(engineeringProjectDocumentAtom, createProjectDocument());
+    appJotaiStore.set(componentCurveCatalogAtom, {
+      curvesByType: {},
+      loadStatusByType: {},
+      errorsByType: {},
+    });
+
+    await render(<ExcalidrawApp />);
+
+    await withExcalidrawDimensions({ width: 1920, height: 1080 }, async () => {
+      const boiler = createEngineeringImage({
+        id: "component:boiler",
+        name: "锅炉",
+        componentType: "Boiler",
+      });
+
+      API.updateScene({
+        elements: [boiler],
+        captureUpdate: CaptureUpdateAction.NEVER,
+      });
+      API.setSelectedElements([boiler]);
+
+      fireEvent.click(screen.getByRole("tab", { name: /^Input$/i }));
+
+      const nameInput = await screen.findByLabelText("参数输入-Boiler-Name");
+      fireEvent.change(nameInput, {
+        target: {
+          value: "锅炉B",
+        },
+      });
+
+      await waitFor(() => {
+        const scenario = appJotaiStore.get(engineeringScenarioDocumentAtom);
+        expect(Object.keys(scenario.manualInputs).length).toBeGreaterThan(0);
+      });
+
+      fireEvent.click(screen.getByTestId("engineering-calculate-trigger"));
+
+      await waitFor(() => {
+        const requestPayload = appJotaiStore.get(
+          engineeringLastCalculationRequestAtom,
+        );
+        expect(requestPayload).not.toBeNull();
+        expect(requestPayload!.manualInputs.length).toBeGreaterThan(0);
+      });
+      await waitFor(() => {
+        expect(appJotaiStore.get(engineeringSelectedCalculationRunIdAtom)).toBeTruthy();
+      });
+      expect(appJotaiStore.get(engineeringRunRuntimeAtom)).toMatchObject({
+        activeRunId: expect.any(String),
+        errorMessage: null,
+      });
+    });
+  });
+});

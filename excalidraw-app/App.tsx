@@ -1390,50 +1390,16 @@ const ExcalidrawWrapper = () => {
             return null;
           }
 
-          if (panel === "actions") {
+          if (
+            panel === "actions" ||
+            panel === "input" ||
+            panel === "output" ||
+            panel === "anchors" ||
+            panel === "data"
+          ) {
             return (
               <EngineeringComponentParameterPanel
-                section="actions"
-                onEngineeringTableResize={resizeEngineeringTableMaterial}
-                onEngineeringChartApply={applyEngineeringChartMaterial}
-              />
-            );
-          }
-
-          if (panel === "input") {
-            return (
-              <EngineeringComponentParameterPanel
-                section="input"
-                onEngineeringTableResize={resizeEngineeringTableMaterial}
-                onEngineeringChartApply={applyEngineeringChartMaterial}
-              />
-            );
-          }
-
-          if (panel === "output") {
-            return (
-              <EngineeringComponentParameterPanel
-                section="output"
-                onEngineeringTableResize={resizeEngineeringTableMaterial}
-                onEngineeringChartApply={applyEngineeringChartMaterial}
-              />
-            );
-          }
-
-          if (panel === "anchors") {
-            return (
-              <EngineeringComponentParameterPanel
-                section="anchors"
-                onEngineeringTableResize={resizeEngineeringTableMaterial}
-                onEngineeringChartApply={applyEngineeringChartMaterial}
-              />
-            );
-          }
-
-          if (panel === "data") {
-            return (
-              <EngineeringComponentParameterPanel
-                section="data"
+                section={panel}
                 onEngineeringTableResize={resizeEngineeringTableMaterial}
                 onEngineeringChartApply={applyEngineeringChartMaterial}
               />

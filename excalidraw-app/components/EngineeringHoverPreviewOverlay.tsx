@@ -31,6 +31,13 @@ import {
   toComponentParameterStableToken,
 } from "../engineering-parameter-identity";
 import { engineeringWorkspaceModeAtom } from "../engineering-ui-state";
+import {
+  getFirstNonEmptyString,
+  isRecord,
+  normalizeLookupKey,
+  parseEngineeringComponent,
+  type ParsedEngineeringAnchor,
+} from "../engineering-component-data-utils";
 
 import "./EngineeringHoverPreviewOverlay.scss";
 
@@ -67,15 +74,7 @@ type HoverPreviewCard = {
   rows: HoverPreviewRow[];
 };
 
-type ParsedAnchor = {
-  id: string;
-  name: string;
-  materialType: string | null;
-  position: {
-    x: number;
-    y: number;
-  } | null;
-};
+type ParsedAnchor = ParsedEngineeringAnchor;
 
 type ParsedComponentData = {
   componentType: string;
@@ -84,60 +83,6 @@ type ParsedComponentData = {
 };
 
 const HIDE_DELAY_MS = 150;
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  !!value && typeof value === "object" && !Array.isArray(value);
-
-const getFirstNonEmptyString = (...values: unknown[]) => {
-  for (const value of values) {
-    if (typeof value !== "string") {
-      continue;
-    }
-    const trimmed = value.trim();
-    if (trimmed.length > 0) {
-      return trimmed;
-    }
-  }
-  return null;
-};
-
-const normalizeLookupKey = (value: string) => value.trim().toLowerCase();
-
-const parseAnchor = (anchorValue: unknown, index: number): ParsedAnchor | null => {
-  if (!isRecord(anchorValue)) {
-    return null;
-  }
-
-  const anchorData = isRecord(anchorValue.data) ? anchorValue.data : {};
-  const anchorId =
-    getFirstNonEmptyString(anchorValue.id, anchorValue.uuid) ||
-    `anchor:${index + 1}`;
-  const anchorName =
-    getFirstNonEmptyString(
-      anchorData.name_cn,
-      anchorData.name,
-      anchorValue.name_cn,
-      anchorValue.name,
-      anchorId,
-    ) || `Anchor ${index + 1}`;
-  const materialType = getFirstNonEmptyString(anchorData.material_type);
-  const position =
-    isRecord(anchorValue.position) &&
-    typeof anchorValue.position.x === "number" &&
-    typeof anchorValue.position.y === "number"
-      ? {
-          x: anchorValue.position.x,
-          y: anchorValue.position.y,
-        }
-      : null;
-
-  return {
-    id: anchorId,
-    name: anchorName,
-    materialType,
-    position,
-  };
-};
 
 const getParsedComponentDataFromElement = (
   element: ReturnType<typeof useExcalidrawElements>[number],
@@ -150,28 +95,22 @@ const getParsedComponentDataFromElement = (
   }
 
   const component = element.customData?.component;
-  if (!isRecord(component) || !isRecord(component.data)) {
-    return null;
-  }
-
-  const componentType = getFirstNonEmptyString(component.data.component_type);
-  if (!componentType) {
+  const parsedComponent = parseEngineeringComponent(component);
+  if (!parsedComponent) {
     return null;
   }
 
   const componentName =
-    getFirstNonEmptyString(component.data.name_cn, component.data.name, componentType) ||
-    componentType;
-  const anchors = Array.isArray(component.data.anchors)
-    ? component.data.anchors
-        .map((anchor, index) => parseAnchor(anchor, index))
-        .filter((anchor): anchor is ParsedAnchor => !!anchor)
-    : [];
+    getFirstNonEmptyString(
+      parsedComponent.nameCn,
+      parsedComponent.name,
+      parsedComponent.componentType,
+    ) || parsedComponent.componentType;
 
   return {
-    componentType,
+    componentType: parsedComponent.componentType,
     componentName,
-    anchors,
+    anchors: parsedComponent.anchors,
   };
 };
 

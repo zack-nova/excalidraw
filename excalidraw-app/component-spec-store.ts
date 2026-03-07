@@ -1,5 +1,9 @@
 import { atom } from "./app-jotai";
 import manifestJson from "./data/componentSpecsMock/manifest.json";
+import {
+  getConfiguredEngineeringBackendBaseUrl,
+  requestEngineeringBackendJson,
+} from "./engineering-backend-client";
 
 export type ComponentSpecManifestEntry = {
   componentType: string;
@@ -95,16 +99,6 @@ type InterfaceSpecLoaderModule = {
   };
 };
 
-class EngineeringBackendHttpError extends Error {
-  readonly status: number;
-
-  constructor(message: string, status: number) {
-    super(message);
-    this.name = "EngineeringBackendHttpError";
-    this.status = status;
-  }
-}
-
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   !!value && typeof value === "object" && !Array.isArray(value);
 
@@ -176,56 +170,6 @@ const readArrayField = (
 ) => {
   const value = readField(record, keys);
   return Array.isArray(value) ? value : [];
-};
-
-const getConfiguredEngineeringBackendBaseUrl = () => {
-  const runtimeBaseUrl = (
-    globalThis as typeof globalThis & {
-      __EXCALIDRAW_ENGINEERING_BACKEND_BASE_URL__?: unknown;
-    }
-  ).__EXCALIDRAW_ENGINEERING_BACKEND_BASE_URL__;
-  if (typeof runtimeBaseUrl === "string") {
-    const runtimeTrimmed = runtimeBaseUrl.trim();
-    if (runtimeTrimmed) {
-      return runtimeTrimmed.replace(/\/+$/, "");
-    }
-  }
-
-  // Avoid real network calls in tests unless explicitly injected at runtime.
-  if (import.meta.env.MODE === "test") {
-    return null;
-  }
-
-  const candidate = import.meta.env.VITE_APP_ENGINEERING_BACKEND_URL;
-  if (typeof candidate !== "string") {
-    return null;
-  }
-  const trimmed = candidate.trim();
-  if (!trimmed) {
-    return null;
-  }
-  return trimmed.replace(/\/+$/, "");
-};
-
-const requestEngineeringBackendJson = async <T>(
-  baseUrl: string,
-  path: string,
-): Promise<T> => {
-  const response = await fetch(`${baseUrl}${path}`, {
-    headers: {
-      "Content-Type": "application/json",
-    },
-  });
-  const responseBody = await response.json();
-
-  if (!response.ok) {
-    throw new EngineeringBackendHttpError(
-      `Engineering backend request failed with ${response.status}`,
-      response.status,
-    );
-  }
-
-  return responseBody as T;
 };
 
 const normalizeParameter = (

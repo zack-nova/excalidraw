@@ -431,7 +431,7 @@ describe("Engineering modeling workspace", () => {
       expect(tabs).toHaveLength(5);
       expect(tabs.at(-1)).not.toHaveTextContent("Properties");
 
-      fireEvent.click(screen.getByRole("tab", { name: /placeholder|占位|待定/i }));
+      fireEvent.click(screen.getByRole("tab", { name: /^Actions$/i }));
 
       await waitFor(() => {
         expect(

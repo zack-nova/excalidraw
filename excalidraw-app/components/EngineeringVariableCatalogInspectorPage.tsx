@@ -86,7 +86,7 @@ export const EngineeringVariableCatalogInspectorPage = () => {
       data-testid="engineering-variable-inspector-page"
     >
       <header className="engineering-variable-inspector-page__header">
-        <h1>变量完整字段查看（临时）</h1>
+        <h1>变量完整字段查看</h1>
         <a
           className="engineering-variable-inspector-page__back"
           href="/"
