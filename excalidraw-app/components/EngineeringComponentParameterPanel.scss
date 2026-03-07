@@ -277,4 +277,71 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 0.45rem;
   }
+
+  .engineering-parameter-panel__chartField {
+    display: flex;
+    flex-direction: column;
+    gap: 0.28rem;
+
+    span {
+      color: var(--text-primary-color);
+      opacity: 0.74;
+      font-size: 0.7rem;
+      line-height: 1.3;
+    }
+  }
+
+  .engineering-parameter-panel__chartField--full {
+    grid-column: 1 / -1;
+  }
+
+  .engineering-parameter-panel__field--code {
+    min-height: 6rem;
+    resize: vertical;
+    font-family: var(--code-font-family);
+  }
+
+  .engineering-parameter-panel__chartLegendToggle {
+    grid-column: 1 / -1;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    color: var(--text-primary-color);
+    font-size: 0.74rem;
+    line-height: 1.3;
+
+    input {
+      accent-color: var(--color-primary);
+    }
+  }
+
+  .engineering-parameter-panel__chartActions {
+    margin-top: 0.15rem;
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .engineering-parameter-panel__chartDataPanel {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+
+  .engineering-parameter-panel__warningCard {
+    border: 1px solid
+      color-mix(in srgb, var(--color-warning) 55%, var(--default-border-color) 45%);
+    background: color-mix(
+      in srgb,
+      var(--island-bg-color) 88%,
+      var(--color-warning) 12%
+    );
+
+    ul {
+      margin: 0.4rem 0 0;
+      padding-left: 1rem;
+      color: color-mix(in srgb, var(--text-primary-color) 88%, var(--color-warning) 12%);
+      font-size: 0.74rem;
+      line-height: 1.35;
+    }
+  }
 }

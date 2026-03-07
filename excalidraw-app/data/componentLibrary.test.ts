@@ -8,6 +8,7 @@ import type { ExcalidrawBindableElement } from "@excalidraw/element/types";
 import {
   buildLibraryItemsFromComponentSources,
   fetchComponentLibrarySourcesFromBackend,
+  loadEngineeringLibraryItems,
 } from "./componentLibrary";
 import type { ComponentLibrarySource } from "./componentLibrary";
 
@@ -86,6 +87,20 @@ describe("buildLibraryItemsFromComponentSources()", () => {
           name_cn: "煤/燃料",
         }),
       }),
+    );
+  });
+
+  it("always includes system table and chart materials", async () => {
+    const libraryItems = await loadEngineeringLibraryItems();
+
+    expect(libraryItems.map((item) => item.name)).toEqual(
+      expect.arrayContaining([
+        "变量表格 (3x3)",
+        "折线图",
+        "柱状图",
+        "条状图",
+        "饼图",
+      ]),
     );
   });
 
